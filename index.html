@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solo Leveling | 我獨自升級</title>
+    <!-- Use Chart.js for the Radar Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            /* Color Palette */
+            --bg-gradient: linear-gradient(135deg, #E0C3FC 0%, #8EC5FC 100%);
+            --glass-bg: rgba(255, 255, 255, 0.25);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --text-primary: #2D3748;
+            --text-secondary: #4A5568;
+            --accent-color: #6B46C1;
+            /* Purple */
+            --success-color: #48BB78;
+            --warning-color: #ECC94B;
+            --card-radius: 16px;
+            --btn-radius: 12px;
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            overflow: hidden;
+            /* Prevent body scroll, handle in main */
+        }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+
+        .glass-card {
+            border-radius: var(--card-radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.2);
+        }
+
+        /* Layout */
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 10px rgba(107, 70, 193, 0.2);
+        }
+
+        .nav-menu {
+            list-style: none;
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: var(--btn-radius);
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.4);
+            color: var(--accent-color);
+        }
+
+        .nav-icon {
+            margin-right: 12px;
+            font-size: 1.2rem;
+        }
+
+        .nav-category {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin: 25px 0 10px 15px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            opacity: 0.8;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 25px;
+            color: var(--text-primary);
+        }
+
+        /* Components */
+        .btn {
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--btn-radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 15px rgba(107, 70, 193, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #553C9A;
+            transform: translateY(-1px);
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--btn-radius);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.4);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            border-color: var(--accent-color);
+        }
+
+        /* Tasks List */
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .task-content {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 2px solid var(--accent-color);
+            margin-right: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .checkbox.checked {
+            background: var(--accent-color);
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-weight: bold;
+        }
+
+        .task-text {
+            font-size: 1.1rem;
+            transition: color 0.2s;
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
+
+        .badge-str {
+            background: #FEB2B2;
+            color: #9B2C2C;
+        }
+
+        .badge-int {
+            background: #90CDF4;
+            color: #2C5282;
+        }
+
+        .badge-agi {
+            background: #F6E05E;
+            color: #744210;
+        }
+
+        .badge-vit {
+            background: #9AE6B4;
+            color: #276749;
+        }
+
+        .badge-cha {
+            background: #F687B3;
+            color: #702459;
+        }
+
+        /* Stats Page */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+        }
+
+        .level-badge {
+            display: inline-block;
+            background: var(--accent-color);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        /* Loading / Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(45, 55, 72, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: var(--btn-radius);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 15px;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .nav-menu {
+                display: flex;
+            }
+
+            .nav-item {
+                margin-bottom: 0;
+                margin-left: 10px;
+                padding: 10px;
+            }
+
+            .nav-text {
+                display: none;
+                /* Hide text on mobile, show only icons if tight */
+            }
+
+            .nav-icon {
+                margin-right: 0;
+                font-size: 1.5rem;
+            }
+
+            .logo {
+                margin-bottom: 0;
+                font-size: 1.2rem;
+            }
+        }
+
+        .badge-dex {
+            background: #D6BCFA;
+            color: #553C9A;
+        }
+
+        .badge-luk {
+            background: #FBD38D;
+            color: #9C4221;
+        }
+
+        .badge-wil {
+            background: #E2E8F0;
+            color: #4A5568;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass">
+            <div class="logo">SOLO LEVELING</div>
+            <ul class="nav-menu" style="overflow-y: auto; flex: 1;">
+                <!-- Core -->
+                <li class="nav-category">核心 (Core)</li>
+                <li class="nav-item active" id="nav-tasks" onclick="switchTab('tasks')">
+                    <span class="nav-icon">⚔️</span>
+                    <span class="nav-text">任務 (Tasks)</span>
+                </li>
+                <li class="nav-item" id="nav-focus" onclick="switchTab('focus')">
+                    <span class="nav-icon">⏱️</span>
+                    <span class="nav-text">專注 (Focus)</span>
+                </li>
+
+                <!-- Store & Achievements -->
+                <li class="nav-category">商店與成就 (Store)</li>
+                <li class="nav-item" id="nav-store" onclick="switchTab('store')">
+                    <span class="nav-icon">🛒</span>
+                    <span class="nav-text">商店 (Store)</span>
+                </li>
+                <li class="nav-item" id="nav-achievements" onclick="switchTab('achievements')">
+                    <span class="nav-icon">🏆</span>
+                    <span class="nav-text">成就 (Achievements)</span>
+                </li>
+
+                <!-- Personal -->
+                <li class="nav-category">個人 (Personal)</li>
+                <li class="nav-item" id="nav-status" onclick="switchTab('status')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">狀態 (Status)</span>
+                </li>
+                <li class="nav-item" id="nav-activity" onclick="switchTab('activity')">
+                    <span class="nav-icon">📅</span>
+                    <span class="nav-text">活動 (Activity)</span>
+                </li>
+                <li class="nav-item" id="nav-statistics" onclick="switchTab('statistics')">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text">統計 (Statistics)</span>
+                </li>
+                <li class="nav-item" id="nav-reflections" onclick="switchTab('reflections')">
+                    <span class="nav-icon">💭</span>
+                    <span class="nav-text">感想 (Reflections)</span>
+                </li>
+
+                <!-- System -->
+                <li class="nav-category">系統 (System)</li>
+                <li class="nav-item" id="nav-settings" onclick="switchTab('settings')">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">設置 (Settings)</span>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Content injected by JS -->
+            <div id="app-content"></div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <div class="toast-icon">✨</div>
+        <div class="toast-message">
+            <h4>Level Up!</h4>
+            <p>Strength +1</p>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const defaultState = {
+            player: {
+                name: "Player",
+                level: 1,
+                exp: 0,
+                gold: 0,
+                attributes: {
+                    strength: 5,
+                    intelligence: 5,
+                    agility: 5,
+                    vitality: 5,
+                    charisma: 5,
+                    dexterity: 5,
+                    luck: 5,
+                    willpower: 5
+                }
+            },
+            tasks: [
+                { id: 1, title: "晨跑 3 公里 (Morning Run)", attribute: "agility", completed: false, rewardExp: 20, rewardGold: 10 },
+                { id: 2, title: "閱讀 30 分鐘 (Read Book)", attribute: "intelligence", completed: false, rewardExp: 15, rewardGold: 5 },
+                { id: 3, title: "完成每日規劃 (Daily Plan)", attribute: "willpower", completed: true, rewardExp: 10, rewardGold: 5 }
+            ]
+        };
+
+        let state = JSON.parse(localStorage.getItem('sl_data')) || defaultState;
+
+        function saveState() {
+            localStorage.setItem('sl_data', JSON.stringify(state));
+        }
+
+        // --- Attributes Config ---
+        const attributesConfig = {
+            strength: { label: "力量 (STR)", color: "rgba(255, 99, 132, 0.7)", border: "rgb(255, 99, 132)", badgeClass: "badge-str" },
+            intelligence: { label: "智力 (INT)", color: "rgba(54, 162, 235, 0.7)", border: "rgb(54, 162, 235)", badgeClass: "badge-int" },
+            agility: { label: "敏捷 (AGI)", color: "rgba(255, 206, 86, 0.7)", border: "rgb(255, 206, 86)", badgeClass: "badge-agi" },
+            vitality: { label: "體力 (VIT)", color: "rgba(75, 192, 192, 0.7)", border: "rgb(75, 192, 192)", badgeClass: "badge-vit" },
+            charisma: { label: "魅力 (CHA)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(255, 159, 64)", badgeClass: "badge-cha" },
+            dexterity: { label: "靈巧 (DEX)", color: "rgba(153, 102, 255, 0.7)", border: "rgb(153, 102, 255)", badgeClass: "badge-dex" },
+            luck: { label: "幸運 (LUK)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(205, 139, 44)", badgeClass: "badge-luk" },
+            willpower: { label: "意志 (WIL)", color: "rgba(201, 203, 207, 0.7)", border: "rgb(201, 203, 207)", badgeClass: "badge-wil" }
+        };
+
+        // --- UI Rendering ---
+        const contentDiv = document.getElementById('app-content');
+        const toastDiv = document.getElementById('toast');
+        let currentTab = 'tasks';
+        let statsChart = null;
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+            const activeNav = document.getElementById(`nav-${tab}`);
+            if (activeNav) activeNav.classList.add('active');
+
+            render();
+        }
+
+        function render() {
+            contentDiv.innerHTML = '';
+            if (currentTab === 'tasks') renderTasksPage();
+            else if (currentTab === 'status') renderStatusPage();
+            else renderPlaceholderPage();
+        }
+
+        function renderPlaceholderPage() {
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
+
+            const card = document.createElement('div');
+            card.className = 'glass glass-card';
+            card.style.textAlign = 'center';
+            card.style.padding = '50px';
+            card.innerHTML = `
+                <div style="font-size: 3rem; margin-bottom: 20px;">🚧</div>
+                <h3>Feature Coming Soon</h3>
+                <p style="opacity: 0.7; margin-top: 10px;">This feature is currently under development.</p>
+            `;
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(card);
+        }
+
+        // --- Task Page ---
+        function renderTasksPage() {
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '每日任務 (Daily Quests)';
+
+            // Add Task Form
+            const formCard = document.createElement('div');
+            formCard.className = 'glass glass-card';
+            formCard.innerHTML = `
+            <h3>新增任務 (New Quest)</h3>
+            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="text" id="newTaskInput" placeholder="輸入任務名稱..." style="flex: 2; min-width: 200px;">
+                <select id="newAttrSelect" style="flex: 1; min-width: 120px;">
+                    ${Object.keys(attributesConfig).map(key => `<option value="${key}">${attributesConfig[key].label}</option>`).join('')}
+                </select>
+                <button class="btn btn-primary" onclick="addTask()">＋ 接受任務</button>
+            </div>
+        `;
+
+            // Task List
+            const listCard = document.createElement('div');
+            listCard.className = 'glass glass-card';
+            listCard.innerHTML = `<h3>任務列表 (Quest List)</h3><div id="taskList" style="margin-top: 15px;"></div>`;
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(formCard);
+            contentDiv.appendChild(listCard);
+
+            const listContainer = document.getElementById('taskList');
+
+            state.tasks.forEach(task => {
+                const item = document.createElement('div');
+                item.className = 'task-item';
+                const attrConfig = attributesConfig[task.attribute];
+
+                item.innerHTML = `
+                <div class="task-content">
+                    <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask(${task.id})"></div>
+                    <div>
+                        <div class="task-text ${task.completed ? 'completed' : ''}">${task.title}</div>
+                        <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 4px;">
+                            Rewards: EXP +${task.rewardExp}, Gold +${task.rewardGold}
+                        </div>
+                    </div>
+                    <span class="badge ${attrConfig.badgeClass}">${attrConfig.label.split(' ')[1]}</span>
+                </div>
+                ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5;" onclick="deleteTask(${task.id})">🗑️</button>`}
+            `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function addTask() {
+            const input = document.getElementById('newTaskInput');
+            const select = document.getElementById('newAttrSelect');
+            const title = input.value.trim();
+            if (!title) return;
+
+            const newTask = {
+                id: Date.now(),
+                title: title,
+                attribute: select.value,
+                completed: false,
+                rewardExp: 25, // Fixed rewards for now
+                rewardGold: 10
+            };
+
+            state.tasks.unshift(newTask);
+            saveState();
+            render();
+            input.value = '';
+        }
+
+        function toggleTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (task && !task.completed) {
+                task.completed = true;
+                // Rewards
+                state.player.exp += task.rewardExp;
+                state.player.gold += task.rewardGold;
+                state.player.attributes[task.attribute] += 1; // Attribute scaling
+
+                // Check Level Up (Simple logic: Level * 100 EXP needed)
+                const expNeeded = state.player.level * 100;
+                let levelUp = false;
+                if (state.player.exp >= expNeeded) {
+                    state.player.level++;
+                    state.player.exp -= expNeeded;
+                    levelUp = true;
+                }
+
+                saveState();
+                render();
+
+                // Show Toast
+                showToast(`Quest Complete!`, `EXP +${task.rewardExp} | Gold +${task.rewardGold}\n${levelUp ? '<b>LEVEL UP!</b>' : ''} ${attributesConfig[task.attribute].label.split(' ')[0]} +1`);
+            } else if (task && task.completed) {
+                // Optional: Untoggle (usually RPGs don't allow un-completing quests easily, but for a to-do app...)
+                // Let's allow un-toggle but decide if we take back rewards. 
+                // For simplicity in this demo, we just toggle state but don't revert rewards to prevent abuse (farming).
+                // Or we revert rewards. Let's revert rewards to be fair.
+                if (state.player.exp >= task.rewardExp) {
+                    task.completed = false;
+                    state.player.exp -= task.rewardExp;
+                    state.player.gold -= task.rewardGold;
+                    state.player.attributes[task.attribute] = Math.max(0, state.player.attributes[task.attribute] - 1);
+                    saveState();
+                    render();
+                } else {
+                    alert("Not enough EXP to undo this action!");
+                }
+            }
+        }
+
+        function deleteTask(id) {
+            if (confirm("Abandon this quest?")) {
+                state.tasks = state.tasks.filter(t => t.id !== id);
+                saveState();
+                render();
+            }
+        }
+
+        // --- Status Page ---
+        function renderStatusPage() {
+            const p = state.player;
+            const expNeeded = p.level * 100;
+            const expPercent = (p.exp / expNeeded) * 100;
+
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '玩家狀態 (Player Status)';
+
+            const grid = document.createElement('div');
+            grid.className = 'stats-grid';
+
+            // Profile Card
+            const profileCard = document.createElement('div');
+            profileCard.className = 'glass glass-card';
+            profileCard.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>${p.name}</h3>
+                <span class="level-badge">LV. ${p.level}</span>
+            </div>
+            <div style="margin: 20px 0;">
+                <div style="font-size: 0.9rem; margin-bottom: 5px; display:flex; justify-content:space-between;">
+                    <span>EXP</span>
+                    <span>${p.exp} / ${expNeeded}</span>
+                </div>
+                <div style="height: 10px; background: rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden;">
+                    <div style="height: 100%; width: ${expPercent}%; background: var(--accent-color); transition: width 0.5s;"></div>
+                </div>
+            </div>
+            <div style="font-size: 1.2rem; display:flex; align-items:center;">
+                <span style="margin-right: 10px;">💰</span> 
+                <span style="font-weight:bold;">${p.gold}</span>
+                <span style="font-size:0.9rem; margin-left: 5px; opacity:0.7;">Gold</span>
+            </div>
+        `;
+
+            // Chart Card
+            const chartCard = document.createElement('div');
+            chartCard.className = 'glass glass-card';
+            chartCard.innerHTML = `
+            <h3>屬性分析 (Ability Radar)</h3>
+            <div class="chart-container">
+                <canvas id="radarChart"></canvas>
+            </div>
+        `;
+
+            // Stats List Card
+            const statsListCard = document.createElement('div');
+            statsListCard.className = 'glass glass-card';
+            let statsHtml = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
+            for (const [key, val] of Object.entries(p.attributes)) {
+                statsHtml += `
+                <div style="display:flex; flex-direction:column; align-items:center; padding: 10px; background:rgba(255,255,255,0.3); border-radius:10px;">
+                    <span style="font-size:0.8rem; opacity:0.8;">${attributesConfig[key].label}</span>
+                    <span style="font-size:1.5rem; font-weight:bold; color:${attributesConfig[key].border}">${val}</span>
+                </div>
+            `;
+            }
+            statsHtml += '</div>';
+            statsListCard.innerHTML = `<h3>詳細數值 (Details)</h3>${statsHtml}`;
+
+            grid.appendChild(profileCard);
+            grid.appendChild(chartCard);
+            grid.appendChild(statsListCard);
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(grid);
+
+            // Render Chart
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            const labels = Object.keys(state.player.attributes).map(k => attributesConfig[k].label.split(' ')[0]);
+            const data = Object.values(state.player.attributes);
+
+            statsChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Player Stats',
+                        data: data,
+                        backgroundColor: 'rgba(107, 70, 193, 0.2)',
+                        borderColor: 'rgba(107, 70, 193, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(107, 70, 193, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(107, 70, 193, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(0,0,0,0.1)' },
+                            grid: { color: 'rgba(0,0,0,0.1)' },
+                            pointLabels: {
+                                font: { size: 12, family: 'sans-serif' },
+                                color: '#4A5568'
+                            },
+                            ticks: { display: false, backdropColor: 'transparent' },
+                            suggestedMin: 0,
+                            suggestedMax: Math.max(...data) + 5 // Dynamic scaling
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // --- Toast Notification ---
+        function showToast(title, message) {
+            toastDiv.querySelector('div h4').innerHTML = title;
+            toastDiv.querySelector('div p').innerHTML = message;
+            toastDiv.classList.add('show');
+            setTimeout(() => toastDiv.classList.remove('show'), 3000);
+        }
+
+        // --- Init ---
+        render();
+
+    </script>
+</body>
+
+</html>
