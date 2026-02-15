@@ -352,6 +352,12 @@
             pointer-events: all;
         }
 
+        /* Ensure Task Modal is always on top of Project Modal */
+        #taskModal {
+            z-index: 1100;
+            /* Higher than default 1000 */
+        }
+
         .modal-content {
             background: rgba(255, 255, 255, 0.95);
             width: 90%;
@@ -555,6 +561,10 @@
                 <li class="nav-item" id="nav-focus" onclick="switchTab('focus')">
                     <span class="nav-icon">⏱️</span>
                     <span class="nav-text">專注 (Focus)</span>
+                </li>
+                <li class="nav-item" id="nav-projects" onclick="switchTab('projects')">
+                    <span class="nav-icon">📂</span>
+                    <span class="nav-text">專案 (Projects)</span>
                 </li>
 
                 <!-- Store & Achievements -->
@@ -818,6 +828,7 @@
             if (currentTab === 'tasks') renderTasksPage();
             else if (currentTab === 'status') renderStatusPage();
             else if (currentTab === 'focus') renderFocusPage();
+            else if (currentTab === 'projects') renderProjectsPage();
             else if (currentTab === 'statistics') renderStatisticsPage();
             else renderPlaceholderPage();
         }
@@ -1082,6 +1093,333 @@
         }
 
 
+        // --- Projects Page ---
+        function renderProjectsPage() {
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '專案 (Projects)';
+
+            const actionCard = document.createElement('div');
+            actionCard.className = 'glass glass-card';
+            actionCard.innerHTML = `
+                <button class="btn btn-primary" onclick="openProjectModal()">+ New Project</button>
+            `;
+
+            const projectsContainer = document.createElement('div');
+
+            // Group projects by Group ID
+            // Default Group
+            const defaultGroupProjects = state.player.tags.filter(t => !t.groupId || t.groupId === 'default');
+            if (defaultGroupProjects.length > 0) {
+                projectsContainer.innerHTML += `<h3>Uncategorized / Default</h3>`;
+                projectsContainer.appendChild(createProjectGrid(defaultGroupProjects));
+            }
+
+            // Other Groups
+            state.player.groups.forEach(group => {
+                if (group.id === 'default') return;
+                const groupProjects = state.player.tags.filter(t => t.groupId === group.id);
+                if (groupProjects.length > 0) {
+                    projectsContainer.innerHTML += `<h3 style="margin-top: 20px;">${group.name}</h3>`;
+                    projectsContainer.appendChild(createProjectGrid(groupProjects));
+                }
+            });
+
+            // If no projects at all (except maybe default empty ones)
+            if (state.player.tags.length === 0) {
+                projectsContainer.innerHTML = '<div style="text-align:center; opacity:0.6; margin-top: 20px;">No projects created yet.</div>';
+            }
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(actionCard);
+            contentDiv.appendChild(projectsContainer);
+        }
+
+        function createProjectGrid(projects) {
+            const grid = document.createElement('div');
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+            grid.style.gap = '20px';
+            grid.style.marginTop = '10px';
+
+            projects.forEach(project => {
+                const card = document.createElement('div');
+                card.className = 'glass glass-card';
+                card.style.cursor = 'pointer';
+                card.onclick = () => openProjectModal(project.id);
+
+                // Calculate progress
+                const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(project.id));
+                const completed = projectTasks.filter(t => t.completed).length;
+                const total = projectTasks.length;
+                const progress = total > 0 ? (completed / total) * 100 : 0;
+
+                // Cover Image (First photo or default pattern)
+                const coverStyle = project.photos && project.photos.length > 0
+                    ? `background-image: url('${project.photos[0]}'); background-size: cover; background-position: center;`
+                    : `background: linear-gradient(135deg, ${project.color}aa, ${project.color}55);`;
+
+                card.innerHTML = `
+                    <div style="height: 120px; border-radius: 12px; margin-bottom: 10px; ${coverStyle}"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <h3 style="margin: 0;">${project.name}</h3>
+                        <span style="font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">${projectTasks.length} Tasks</span>
+                    </div>
+                    ${project.startDate ? `<div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px;">📅 ${project.startDate} ~ ${project.endDate || '...'}</div>` : ''}
+                    <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 10px;">
+                        <div style="width: ${progress}%; height: 100%; background: ${project.color};"></div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            return grid;
+        }
+
+        // --- Project Modal ---
+        let editingProjectId = null;
+
+        function openProjectModal(projectId = null) {
+            editingProjectId = projectId;
+            const project = projectId ? state.player.tags.find(t => t.id === projectId) : null;
+
+            // Create Modal HTML if not exists (reusing a generic structure or creating new)
+            // For simplicity, we'll inject a specific modal for projects
+            let modal = document.getElementById('projectModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'projectModal';
+                modal.className = 'modal-backdrop';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <h2 id="projectModalTitle">New Project</h2>
+                            <button class="close-btn" onclick="document.getElementById('projectModal').classList.remove('show')">Close</button>
+                        </div>
+                        <div style="overflow-y: auto; max-height: 80vh; padding: 5px;">
+                            <div class="form-group">
+                                <label>Project Name</label>
+                                <input type="text" id="projName" placeholder="Enter project name">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Group</label>
+                                    <select id="projGroup"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Color</label>
+                                    <input type="color" id="projColor" value="#6B46C1" style="height: 40px; cursor: pointer;">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Start Date</label>
+                                    <input type="date" id="projStart">
+                                </div>
+                                <div class="form-group">
+                                    <label>End Date</label>
+                                    <input type="date" id="projEnd">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="projDesc" rows="3" placeholder="Project goals..."></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Cover Photo</label>
+                                <div id="projPhotosContainer" style="margin-bottom: 10px;"></div>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="file" id="projPhotoInput" accept="image/*" style="flex: 1;">
+                                    <button class="btn" onclick="addProjectPhoto()">Upload</button>
+                                </div>
+                            </div>
+
+                             <div class="form-section">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                    <h4>Related Quests</h4>
+                                    <!-- Use existing Task Modal to add task, pre-setting this project -->
+                                    <button class="btn" onclick="openTaskModalForProject()">+ Add Quest</button>
+                                </div>
+                                <div id="projTasksList"></div>
+                            </div>
+
+                            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
+                            <button id="btnDeleteProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E;" onclick="deleteProject()">Delete Project</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            // Populate Fields
+            const titleEl = document.getElementById('projectModalTitle');
+            const groupSelect = document.getElementById('projGroup');
+            groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
+            const btnDelete = document.getElementById('btnDeleteProject');
+
+            // Clear or Set Values
+            if (project) {
+                titleEl.textContent = 'Edit Project';
+                document.getElementById('projName').value = project.name;
+                document.getElementById('projGroup').value = project.groupId || 'default';
+                document.getElementById('projColor').value = project.color || '#6B46C1';
+                document.getElementById('projStart').value = project.startDate || '';
+                document.getElementById('projEnd').value = project.endDate || '';
+                document.getElementById('projDesc').value = project.description || '';
+                btnDelete.style.display = 'block';
+
+                renderProjectPhotos(project.photos || []);
+                renderProjectTasks(project.id);
+            } else {
+                titleEl.textContent = 'New Project';
+                document.getElementById('projName').value = '';
+                document.getElementById('projGroup').value = 'default';
+                document.getElementById('projColor').value = '#6B46C1';
+                document.getElementById('projStart').value = '';
+                document.getElementById('projEnd').value = '';
+                document.getElementById('projDesc').value = '';
+                btnDelete.style.display = 'none';
+
+                renderProjectPhotos([]);
+                document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save project first to add tasks.</div>';
+            }
+
+            modal.classList.add('show');
+        }
+
+        function renderProjectPhotos(photos) {
+            const container = document.getElementById('projPhotosContainer');
+            if (photos && photos.length > 0) {
+                const url = photos[0];
+                container.innerHTML = `
+                    <div style="position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1);">
+                        <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <button onclick="removeProjectPhoto(0)" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div style="width: 100%; height: 100px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5);">
+                        No cover photo selected
+                    </div>
+                `;
+            }
+            // Store current photos in a temp way for saving
+            container.dataset.photos = JSON.stringify(photos);
+        }
+
+        function addProjectPhoto() {
+            const input = document.getElementById('projPhotoInput');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const url = e.target.result; // Base64
+                    const container = document.getElementById('projPhotosContainer');
+                    // Enforce Single Photo: Replace entire array
+                    const currentPhotos = [url];
+                    renderProjectPhotos(currentPhotos);
+                    input.value = ''; // Reset
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removeProjectPhoto(index) {
+            const container = document.getElementById('projPhotosContainer');
+            const currentPhotos = JSON.parse(container.dataset.photos || '[]');
+            currentPhotos.splice(index, 1);
+            renderProjectPhotos(currentPhotos);
+        }
+
+        function renderProjectTasks(projectId) {
+            const container = document.getElementById('projTasksList');
+            const tasks = state.tasks.filter(t => t.tags && t.tags.includes(projectId));
+
+            if (tasks.length === 0) {
+                container.innerHTML = '<div style="opacity: 0.6; text-align: center;">No quests linked to this project.</div>';
+                return;
+            }
+
+            container.innerHTML = tasks.map(t => `
+                <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 5px;">
+                    <span style="${t.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
+                    <span style="font-size: 0.8rem; opacity: 0.7;">${t.completed ? '✅ Done' : '⚔️ Active'}</span>
+                </div>
+            `).join('');
+        }
+
+        function openTaskModalForProject() {
+            if (!editingProjectId) return alert("Please save the project first.");
+            // Open task modal over the project modal
+            openTaskModal(null, editingProjectId);
+        }
+
+        function saveProject() {
+            const name = document.getElementById('projName').value.trim();
+            if (!name) return alert("Project name is required");
+
+            const groupId = document.getElementById('projGroup').value;
+            const color = document.getElementById('projColor').value;
+            const startDate = document.getElementById('projStart').value;
+            const endDate = document.getElementById('projEnd').value;
+            const description = document.getElementById('projDesc').value;
+            const photos = JSON.parse(document.getElementById('projPhotosContainer').dataset.photos || '[]');
+
+            if (editingProjectId) {
+                // Update
+                const project = state.player.tags.find(t => t.id === editingProjectId);
+                if (project) {
+                    project.name = name;
+                    project.groupId = groupId;
+                    project.color = color;
+                    project.startDate = startDate;
+                    project.endDate = endDate;
+                    project.description = description;
+                    project.photos = photos;
+                }
+            } else {
+                // Create
+                const newProject = {
+                    id: 'p_' + Date.now(),
+                    name,
+                    groupId,
+                    color,
+                    startDate,
+                    endDate,
+                    description,
+                    photos
+                };
+                state.player.tags.push(newProject);
+                editingProjectId = newProject.id; // Set ID so we can add tasks now
+            }
+
+            saveState();
+            renderProjectsPage(); // Refresh bg
+
+            // If strictly saving and closing:
+            document.getElementById('projectModal').classList.remove('show');
+            // If we want to keep open to add tasks, we'd need to re-render modal content with new ID.
+        }
+
+        function deleteProject() {
+            if (!editingProjectId) return;
+            if (!confirm("Delete this project? Linked tasks will remain but lose this project tag.")) return;
+
+            // Remove tag from tasks
+            state.tasks.forEach(t => {
+                if (t.tags) {
+                    t.tags = t.tags.filter(id => id !== editingProjectId);
+                }
+            });
+
+            state.player.tags = state.player.tags.filter(t => t.id !== editingProjectId);
+            saveState();
+            renderProjectsPage();
+            document.getElementById('projectModal').classList.remove('show');
+        }
+
+
         function renderPlaceholderPage() {
             const title = document.createElement('h2');
             title.className = 'page-title';
@@ -1238,7 +1576,7 @@
         }
 
         // --- Modal Logic ---
-        function openTaskModal(taskId = null) {
+        function openTaskModal(taskId = null, prefillTag = null) {
             const modal = document.getElementById('taskModal');
             const titleEl = modal.querySelector('.modal-header h2');
             const saveBtn = modal.querySelector('.modal-content > .btn-primary');
@@ -1253,6 +1591,16 @@
             // Reset Subtasks
             document.getElementById('modalSubtasks').innerHTML = '';
 
+            // Populate Tags/Projects
+            const tagsContainer = document.getElementById('modalTags');
+            tagsContainer.innerHTML = state.player.tags.map(t => `
+                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem; background: rgba(0,0,0,0.1); padding: 5px 8px; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" name="modalTag" value="${t.id}" ${prefillTag === t.id ? 'checked' : ''}>
+                    <span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${t.color};"></span>
+                    ${t.name}
+                </label>
+            `).join('');
+
             if (taskId) {
                 // Edit Mode
                 editingTaskId = taskId;
@@ -1264,34 +1612,6 @@
 
                 document.getElementById('modalTitle').value = task.title;
                 document.getElementById('modalDesc').value = task.description || '';
-                document.getElementById('modalImage').value = task.image || '';
-
-                // Photo Preview
-                const photoPreview = document.getElementById('modalPhotoPreview');
-                const photoBase64 = document.getElementById('modalPhotoBase64');
-                if (task.photo) {
-                    photoPreview.src = task.photo;
-                    photoPreview.style.display = 'block';
-                    photoBase64.value = task.photo;
-                } else {
-                    photoPreview.style.display = 'none';
-                    photoBase64.value = '';
-                }
-                document.getElementById('modalPhotoFile').value = ''; // Reset file input
-
-                // Select Group & Attribute
-                groupSelect.value = task.groupId || 'default';
-                attrSelect.value = task.attribute || 'strength';
-
-                // Populate Tags
-                const tagsContainer = document.getElementById('modalTags');
-                tagsContainer.innerHTML = state.player.tags.map(t => `
-                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 15px;">
-                        <input type="checkbox" name="modalTag" value="${t.id}" ${task.tags && task.tags.includes(t.id) ? 'checked' : ''}>
-                        <span style="font-size: 0.8rem; color:${t.color};">#${t.name.split(' ')[0]}</span>
-                    </label>
-                `).join('');
-
                 // Populate Subtasks
                 if (task.subtasks) {
                     task.subtasks.forEach(st => addSubtaskInput(st.title));
@@ -1311,15 +1631,11 @@
                 document.getElementById('modalTitle').value = '';
                 document.getElementById('modalDesc').value = '';
                 document.getElementById('modalImage').value = '';
+                document.getElementById('modalPhotoPreview').src = '';
+                document.getElementById('modalPhotoPreview').style.display = 'none';
+                document.getElementById('modalPhotoBase64').value = '';
+                document.getElementById('modalPhotoFile').value = '';
 
-                // Populate Tags (Unchecked)
-                const tagsContainer = document.getElementById('modalTags');
-                tagsContainer.innerHTML = state.player.tags.map(t => `
-                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 15px;">
-                        <input type="checkbox" name="modalTag" value="${t.id}">
-                        <span style="font-size: 0.8rem; color:${t.color};">#${t.name.split(' ')[0]}</span>
-                    </label>
-                `).join('');
 
                 document.getElementById('modalRepeat').value = 'none';
                 document.getElementById('modalExp').value = 25;
@@ -1335,6 +1651,11 @@
 
         function closeTaskModal() {
             document.getElementById('taskModal').classList.remove('show');
+            // If project modal is open, ensure it stays open
+            const projectModal = document.getElementById('projectModal');
+            if (projectModal && projectModal.classList.contains('show')) {
+                // Do nothing, let it stay
+            }
         }
 
         function addSubtaskInput(value = '') {
@@ -1420,7 +1741,18 @@
             }
 
             saveState();
-            render();
+
+            // Intelligent Render/Close Logic
+            const projectModal = document.getElementById('projectModal');
+            if (projectModal && projectModal.classList.contains('show') && editingProjectId) {
+                // We are in Project Mode
+                renderProjectTasks(editingProjectId);
+                // Do NOT call render() here as it kills the modal
+            } else {
+                // Standard Mode
+                render();
+            }
+
             closeTaskModal();
             editingTaskId = null;
         }
