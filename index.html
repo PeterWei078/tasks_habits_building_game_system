@@ -842,19 +842,25 @@
 
                 const activeNav = document.getElementById(`nav-${tab}`);
                 if (activeNav) activeNav.classList.add('active');
-
                 render();
             }
 
             function render() {
+                console.log("Rendering Tab:", currentTab); // DEBUG
                 contentDiv.innerHTML = '';
                 if (currentTab === 'tasks') renderTasksPage();
                 else if (currentTab === 'status') renderStatusPage();
                 else if (currentTab === 'focus') renderFocusPage();
                 else if (currentTab === 'projects') renderProjectsPage();
                 else if (currentTab === 'statistics') renderStatisticsPage();
-                else if (currentTab === 'activity') renderActivityPage();
-                else renderPlaceholderPage();
+                else if (currentTab === 'activity') {
+                    console.log("Calling renderActivityPage..."); // DEBUG
+                    renderActivityPage();
+                }
+                else {
+                    console.log("Falling back to placeholder for:", currentTab); // DEBUG
+                    renderPlaceholderPage();
+                }
             }
 
             // --- Focus & Pomodoro ---
@@ -2308,7 +2314,7 @@
             }
 
             // --- Init ---
-            console.log("System Version: 1.1 - Activity Page Verified");
+            console.log("System Version: 1.3 - Debugging Activity Page");
             render();
 
         </script>
