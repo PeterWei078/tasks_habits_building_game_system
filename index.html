@@ -696,177 +696,189 @@
                             <input type="number" id="modalGold" value="10" style="width: 80px;" placeholder="Gold">
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px;"
-                onclick="saveTaskFromModal()">Create Task</button>
-        </div>
-    </div>
-
-    <!-- Management Modal -->
-    <div id="managementModal" class="modal-backdrop">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Manage Lists</h2>
-                <button class="close-btn" onclick="closeManagementModal()">Close</button>
-            </div>
-            <div style="overflow-y: auto; padding: 10px;">
-                <!-- Groups Section -->
-                <h3 style="margin-bottom: 10px;">Groups</h3>
-                <ul id="manageGroupList" style="list-style: none; margin-bottom: 15px;"></ul>
-                <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-                    <input type="text" id="manageNewGroupInput" placeholder="New Group Name" style="flex: 1;">
-                    <button class="btn btn-primary" onclick="addGroup()">Add</button>
+                    <div class="form-group">
+                        <label>Time Spent (min)</label>
+                        <div class="form-group">
+                            <label>Time Spent (min)</label>
+                            <input type="number" id="modalTimeSpent" value="0" style="width: 80px;" placeholder="Min">
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Tags Section -->
-                <h3 style="margin-bottom: 10px;">Projects</h3>
-                <div id="manageTagList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;"></div>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="manageNewTagInput" placeholder="New Project Name" style="flex: 1;">
-                    <input type="color" id="manageNewTagColor" value="#6B46C1"
-                        style="width: 40px; height: 40px; border: none; background: none; cursor: pointer;">
-                    <button class="btn btn-primary" onclick="addTag()">Add</button>
-                </div>
+                <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px;"
+                    onclick="saveTaskFromModal()">Create Task</button>
             </div>
         </div>
-    </div>
 
-    <script>
-        // --- State Management ---
-        const defaultState = {
-            player: {
-                name: "Player",
-                level: 1,
-                exp: 0,
-                gold: 0,
-                attributes: {
-                    strength: 5,
-                    intelligence: 5,
-                    agility: 5,
-                    vitality: 5,
-                    charisma: 5,
-                    dexterity: 5,
-                    luck: 5,
-                    willpower: 5
+        <!-- Management Modal -->
+        <div id="managementModal" class="modal-backdrop">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Manage Lists</h2>
+                    <button class="close-btn" onclick="closeManagementModal()">Close</button>
+                </div>
+                <div style="overflow-y: auto; padding: 10px;">
+                    <!-- Groups Section -->
+                    <h3 style="margin-bottom: 10px;">Groups</h3>
+                    <ul id="manageGroupList" style="list-style: none; margin-bottom: 15px;"></ul>
+                    <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+                        <input type="text" id="manageNewGroupInput" placeholder="New Group Name" style="flex: 1;">
+                        <button class="btn btn-primary" onclick="addGroup()">Add</button>
+                    </div>
+
+                    <!-- Tags Section -->
+                    <h3 style="margin-bottom: 10px;">Projects</h3>
+                    <div id="manageTagList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="manageNewTagInput" placeholder="New Project Name" style="flex: 1;">
+                        <input type="color" id="manageNewTagColor" value="#6B46C1"
+                            style="width: 40px; height: 40px; border: none; background: none; cursor: pointer;">
+                        <button class="btn btn-primary" onclick="addTag()">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // --- State Management ---
+            const defaultState = {
+                player: {
+                    name: "Player",
+                    level: 1,
+                    exp: 0,
+                    gold: 0,
+                    attributes: {
+                        strength: 5,
+                        intelligence: 5,
+                        agility: 5,
+                        vitality: 5,
+                        charisma: 5,
+                        dexterity: 5,
+                        luck: 5,
+                        willpower: 5
+                    },
+                    // Groups & Tags
+                    groups: [
+                        { id: 'default', name: '預設 (Default)' },
+                        { id: 'work', name: '工作 (Work)' },
+                        { id: 'learning', name: '學習 (Learning)' },
+                        { id: 'health', name: '健康 (Health)' }
+                    ],
+                    tags: [
+                        { id: 'daily', name: '日常 (Daily)', color: '#4299E1' },
+                        { id: 'urgent', name: '緊急 (Urgent)', color: '#F56565' },
+                        { id: 'longterm', name: '長期 (Long-term)', color: '#48BB78' }
+                    ],
+                    totalFocusTime: 0,
+                    activities: [] // Activity Log
                 },
-                // Groups & Tags
-                groups: [
-                    { id: 'default', name: '預設 (Default)' },
-                    { id: 'work', name: '工作 (Work)' },
-                    { id: 'learning', name: '學習 (Learning)' },
-                    { id: 'health', name: '健康 (Health)' }
-                ],
-                tags: [
-                    { id: 'daily', name: '日常 (Daily)', color: '#4299E1' },
-                    { id: 'urgent', name: '緊急 (Urgent)', color: '#F56565' },
-                    { id: 'longterm', name: '長期 (Long-term)', color: '#48BB78' }
-                ],
-                totalFocusTime: 0
-            },
-            tasks: [
-                { id: 1, title: "晨跑 3 公里 (Morning Run)", attribute: "agility", completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
-                { id: 2, title: "閱讀 30 分鐘 (Read Book)", attribute: "intelligence", completed: false, rewardExp: 15, rewardGold: 5, groupId: 'learning', tags: ['longterm'] }
-            ]
-        };
+                tasks: [
+                    { id: 1, title: "晨跑 3 公里 (Morning Run)", attribute: "agility", completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
+                    { id: 2, title: "閱讀 30 分鐘 (Read Book)", attribute: "intelligence", completed: false, rewardExp: 15, rewardGold: 5, groupId: 'learning', tags: ['longterm'] }
+                ]
+            };
 
-        let state = JSON.parse(localStorage.getItem('sl_data')) || defaultState;
+            let state = JSON.parse(localStorage.getItem('sl_data')) || defaultState;
 
-        // --- Data Migration / Safety Check ---
-        // Ensure groups and tags exist if loading from old local storage
-        if (!state.player.groups) {
-            state.player.groups = defaultState.player.groups;
-        }
-        if (!state.player.tags) {
-            state.player.tags = defaultState.player.tags;
-        }
-        if (typeof state.player.totalFocusTime === 'undefined') {
-            state.player.totalFocusTime = 0;
-        }
-        // Ensure attributes exist
-        if (!state.player.attributes.dexterity) state.player.attributes.dexterity = 5;
-        if (!state.player.attributes.luck) state.player.attributes.luck = 5;
-        if (!state.player.attributes.willpower) state.player.attributes.willpower = 5;
-
-        saveState(); // Save the patched state immediately
-
-        function saveState() {
-            try {
-                localStorage.setItem('sl_data', JSON.stringify(state));
-                return true;
-            } catch (e) {
-                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-                    alert("⚠️ Storage Limit Reached!\n\nYour browser's storage is full. Please delete some projects, tasks, or images to save new changes.");
-                    console.error("Storage limit reached:", e);
-                } else {
-                    console.error("Error saving state:", e);
-                    alert("Error saving data. Please check console.");
-                }
-                return false;
+            // --- Data Migration / Safety Check ---
+            // Ensure groups and tags exist if loading from old local storage
+            if (!state.player.groups) {
+                state.player.groups = defaultState.player.groups;
             }
-        }
+            if (!state.player.tags) {
+                state.player.tags = defaultState.player.tags;
+            }
+            if (typeof state.player.totalFocusTime === 'undefined') {
+                state.player.totalFocusTime = 0;
+            }
+            if (!state.player.activities) {
+                state.player.activities = [];
+            }
+            // Ensure attributes exist
+            if (!state.player.attributes.dexterity) state.player.attributes.dexterity = 5;
+            if (!state.player.attributes.luck) state.player.attributes.luck = 5;
+            if (!state.player.attributes.willpower) state.player.attributes.willpower = 5;
 
-        // --- Attributes Config ---
-        const attributesConfig = {
-            strength: { label: "力量 (STR)", color: "rgba(255, 99, 132, 0.7)", border: "rgb(255, 99, 132)", badgeClass: "badge-str" },
-            intelligence: { label: "智力 (INT)", color: "rgba(54, 162, 235, 0.7)", border: "rgb(54, 162, 235)", badgeClass: "badge-int" },
-            agility: { label: "敏捷 (AGI)", color: "rgba(255, 206, 86, 0.7)", border: "rgb(255, 206, 86)", badgeClass: "badge-agi" },
-            vitality: { label: "體力 (VIT)", color: "rgba(75, 192, 192, 0.7)", border: "rgb(75, 192, 192)", badgeClass: "badge-vit" },
-            charisma: { label: "魅力 (CHA)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(255, 159, 64)", badgeClass: "badge-cha" },
-            dexterity: { label: "靈巧 (DEX)", color: "rgba(153, 102, 255, 0.7)", border: "rgb(153, 102, 255)", badgeClass: "badge-dex" },
-            luck: { label: "幸運 (LUK)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(205, 139, 44)", badgeClass: "badge-luk" },
-            willpower: { label: "意志 (WIL)", color: "rgba(201, 203, 207, 0.7)", border: "rgb(201, 203, 207)", badgeClass: "badge-wil" }
-        };
+            saveState(); // Save the patched state immediately
 
-        // --- UI Rendering ---
-        const contentDiv = document.getElementById('app-content');
-        const toastDiv = document.getElementById('toast');
-        let currentTab = 'tasks';
-        let statsChart = null;
+            function saveState() {
+                try {
+                    localStorage.setItem('sl_data', JSON.stringify(state));
+                    return true;
+                } catch (e) {
+                    if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                        alert("⚠️ Storage Limit Reached!\n\nYour browser's storage is full. Please delete some projects, tasks, or images to save new changes.");
+                        console.error("Storage limit reached:", e);
+                    } else {
+                        console.error("Error saving state:", e);
+                        alert("Error saving data. Please check console.");
+                    }
+                    return false;
+                }
+            }
 
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            // --- Attributes Config ---
+            const attributesConfig = {
+                strength: { label: "力量 (STR)", color: "rgba(255, 99, 132, 0.7)", border: "rgb(255, 99, 132)", badgeClass: "badge-str" },
+                intelligence: { label: "智力 (INT)", color: "rgba(54, 162, 235, 0.7)", border: "rgb(54, 162, 235)", badgeClass: "badge-int" },
+                agility: { label: "敏捷 (AGI)", color: "rgba(255, 206, 86, 0.7)", border: "rgb(255, 206, 86)", badgeClass: "badge-agi" },
+                vitality: { label: "體力 (VIT)", color: "rgba(75, 192, 192, 0.7)", border: "rgb(75, 192, 192)", badgeClass: "badge-vit" },
+                charisma: { label: "魅力 (CHA)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(255, 159, 64)", badgeClass: "badge-cha" },
+                dexterity: { label: "靈巧 (DEX)", color: "rgba(153, 102, 255, 0.7)", border: "rgb(153, 102, 255)", badgeClass: "badge-dex" },
+                luck: { label: "幸運 (LUK)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(205, 139, 44)", badgeClass: "badge-luk" },
+                willpower: { label: "意志 (WIL)", color: "rgba(201, 203, 207, 0.7)", border: "rgb(201, 203, 207)", badgeClass: "badge-wil" }
+            };
 
-            const activeNav = document.getElementById(`nav-${tab}`);
-            if (activeNav) activeNav.classList.add('active');
+            // --- UI Rendering ---
+            const contentDiv = document.getElementById('app-content');
+            const toastDiv = document.getElementById('toast');
+            let currentTab = 'tasks';
+            let statsChart = null;
 
-            render();
-        }
+            function switchTab(tab) {
+                currentTab = tab;
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
 
-        function render() {
-            contentDiv.innerHTML = '';
-            if (currentTab === 'tasks') renderTasksPage();
-            else if (currentTab === 'status') renderStatusPage();
-            else if (currentTab === 'focus') renderFocusPage();
-            else if (currentTab === 'projects') renderProjectsPage();
-            else if (currentTab === 'statistics') renderStatisticsPage();
-            else renderPlaceholderPage();
-        }
+                const activeNav = document.getElementById(`nav-${tab}`);
+                if (activeNav) activeNav.classList.add('active');
 
-        // --- Focus & Pomodoro ---
-        let timerInterval;
-        let timeLeft = 25 * 60;
-        let isTimerRunning = false;
-        let timerMode = 'pomodoro'; // pomodoro, short, long
-        let selectedFocusTaskId = null;
+                render();
+            }
 
-        function renderFocusPage() {
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = '專注 (Focus)';
+            function render() {
+                contentDiv.innerHTML = '';
+                if (currentTab === 'tasks') renderTasksPage();
+                else if (currentTab === 'status') renderStatusPage();
+                else if (currentTab === 'focus') renderFocusPage();
+                else if (currentTab === 'projects') renderProjectsPage();
+                else if (currentTab === 'statistics') renderStatisticsPage();
+                else if (currentTab === 'activity') renderActivityPage();
+                else renderPlaceholderPage();
+            }
 
-            // Task Selector
-            const taskSelector = document.createElement('div');
-            taskSelector.className = 'glass glass-card';
-            taskSelector.style.padding = '20px';
-            taskSelector.style.marginBottom = '20px';
+            // --- Focus & Pomodoro ---
+            let timerInterval;
+            let timeLeft = 25 * 60;
+            let isTimerRunning = false;
+            let timerMode = 'pomodoro'; // pomodoro, short, long
+            let selectedFocusTaskId = null;
 
-            // Filter incomplete tasks
-            const incompleteTasks = state.tasks.filter(t => !t.completed);
+            function renderFocusPage() {
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = '專注 (Focus)';
 
-            taskSelector.innerHTML = `
+                // Task Selector
+                const taskSelector = document.createElement('div');
+                taskSelector.className = 'glass glass-card';
+                taskSelector.style.padding = '20px';
+                taskSelector.style.marginBottom = '20px';
+
+                // Filter incomplete tasks
+                const incompleteTasks = state.tasks.filter(t => !t.completed);
+
+                taskSelector.innerHTML = `
                 <h3 style="margin-bottom: 10px;">Select Task to Focus On</h3>
                 <select id="focusTaskSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: inherit;" onchange="selectedFocusTaskId = this.value === 'general' ? null : this.value">
                     <option value="general" ${selectedFocusTaskId === null ? 'selected' : ''}>🎯 General Focus (No specific task)</option>
@@ -874,12 +886,12 @@
                 </select>
             `;
 
-            // Timer Display
-            const timerCard = document.createElement('div');
-            timerCard.className = 'glass glass-card';
-            timerCard.style.textAlign = 'center';
-            timerCard.style.padding = '40px';
-            timerCard.innerHTML = `
+                // Timer Display
+                const timerCard = document.createElement('div');
+                timerCard.className = 'glass glass-card';
+                timerCard.style.textAlign = 'center';
+                timerCard.style.padding = '40px';
+                timerCard.innerHTML = `
                 <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;">
                     <button class="btn ${timerMode === 'pomodoro' ? 'btn-primary' : ''}" onclick="setTimerMode('pomodoro')">🍅 Pomodoro (25m)</button>
                     <button class="btn ${timerMode === 'short' ? 'btn-primary' : ''}" onclick="setTimerMode('short')">☕ Short Break (5m)</button>
@@ -903,124 +915,124 @@
                 </div>
             `;
 
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(taskSelector);
-            contentDiv.appendChild(timerCard);
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(taskSelector);
+                contentDiv.appendChild(timerCard);
 
-            updateTimerProgress();
-        }
+                updateTimerProgress();
+            }
 
-        function setTimerMode(mode) {
-            timerMode = mode;
-            pauseTimer();
-            if (mode === 'pomodoro') timeLeft = 25 * 60;
-            else if (mode === 'short') timeLeft = 5 * 60;
-            else if (mode === 'long') timeLeft = 15 * 60;
-            render();
-        }
+            function setTimerMode(mode) {
+                timerMode = mode;
+                pauseTimer();
+                if (mode === 'pomodoro') timeLeft = 25 * 60;
+                else if (mode === 'short') timeLeft = 5 * 60;
+                else if (mode === 'long') timeLeft = 15 * 60;
+                render();
+            }
 
-        function toggleTimer() {
-            if (isTimerRunning) pauseTimer();
-            else startTimer();
-            render();
-        }
+            function toggleTimer() {
+                if (isTimerRunning) pauseTimer();
+                else startTimer();
+                render();
+            }
 
-        function startTimer() {
-            if (isTimerRunning) return;
-            isTimerRunning = true;
-            timerInterval = setInterval(() => {
-                if (timeLeft > 0) {
-                    timeLeft--;
+            function startTimer() {
+                if (isTimerRunning) return;
+                isTimerRunning = true;
+                timerInterval = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
 
-                    // Track time if focusing (not break)
-                    if (timerMode === 'pomodoro') {
-                        // Add to global total
-                        state.player.totalFocusTime = (state.player.totalFocusTime || 0) + 1;
+                        // Track time if focusing (not break)
+                        if (timerMode === 'pomodoro') {
+                            // Add to global total
+                            state.player.totalFocusTime = (state.player.totalFocusTime || 0) + 1;
 
-                        // Add to specific task if selected
-                        if (selectedFocusTaskId) {
-                            const task = state.tasks.find(t => t.id == selectedFocusTaskId);
-                            if (task) {
-                                task.timeSpent = (task.timeSpent || 0) + 1;
+                            // Add to specific task if selected
+                            if (selectedFocusTaskId) {
+                                const task = state.tasks.find(t => t.id == selectedFocusTaskId);
+                                if (task) {
+                                    task.timeSpent = (task.timeSpent || 0) + 1;
+                                }
                             }
+
+                            // Save every 10 seconds to avoid too many writes, or strictly on pause
+                            if (timeLeft % 10 === 0) saveState();
                         }
 
-                        // Save every 10 seconds to avoid too many writes, or strictly on pause
-                        if (timeLeft % 10 === 0) saveState();
+                        updateTimerUI(); // Efficient update
+                    } else {
+                        pauseTimer();
+                        alert("Time's up!");
+                        if (timerMode === 'pomodoro') {
+                            showToast("Focus Complete!", "Great job! Take a break.");
+                            state.player.gold += 10;
+                            state.player.exp += 20;
+                            checkLevelUp();
+                            saveState();
+                        }
                     }
+                }, 1000);
+            }
 
-                    updateTimerUI(); // Efficient update
-                } else {
-                    pauseTimer();
-                    alert("Time's up!");
-                    if (timerMode === 'pomodoro') {
-                        showToast("Focus Complete!", "Great job! Take a break.");
-                        state.player.gold += 10;
-                        state.player.exp += 20;
-                        checkLevelUp();
-                        saveState();
-                    }
-                }
-            }, 1000);
-        }
+            function pauseTimer() {
+                isTimerRunning = false;
+                clearInterval(timerInterval);
+                saveState();
+            }
 
-        function pauseTimer() {
-            isTimerRunning = false;
-            clearInterval(timerInterval);
-            saveState();
-        }
+            function resetTimer() {
+                pauseTimer();
+                setTimerMode(timerMode);
+            }
 
-        function resetTimer() {
-            pauseTimer();
-            setTimerMode(timerMode);
-        }
+            function formatTime(seconds) {
+                const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const s = (seconds % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            }
 
-        function formatTime(seconds) {
-            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const s = (seconds % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
-        }
+            function updateTimerUI() {
+                // Update Text
+                const timeDisplay = document.getElementById('timer-text');
+                if (timeDisplay) timeDisplay.textContent = formatTime(timeLeft);
 
-        function updateTimerUI() {
-            // Update Text
-            const timeDisplay = document.getElementById('timer-text');
-            if (timeDisplay) timeDisplay.textContent = formatTime(timeLeft);
+                // Update Circle
+                updateTimerProgress();
+            }
 
-            // Update Circle
-            updateTimerProgress();
-        }
+            function updateTimerProgress() {
+                const circle = document.getElementById('timer-progress');
+                if (!circle) return;
 
-        function updateTimerProgress() {
-            const circle = document.getElementById('timer-progress');
-            if (!circle) return;
+                let totalTime;
+                if (timerMode === 'pomodoro') totalTime = 25 * 60;
+                else if (timerMode === 'short') totalTime = 5 * 60;
+                else totalTime = 15 * 60;
 
-            let totalTime;
-            if (timerMode === 'pomodoro') totalTime = 25 * 60;
-            else if (timerMode === 'short') totalTime = 5 * 60;
-            else totalTime = 15 * 60;
+                const percentage = timeLeft / totalTime;
+                const circumference = 2 * Math.PI * 110; // r=110
+                const offset = circumference * (1 - percentage);
 
-            const percentage = timeLeft / totalTime;
-            const circumference = 2 * Math.PI * 110; // r=110
-            const offset = circumference * (1 - percentage);
+                circle.style.strokeDashoffset = offset;
+            }
 
-            circle.style.strokeDashoffset = offset;
-        }
+            // --- Statistics Page ---
+            function renderStatisticsPage() {
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = '統計 (Statistics)';
 
-        // --- Statistics Page ---
-        function renderStatisticsPage() {
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = '統計 (Statistics)';
-
-            // Global Stats
-            const totalHours = ((state.player.totalFocusTime || 0) / 3600).toFixed(1);
-            const globalStats = document.createElement('div');
-            globalStats.className = 'glass glass-card';
-            globalStats.style.padding = '20px';
-            globalStats.style.marginBottom = '20px';
-            globalStats.style.display = 'flex';
-            globalStats.style.justifyContent = 'space-around';
-            globalStats.innerHTML = `
+                // Global Stats
+                const totalHours = ((state.player.totalFocusTime || 0) / 3600).toFixed(1);
+                const globalStats = document.createElement('div');
+                globalStats.className = 'glass glass-card';
+                globalStats.style.padding = '20px';
+                globalStats.style.marginBottom = '20px';
+                globalStats.style.display = 'flex';
+                globalStats.style.justifyContent = 'space-around';
+                globalStats.innerHTML = `
                 <div style="text-align: center;">
                     <div style="font-size: 2rem; font-weight: bold;">${totalHours}h</div>
                     <div style="opacity: 0.7;">Total Focus Time</div>
@@ -1031,33 +1043,33 @@
                 </div>
             `;
 
-            // Project Stats (By Tag)
-            const projectStats = document.createElement('div');
-            projectStats.className = 'glass glass-card';
-            projectStats.style.padding = '20px';
-            projectStats.style.marginBottom = '20px';
+                // Project Stats (By Tag)
+                const projectStats = document.createElement('div');
+                projectStats.className = 'glass glass-card';
+                projectStats.style.padding = '20px';
+                projectStats.style.marginBottom = '20px';
 
-            // Aggregate time by tag (Project)
-            const projectTimes = {};
-            state.tasks.forEach(t => {
-                if (t.timeSpent > 0 && t.tags) {
-                    t.tags.forEach(tagId => {
-                        const tag = state.player.tags.find(tag => tag.id === tagId);
-                        if (tag) {
-                            projectTimes[tag.name] = (projectTimes[tag.name] || 0) + t.timeSpent;
-                        }
-                    });
-                }
-            });
+                // Aggregate time by tag (Project)
+                const projectTimes = {};
+                state.tasks.forEach(t => {
+                    if (t.timeSpent > 0 && t.tags) {
+                        t.tags.forEach(tagId => {
+                            const tag = state.player.tags.find(tag => tag.id === tagId);
+                            if (tag) {
+                                projectTimes[tag.name] = (projectTimes[tag.name] || 0) + t.timeSpent;
+                            }
+                        });
+                    }
+                });
 
-            // Calculate max for bar scaling
-            const maxTime = Math.max(...Object.values(projectTimes), 1);
+                // Calculate max for bar scaling
+                const maxTime = Math.max(...Object.values(projectTimes), 1);
 
-            let projectBars = Object.keys(projectTimes).map(name => {
-                const seconds = projectTimes[name];
-                const minutes = Math.round(seconds / 60);
-                const percent = (seconds / maxTime) * 100;
-                return `
+                let projectBars = Object.keys(projectTimes).map(name => {
+                    const seconds = projectTimes[name];
+                    const minutes = Math.round(seconds / 60);
+                    const percent = (seconds / maxTime) * 100;
+                    return `
                     <div style="margin-bottom: 10px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                             <span>${name}</span>
@@ -1068,110 +1080,110 @@
                         </div>
                     </div>
                 `;
-            }).join('');
+                }).join('');
 
-            if (!projectBars) projectBars = '<div style="text-align:center; opacity:0.6;">No focus time recorded for projects yet.</div>';
+                if (!projectBars) projectBars = '<div style="text-align:center; opacity:0.6;">No focus time recorded for projects yet.</div>';
 
-            projectStats.innerHTML = `
+                projectStats.innerHTML = `
                 <h3>Project Focus Time</h3>
                 <div style="margin-top: 15px;">${projectBars}</div>
             `;
 
-            // Task Stats (List)
-            const taskStats = document.createElement('div');
-            taskStats.className = 'glass glass-card';
-            taskStats.style.padding = '20px';
+                // Task Stats (List)
+                const taskStats = document.createElement('div');
+                taskStats.className = 'glass glass-card';
+                taskStats.style.padding = '20px';
 
-            const tasksWithTime = state.tasks.filter(t => t.timeSpent > 0).sort((a, b) => b.timeSpent - a.timeSpent);
+                const tasksWithTime = state.tasks.filter(t => t.timeSpent > 0).sort((a, b) => b.timeSpent - a.timeSpent);
 
-            let taskListHtml = tasksWithTime.map(t => `
+                let taskListHtml = tasksWithTime.map(t => `
                 <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                     <span>${t.title}</span>
                     <span>${Math.round(t.timeSpent / 60)} min</span>
                 </div>
             `).join('');
 
-            if (!taskListHtml) taskListHtml = '<div style="text-align:center; opacity:0.6;">No focus time recorded for tasks yet.</div>';
+                if (!taskListHtml) taskListHtml = '<div style="text-align:center; opacity:0.6;">No focus time recorded for tasks yet.</div>';
 
-            taskStats.innerHTML = `
+                taskStats.innerHTML = `
                 <h3>Task Focus Time</h3>
                 <div style="margin-top: 15px;">${taskListHtml}</div>
             `;
 
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(globalStats);
-            contentDiv.appendChild(projectStats);
-            contentDiv.appendChild(taskStats);
-        }
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(globalStats);
+                contentDiv.appendChild(projectStats);
+                contentDiv.appendChild(taskStats);
+            }
 
 
-        // --- Projects Page ---
-        function renderProjectsPage() {
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = '專案 (Projects)';
+            // --- Projects Page ---
+            function renderProjectsPage() {
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = '專案 (Projects)';
 
-            const actionCard = document.createElement('div');
-            actionCard.className = 'glass glass-card';
-            actionCard.innerHTML = `
+                const actionCard = document.createElement('div');
+                actionCard.className = 'glass glass-card';
+                actionCard.innerHTML = `
                 <button class="btn btn-primary" onclick="openProjectModal()">+ New Project</button>
             `;
 
-            const projectsContainer = document.createElement('div');
+                const projectsContainer = document.createElement('div');
 
-            // Group projects by Group ID
-            // Default Group
-            const defaultGroupProjects = state.player.tags.filter(t => !t.groupId || t.groupId === 'default');
-            if (defaultGroupProjects.length > 0) {
-                projectsContainer.innerHTML += `<h3>Uncategorized / Default</h3>`;
-                projectsContainer.appendChild(createProjectGrid(defaultGroupProjects));
-            }
-
-            // Other Groups
-            state.player.groups.forEach(group => {
-                if (group.id === 'default') return;
-                const groupProjects = state.player.tags.filter(t => t.groupId === group.id);
-                if (groupProjects.length > 0) {
-                    projectsContainer.innerHTML += `<h3 style="margin-top: 20px;">${group.name}</h3>`;
-                    projectsContainer.appendChild(createProjectGrid(groupProjects));
+                // Group projects by Group ID
+                // Default Group
+                const defaultGroupProjects = state.player.tags.filter(t => !t.groupId || t.groupId === 'default');
+                if (defaultGroupProjects.length > 0) {
+                    projectsContainer.innerHTML += `<h3>Uncategorized / Default</h3>`;
+                    projectsContainer.appendChild(createProjectGrid(defaultGroupProjects));
                 }
-            });
 
-            // If no projects at all (except maybe default empty ones)
-            if (state.player.tags.length === 0) {
-                projectsContainer.innerHTML = '<div style="text-align:center; opacity:0.6; margin-top: 20px;">No projects created yet.</div>';
+                // Other Groups
+                state.player.groups.forEach(group => {
+                    if (group.id === 'default') return;
+                    const groupProjects = state.player.tags.filter(t => t.groupId === group.id);
+                    if (groupProjects.length > 0) {
+                        projectsContainer.innerHTML += `<h3 style="margin-top: 20px;">${group.name}</h3>`;
+                        projectsContainer.appendChild(createProjectGrid(groupProjects));
+                    }
+                });
+
+                // If no projects at all (except maybe default empty ones)
+                if (state.player.tags.length === 0) {
+                    projectsContainer.innerHTML = '<div style="text-align:center; opacity:0.6; margin-top: 20px;">No projects created yet.</div>';
+                }
+
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(actionCard);
+                contentDiv.appendChild(projectsContainer);
             }
 
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(actionCard);
-            contentDiv.appendChild(projectsContainer);
-        }
+            function createProjectGrid(projects) {
+                const grid = document.createElement('div');
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+                grid.style.gap = '20px';
+                grid.style.marginTop = '10px';
 
-        function createProjectGrid(projects) {
-            const grid = document.createElement('div');
-            grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
-            grid.style.gap = '20px';
-            grid.style.marginTop = '10px';
+                projects.forEach(project => {
+                    const card = document.createElement('div');
+                    card.className = 'glass glass-card';
+                    card.style.cursor = 'pointer';
+                    card.onclick = () => openProjectModal(project.id);
 
-            projects.forEach(project => {
-                const card = document.createElement('div');
-                card.className = 'glass glass-card';
-                card.style.cursor = 'pointer';
-                card.onclick = () => openProjectModal(project.id);
+                    // Calculate progress
+                    const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(project.id));
+                    const completed = projectTasks.filter(t => t.completed).length;
+                    const total = projectTasks.length;
+                    const progress = total > 0 ? (completed / total) * 100 : 0;
 
-                // Calculate progress
-                const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(project.id));
-                const completed = projectTasks.filter(t => t.completed).length;
-                const total = projectTasks.length;
-                const progress = total > 0 ? (completed / total) * 100 : 0;
+                    // Cover Image (First photo or default pattern)
+                    const coverStyle = project.photos && project.photos.length > 0
+                        ? `background-image: url('${project.photos[0]}'); background-size: cover; background-position: center;`
+                        : `background: linear-gradient(135deg, ${project.color}aa, ${project.color}55);`;
 
-                // Cover Image (First photo or default pattern)
-                const coverStyle = project.photos && project.photos.length > 0
-                    ? `background-image: url('${project.photos[0]}'); background-size: cover; background-position: center;`
-                    : `background: linear-gradient(135deg, ${project.color}aa, ${project.color}55);`;
-
-                card.innerHTML = `
+                    card.innerHTML = `
                     <div style="height: 120px; border-radius: 12px; margin-bottom: 10px; ${coverStyle}"></div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                         <h3 style="margin: 0;">${project.name}</h3>
@@ -1182,27 +1194,27 @@
                         <div style="width: ${progress}%; height: 100%; background: ${project.color};"></div>
                     </div>
                 `;
-                grid.appendChild(card);
-            });
-            return grid;
-        }
+                    grid.appendChild(card);
+                });
+                return grid;
+            }
 
-        // --- Project Modal ---
-        let editingProjectId = null;
+            // --- Project Modal ---
+            let editingProjectId = null;
 
-        function openProjectModal(projectId = null) {
-            try {
-                editingProjectId = projectId;
-                const project = projectId ? state.player.tags.find(t => t.id === projectId) : null;
+            function openProjectModal(projectId = null) {
+                try {
+                    editingProjectId = projectId;
+                    const project = projectId ? state.player.tags.find(t => t.id === projectId) : null;
 
-                // Create Modal HTML if not exists (reusing a generic structure or creating new)
-                // For simplicity, we'll inject a specific modal for projects
-                let modal = document.getElementById('projectModal');
-                if (!modal) {
-                    modal = document.createElement('div');
-                    modal.id = 'projectModal';
-                    modal.className = 'modal-backdrop';
-                    modal.innerHTML = `
+                    // Create Modal HTML if not exists (reusing a generic structure or creating new)
+                    // For simplicity, we'll inject a specific modal for projects
+                    let modal = document.getElementById('projectModal');
+                    if (!modal) {
+                        modal = document.createElement('div');
+                        modal.id = 'projectModal';
+                        modal.className = 'modal-backdrop';
+                        modal.innerHTML = `
                         <div class="modal-content" style="max-width: 600px;">
                             <div class="modal-header">
                                 <h2 id="projectModalTitle">New Project</h2>
@@ -1261,263 +1273,268 @@
                             </div>
                         </div>
                     `;
-                    document.body.appendChild(modal);
+                        document.body.appendChild(modal);
+                    }
+
+                    // Populate Fields
+                    const titleEl = document.getElementById('projectModalTitle');
+                    const groupSelect = document.getElementById('projGroup');
+                    groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
+                    const btnDelete = document.getElementById('btnDeleteProject');
+
+                    // Clear or Set Values
+                    if (project) {
+                        titleEl.textContent = 'Edit Project';
+                        document.getElementById('projName').value = project.name;
+                        document.getElementById('projGroup').value = project.groupId || 'default';
+                        document.getElementById('projColor').value = project.color || '#6B46C1';
+                        document.getElementById('projStart').value = project.startDate || '';
+                        document.getElementById('projEnd').value = project.endDate || '';
+                        document.getElementById('projDesc').value = project.description || '';
+                        btnDelete.style.display = 'block';
+
+                        renderProjectPhotos(project.photos || []);
+                        renderProjectTasks(project.id);
+                    } else {
+                        titleEl.textContent = 'New Project';
+                        document.getElementById('projName').value = '';
+                        document.getElementById('projGroup').value = 'default';
+                        document.getElementById('projColor').value = '#6B46C1';
+                        document.getElementById('projStart').value = '';
+                        document.getElementById('projEnd').value = '';
+                        document.getElementById('projDesc').value = '';
+                        btnDelete.style.display = 'none';
+
+                        renderProjectPhotos([]);
+                        document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save project first to add tasks.</div>';
+                    }
+
+                    modal.classList.add('show');
+                } catch (e) {
+                    console.error("Error opening project modal:", e);
+                    alert("Error opening project. Check console for details.");
                 }
-
-                // Populate Fields
-                const titleEl = document.getElementById('projectModalTitle');
-                const groupSelect = document.getElementById('projGroup');
-                groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
-
-                const btnDelete = document.getElementById('btnDeleteProject');
-
-                // Clear or Set Values
-                if (project) {
-                    titleEl.textContent = 'Edit Project';
-                    document.getElementById('projName').value = project.name;
-                    document.getElementById('projGroup').value = project.groupId || 'default';
-                    document.getElementById('projColor').value = project.color || '#6B46C1';
-                    document.getElementById('projStart').value = project.startDate || '';
-                    document.getElementById('projEnd').value = project.endDate || '';
-                    document.getElementById('projDesc').value = project.description || '';
-                    btnDelete.style.display = 'block';
-
-                    renderProjectPhotos(project.photos || []);
-                    renderProjectTasks(project.id);
-                } else {
-                    titleEl.textContent = 'New Project';
-                    document.getElementById('projName').value = '';
-                    document.getElementById('projGroup').value = 'default';
-                    document.getElementById('projColor').value = '#6B46C1';
-                    document.getElementById('projStart').value = '';
-                    document.getElementById('projEnd').value = '';
-                    document.getElementById('projDesc').value = '';
-                    btnDelete.style.display = 'none';
-
-                    renderProjectPhotos([]);
-                    document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save project first to add tasks.</div>';
-                }
-
-                modal.classList.add('show');
-            } catch (e) {
-                console.error("Error opening project modal:", e);
-                alert("Error opening project. Check console for details.");
             }
-        }
 
-        function renderProjectPhotos(photos) {
-            const container = document.getElementById('projPhotosContainer');
-            if (photos && photos.length > 0) {
-                const url = photos[0];
-                container.innerHTML = `
+            function renderProjectPhotos(photos) {
+                const container = document.getElementById('projPhotosContainer');
+                if (photos && photos.length > 0) {
+                    const url = photos[0];
+                    container.innerHTML = `
                     <div style="position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1);">
                         <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">
                         <button onclick="removeProjectPhoto(0)" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
                     </div>
                 `;
-            } else {
-                container.innerHTML = `
+                } else {
+                    container.innerHTML = `
                     <div style="width: 100%; height: 100px; border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5);">
                         No cover photo selected
                     </div>
                 `;
-            }
-            // Store current photos in a temp way for saving
-            container.dataset.photos = JSON.stringify(photos);
-        }
-
-        function addProjectPhoto() {
-            const input = document.getElementById('projPhotoInput');
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const url = e.target.result; // Base64
-                    const container = document.getElementById('projPhotosContainer');
-                    // Enforce Single Photo: Replace entire array
-                    const currentPhotos = [url];
-                    renderProjectPhotos(currentPhotos);
-                    input.value = ''; // Reset
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function removeProjectPhoto(index) {
-            const container = document.getElementById('projPhotosContainer');
-            const currentPhotos = JSON.parse(container.dataset.photos || '[]');
-            currentPhotos.splice(index, 1);
-            renderProjectPhotos(currentPhotos);
-        }
-
-        function renderProjectTasks(projectId) {
-            const container = document.getElementById('projTasksList');
-            const tasks = state.tasks.filter(t => t.tags && t.tags.includes(projectId));
-
-            if (tasks.length === 0) {
-                container.innerHTML = '<div style="opacity: 0.6; text-align: center;">No quests linked to this project.</div>';
-                return;
+                }
+                // Store current photos in a temp way for saving
+                container.dataset.photos = JSON.stringify(photos);
             }
 
-            container.innerHTML = tasks.map(t => `
+            function addProjectPhoto() {
+                const input = document.getElementById('projPhotoInput');
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const url = e.target.result; // Base64
+                        const container = document.getElementById('projPhotosContainer');
+                        // Enforce Single Photo: Replace entire array
+                        const currentPhotos = [url];
+                        renderProjectPhotos(currentPhotos);
+                        input.value = ''; // Reset
+                    };
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
+
+            function removeProjectPhoto(index) {
+                const container = document.getElementById('projPhotosContainer');
+                const currentPhotos = JSON.parse(container.dataset.photos || '[]');
+                currentPhotos.splice(index, 1);
+                renderProjectPhotos(currentPhotos);
+            }
+
+            function renderProjectTasks(projectId) {
+                const container = document.getElementById('projTasksList');
+                const tasks = state.tasks.filter(t => t.tags && t.tags.includes(projectId));
+
+                if (tasks.length === 0) {
+                    container.innerHTML = '<div style="opacity: 0.6; text-align: center;">No quests linked to this project.</div>';
+                    return;
+                }
+
+                container.innerHTML = tasks.map(t => `
                 <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 5px;">
                     <span style="${t.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
                     <span style="font-size: 0.8rem; opacity: 0.7;">${t.completed ? '✅ Done' : '⚔️ Active'}</span>
                 </div>
             `).join('');
-        }
+            }
 
-        function openTaskModalForProject() {
-            if (!editingProjectId) return alert("Please save the project first.");
-            // Open task modal over the project modal
-            openTaskModal(null, editingProjectId);
-        }
+            function openTaskModalForProject() {
+                if (!editingProjectId) return alert("Please save the project first.");
+                // Open task modal over the project modal
+                openTaskModal(null, editingProjectId);
+            }
 
-        function saveProject() {
-            const name = document.getElementById('projName').value.trim();
-            if (!name) return alert("Project name is required");
+            function saveProject() {
+                try {
+                    const name = document.getElementById('projName').value.trim();
+                    if (!name) return alert("Project name is required");
 
-            const groupId = document.getElementById('projGroup').value;
-            const color = document.getElementById('projColor').value;
-            const startDate = document.getElementById('projStart').value;
-            const endDate = document.getElementById('projEnd').value;
-            const description = document.getElementById('projDesc').value;
-            const photos = JSON.parse(document.getElementById('projPhotosContainer').dataset.photos || '[]');
+                    const groupId = document.getElementById('projGroup').value;
+                    const color = document.getElementById('projColor').value;
+                    const startDate = document.getElementById('projStart').value;
+                    const endDate = document.getElementById('projEnd').value;
+                    const description = document.getElementById('projDesc').value;
+                    const photos = JSON.parse(document.getElementById('projPhotosContainer').dataset.photos || '[]');
 
-            if (editingProjectId) {
-                // Update
-                const project = state.player.tags.find(t => t.id === editingProjectId);
-                if (project) {
-                    project.name = name;
-                    project.groupId = groupId;
-                    project.color = color;
-                    project.startDate = startDate;
-                    project.endDate = endDate;
-                    project.description = description;
-                    project.photos = photos;
+                    if (editingProjectId) {
+                        // Update
+                        const project = state.player.tags.find(t => t.id === editingProjectId);
+                        if (project) {
+                            project.name = name;
+                            project.groupId = groupId;
+                            project.color = color;
+                            project.startDate = startDate;
+                            project.endDate = endDate;
+                            project.description = description;
+                            project.photos = photos;
+                        }
+                    } else {
+                        // Create
+                        const newProject = {
+                            id: 'p_' + Date.now(),
+                            name,
+                            groupId,
+                            color,
+                            startDate,
+                            endDate,
+                            description,
+                            photos
+                        };
+                        state.player.tags.push(newProject);
+                        editingProjectId = newProject.id; // Set ID so we can add tasks now
+                    }
+
+                    if (saveState()) {
+                        renderProjectsPage(); // Refresh bg
+                        // If strictly saving and closing:
+                        document.getElementById('projectModal').classList.remove('show');
+                    } else {
+                        // Save failed (alert shown in saveState). Keep modal open.
+                    }
+                    // If we want to keep open to add tasks, we'd need to re-render modal content with new ID.
+                } catch (e) {
+                    console.error("Critical error saving project:", e);
+                    alert("Critical Error Saving Project:\n" + e.message);
                 }
-            } else {
-                // Create
-                const newProject = {
-                    id: 'p_' + Date.now(),
-                    name,
-                    groupId,
-                    color,
-                    startDate,
-                    endDate,
-                    description,
-                    photos
-                };
-                state.player.tags.push(newProject);
-                editingProjectId = newProject.id; // Set ID so we can add tasks now
             }
 
-            if (saveState()) {
-                renderProjectsPage(); // Refresh bg
-                // If strictly saving and closing:
-                document.getElementById('projectModal').classList.remove('show');
-            } else {
-                // Save failed (alert shown in saveState). Keep modal open.
-            }
-            // If we want to keep open to add tasks, we'd need to re-render modal content with new ID.
-        }
+            function deleteProject() {
+                if (!editingProjectId) return;
+                if (!confirm("Delete this project? Linked tasks will remain but lose this project tag.")) return;
 
-        function deleteProject() {
-            if (!editingProjectId) return;
-            if (!confirm("Delete this project? Linked tasks will remain but lose this project tag.")) return;
+                // Remove tag from tasks
+                state.tasks.forEach(t => {
+                    if (t.tags) {
+                        t.tags = t.tags.filter(id => id !== editingProjectId);
+                    }
+                });
 
-            // Remove tag from tasks
-            state.tasks.forEach(t => {
-                if (t.tags) {
-                    t.tags = t.tags.filter(id => id !== editingProjectId);
+                state.player.tags = state.player.tags.filter(t => t.id !== editingProjectId);
+                if (saveState()) {
+                    renderProjectsPage();
+                    document.getElementById('projectModal').classList.remove('show');
                 }
-            });
-
-            state.player.tags = state.player.tags.filter(t => t.id !== editingProjectId);
-            if (saveState()) {
-                renderProjectsPage();
-                document.getElementById('projectModal').classList.remove('show');
             }
-        }
 
 
-        function renderPlaceholderPage() {
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
+            function renderPlaceholderPage() {
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = currentTab.charAt(0).toUpperCase() + currentTab.slice(1);
 
-            const card = document.createElement('div');
-            card.className = 'glass glass-card';
-            card.style.textAlign = 'center';
-            card.style.padding = '50px';
-            card.innerHTML = `
+                const card = document.createElement('div');
+                card.className = 'glass glass-card';
+                card.style.textAlign = 'center';
+                card.style.padding = '50px';
+                card.innerHTML = `
                 <div style="font-size: 3rem; margin-bottom: 20px;">🚧</div>
                 <h3>Feature Coming Soon</h3>
                 <p style="opacity: 0.7; margin-top: 10px;">This feature is currently under development.</p>
             `;
 
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(card);
-        }
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(card);
+            }
 
-        // --- Task Page ---
-        // --- Filter State ---
-        let currentGroupId = 'default';
-        let currentTagFilter = null; // null means all tags
-        let editingTaskId = null;
+            // --- Task Page ---
+            // --- Filter State ---
+            let currentGroupId = 'default';
+            let currentTagFilter = null; // null means all tags
+            let editingTaskId = null;
 
-        function renderTasksPage() {
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = '專案任務 (Project Quests)';
+            function renderTasksPage() {
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = '專案任務 (Project Quests)';
 
-            // Group Filters (Tabs style)
-            const groupFilterContainer = document.createElement('div');
-            groupFilterContainer.className = 'filter-bar';
-            state.player.groups.forEach(group => {
-                const chip = document.createElement('div');
-                chip.className = `filter-chip ${currentGroupId === group.id ? 'active' : ''}`;
-                chip.textContent = group.name;
-                chip.onclick = () => {
-                    currentGroupId = group.id;
+                // Group Filters (Tabs style)
+                const groupFilterContainer = document.createElement('div');
+                groupFilterContainer.className = 'filter-bar';
+                state.player.groups.forEach(group => {
+                    const chip = document.createElement('div');
+                    chip.className = `filter-chip ${currentGroupId === group.id ? 'active' : ''}`;
+                    chip.textContent = group.name;
+                    chip.onclick = () => {
+                        currentGroupId = group.id;
+                        render();
+                    };
+                    groupFilterContainer.appendChild(chip);
+                });
+
+                // Tag Filters
+                const tagFilterContainer = document.createElement('div');
+                tagFilterContainer.className = 'filter-bar';
+
+                // "All" Tag Option
+                const allTagChip = document.createElement('div');
+                allTagChip.className = `filter-chip ${currentTagFilter === null ? 'active' : ''}`;
+                allTagChip.textContent = '# 全部 (All)';
+                allTagChip.onclick = () => {
+                    currentTagFilter = null;
                     render();
                 };
-                groupFilterContainer.appendChild(chip);
-            });
+                tagFilterContainer.appendChild(allTagChip);
 
-            // Tag Filters
-            const tagFilterContainer = document.createElement('div');
-            tagFilterContainer.className = 'filter-bar';
-
-            // "All" Tag Option
-            const allTagChip = document.createElement('div');
-            allTagChip.className = `filter-chip ${currentTagFilter === null ? 'active' : ''}`;
-            allTagChip.textContent = '# 全部 (All)';
-            allTagChip.onclick = () => {
-                currentTagFilter = null;
-                render();
-            };
-            tagFilterContainer.appendChild(allTagChip);
-
-            state.player.tags.forEach(tag => {
-                const chip = document.createElement('div');
-                chip.className = `filter-chip ${currentTagFilter === tag.id ? 'active' : ''}`;
-                chip.textContent = `# ${tag.name}`;
-                chip.style.borderColor = currentTagFilter === tag.id ? 'transparent' : tag.color; // Subtle hint
-                chip.onclick = () => {
-                    currentTagFilter = currentTagFilter === tag.id ? null : tag.id; // Toggle
-                    render();
-                };
-                tagFilterContainer.appendChild(chip);
-            });
+                state.player.tags.forEach(tag => {
+                    const chip = document.createElement('div');
+                    chip.className = `filter-chip ${currentTagFilter === tag.id ? 'active' : ''}`;
+                    chip.textContent = `# ${tag.name}`;
+                    chip.style.borderColor = currentTagFilter === tag.id ? 'transparent' : tag.color; // Subtle hint
+                    chip.onclick = () => {
+                        currentTagFilter = currentTagFilter === tag.id ? null : tag.id; // Toggle
+                        render();
+                    };
+                    tagFilterContainer.appendChild(chip);
+                });
 
 
-            // Add Task Button (Replaces inline form)
-            const actionCard = document.createElement('div');
-            actionCard.className = 'glass glass-card';
-            actionCard.style.display = 'flex';
-            actionCard.style.justifyContent = 'space-between';
-            actionCard.style.alignItems = 'center';
-            actionCard.innerHTML = `
+                // Add Task Button (Replaces inline form)
+                const actionCard = document.createElement('div');
+                actionCard.className = 'glass glass-card';
+                actionCard.style.display = 'flex';
+                actionCard.style.justifyContent = 'space-between';
+                actionCard.style.alignItems = 'center';
+                actionCard.innerHTML = `
                 <div>
                     <h3 style="margin: 0;">Create New Task</h3>
                     <p style="opacity: 0.6; font-size: 0.9rem;">Define your goals and rewards</p>
@@ -1528,51 +1545,51 @@
                 </div>
             `;
 
-            // Task List
-            const listCard = document.createElement('div');
-            listCard.className = 'glass glass-card';
-            listCard.innerHTML = `<h3>任務列表 (Quest List)</h3><div id="taskList" style="margin-top: 15px;"></div>`;
+                // Task List
+                const listCard = document.createElement('div');
+                listCard.className = 'glass glass-card';
+                listCard.innerHTML = `<h3>任務列表 (Quest List)</h3><div id="taskList" style="margin-top: 15px;"></div>`;
 
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(groupFilterContainer);
-            contentDiv.appendChild(tagFilterContainer);
-            contentDiv.appendChild(actionCard);
-            contentDiv.appendChild(listCard);
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(groupFilterContainer);
+                contentDiv.appendChild(tagFilterContainer);
+                contentDiv.appendChild(actionCard);
+                contentDiv.appendChild(listCard);
 
-            const listContainer = document.getElementById('taskList');
+                const listContainer = document.getElementById('taskList');
 
-            // Filter Logic
-            const filteredTasks = state.tasks.filter(t => {
-                const groupMatch = t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'; // Backward compat
-                const tagMatch = currentTagFilter ? (t.tags && t.tags.includes(currentTagFilter)) : true;
-                return groupMatch && tagMatch;
-            });
+                // Filter Logic
+                const filteredTasks = state.tasks.filter(t => {
+                    const groupMatch = t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'; // Backward compat
+                    const tagMatch = currentTagFilter ? (t.tags && t.tags.includes(currentTagFilter)) : true;
+                    return groupMatch && tagMatch;
+                });
 
-            if (filteredTasks.length === 0) {
-                listContainer.innerHTML = `<div style="text-align:center; opacity:0.6; padding: 20px;">此分組或標籤下暫無任務。</div>`;
-                return;
-            }
-
-            filteredTasks.forEach(task => {
-                const item = document.createElement('div');
-                item.className = 'task-item';
-                const attrConfig = attributesConfig[task.attribute];
-
-                // Render Tags
-                const tagsHtml = task.tags ? task.tags.map(tagId => {
-                    const tagInfo = state.player.tags.find(t => t.id === tagId);
-                    return tagInfo ? `<span style="font-size: 0.75rem; color: ${tagInfo.color}; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; margin-right: 5px;">#${tagInfo.name.split(' ')[0]}</span>` : '';
-                }).join('') : '';
-
-                // Subtasks Progress
-                let subtaskHtml = '';
-                if (task.subtasks && task.subtasks.length > 0) {
-                    const completed = task.subtasks.filter(st => st.completed).length;
-                    const total = task.subtasks.length;
-                    subtaskHtml = `<div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">Subtasks: ${completed}/${total}</div>`;
+                if (filteredTasks.length === 0) {
+                    listContainer.innerHTML = `<div style="text-align:center; opacity:0.6; padding: 20px;">此分組或標籤下暫無任務。</div>`;
+                    return;
                 }
 
-                item.innerHTML = `
+                filteredTasks.forEach(task => {
+                    const item = document.createElement('div');
+                    item.className = 'task-item';
+                    const attrConfig = attributesConfig[task.attribute];
+
+                    // Render Tags
+                    const tagsHtml = task.tags ? task.tags.map(tagId => {
+                        const tagInfo = state.player.tags.find(t => t.id === tagId);
+                        return tagInfo ? `<span style="font-size: 0.75rem; color: ${tagInfo.color}; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; margin-right: 5px;">#${tagInfo.name.split(' ')[0]}</span>` : '';
+                    }).join('') : '';
+
+                    // Subtasks Progress
+                    let subtaskHtml = '';
+                    if (task.subtasks && task.subtasks.length > 0) {
+                        const completed = task.subtasks.filter(st => st.completed).length;
+                        const total = task.subtasks.length;
+                        subtaskHtml = `<div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">Subtasks: ${completed}/${total}</div>`;
+                    }
+
+                    item.innerHTML = `
                 <div class="task-content" onclick="openTaskModal(${task.id})" style="cursor: pointer;">
                     <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTask(${task.id})"></div>
                     <div>
@@ -1591,29 +1608,29 @@
                 </div>
                 ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5;" onclick="deleteTask(${task.id})">🗑️</button>`}
             `;
-                listContainer.appendChild(item);
-            });
-        }
+                    listContainer.appendChild(item);
+                });
+            }
 
-        // --- Modal Logic ---
-        function openTaskModal(taskId = null, prefillTag = null) {
-            const modal = document.getElementById('taskModal');
-            const titleEl = modal.querySelector('.modal-header h2');
-            const saveBtn = modal.querySelector('.modal-content > .btn-primary');
+            // --- Modal Logic ---
+            function openTaskModal(taskId = null, prefillTag = null) {
+                const modal = document.getElementById('taskModal');
+                const titleEl = modal.querySelector('.modal-header h2');
+                const saveBtn = modal.querySelector('.modal-content > .btn-primary');
 
-            // Populate Dropdowns
-            const groupSelect = document.getElementById('modalGroup');
-            groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${g.name}</option>`).join('');
+                // Populate Dropdowns
+                const groupSelect = document.getElementById('modalGroup');
+                groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${g.name}</option>`).join('');
 
-            const attrSelect = document.getElementById('modalAttribute');
-            attrSelect.innerHTML = Object.keys(attributesConfig).map(key => `<option value="${key}">${attributesConfig[key].label}</option>`).join('');
+                const attrSelect = document.getElementById('modalAttribute');
+                attrSelect.innerHTML = Object.keys(attributesConfig).map(key => `<option value="${key}">${attributesConfig[key].label}</option>`).join('');
 
-            // Reset Subtasks
-            document.getElementById('modalSubtasks').innerHTML = '';
+                // Reset Subtasks
+                document.getElementById('modalSubtasks').innerHTML = '';
 
-            // Populate Tags/Projects
-            const tagsContainer = document.getElementById('modalTags');
-            tagsContainer.innerHTML = state.player.tags.map(t => `
+                // Populate Tags/Projects
+                const tagsContainer = document.getElementById('modalTags');
+                tagsContainer.innerHTML = state.player.tags.map(t => `
                 <label style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem; background: rgba(0,0,0,0.1); padding: 5px 8px; border-radius: 6px; cursor: pointer;">
                     <input type="checkbox" name="modalTag" value="${t.id}" ${prefillTag === t.id ? 'checked' : ''}>
                     <span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${t.color};"></span>
@@ -1621,265 +1638,299 @@
                 </label>
             `).join('');
 
-            if (taskId) {
-                // Edit Mode
-                editingTaskId = taskId;
-                const task = state.tasks.find(t => t.id === taskId);
-                if (!task) return;
+                if (taskId) {
+                    // Edit Mode
+                    editingTaskId = taskId;
+                    const task = state.tasks.find(t => t.id === taskId);
+                    if (!task) return;
 
-                titleEl.textContent = 'Edit Task';
-                saveBtn.textContent = 'Save Changes';
+                    titleEl.textContent = 'Edit Task';
+                    saveBtn.textContent = 'Save Changes';
 
-                document.getElementById('modalTitle').value = task.title;
-                document.getElementById('modalDesc').value = task.description || '';
-                // Populate Subtasks
-                if (task.subtasks) {
-                    task.subtasks.forEach(st => addSubtaskInput(st.title));
+                    document.getElementById('modalTitle').value = task.title;
+                    document.getElementById('modalDesc').value = task.description || '';
+                    // Populate Subtasks
+                    if (task.subtasks) {
+                        task.subtasks.forEach(st => addSubtaskInput(st.title));
+                    }
+
+                    // Repeat & Rewards
+                    document.getElementById('modalRepeat').value = task.repeat || 'none';
+                    document.getElementById('modalExp').value = task.rewardExp || 25;
+                    document.getElementById('modalGold').value = task.rewardGold || 10;
+                    document.getElementById('modalTimeSpent').value = Math.round((task.timeSpent || 0) / 60);
+
+                } else {
+                    // Create Mode
+                    editingTaskId = null;
+                    titleEl.textContent = 'New Task';
+                    saveBtn.textContent = 'Create Task';
+
+                    document.getElementById('modalTitle').value = '';
+                    document.getElementById('modalDesc').value = '';
+                    document.getElementById('modalImage').value = '';
+                    document.getElementById('modalPhotoPreview').src = '';
+                    document.getElementById('modalPhotoPreview').style.display = 'none';
+                    document.getElementById('modalPhotoBase64').value = '';
+                    document.getElementById('modalPhotoFile').value = '';
+
+
+                    document.getElementById('modalRepeat').value = 'none';
+                    document.getElementById('modalExp').value = 25;
+                    document.getElementById('modalGold').value = 10;
+                    document.getElementById('modalTimeSpent').value = 0;
+
+                    document.getElementById('modalPhotoFile').value = '';
+                    document.getElementById('modalPhotoPreview').style.display = 'none';
+                    document.getElementById('modalPhotoBase64').value = '';
                 }
 
-                // Repeat & Rewards
-                document.getElementById('modalRepeat').value = task.repeat || 'none';
-                document.getElementById('modalExp').value = task.rewardExp || 25;
-                document.getElementById('modalGold').value = task.rewardGold || 10;
-
-            } else {
-                // Create Mode
-                editingTaskId = null;
-                titleEl.textContent = 'New Task';
-                saveBtn.textContent = 'Create Task';
-
-                document.getElementById('modalTitle').value = '';
-                document.getElementById('modalDesc').value = '';
-                document.getElementById('modalImage').value = '';
-                document.getElementById('modalPhotoPreview').src = '';
-                document.getElementById('modalPhotoPreview').style.display = 'none';
-                document.getElementById('modalPhotoBase64').value = '';
-                document.getElementById('modalPhotoFile').value = '';
-
-
-                document.getElementById('modalRepeat').value = 'none';
-                document.getElementById('modalExp').value = 25;
-                document.getElementById('modalGold').value = 10;
-
-                document.getElementById('modalPhotoFile').value = '';
-                document.getElementById('modalPhotoPreview').style.display = 'none';
-                document.getElementById('modalPhotoBase64').value = '';
+                modal.classList.add('show');
             }
 
-            modal.classList.add('show');
-        }
-
-        function closeTaskModal() {
-            document.getElementById('taskModal').classList.remove('show');
-            // If project modal is open, ensure it stays open
-            const projectModal = document.getElementById('projectModal');
-            if (projectModal && projectModal.classList.contains('show')) {
-                // Do nothing, let it stay
+            function closeTaskModal() {
+                document.getElementById('taskModal').classList.remove('show');
+                // If project modal is open, ensure it stays open
+                const projectModal = document.getElementById('projectModal');
+                if (projectModal && projectModal.classList.contains('show')) {
+                    // Do nothing, let it stay
+                }
             }
-        }
 
-        function addSubtaskInput(value = '') {
-            const container = document.getElementById('modalSubtasks');
-            const div = document.createElement('div');
-            div.className = 'subtask-item';
-            div.innerHTML = `
+            function addSubtaskInput(value = '') {
+                const container = document.getElementById('modalSubtasks');
+                const div = document.createElement('div');
+                div.className = 'subtask-item';
+                div.innerHTML = `
                 <input type="checkbox" disabled style="width: 20px; height: 20px;">
                 <input type="text" placeholder="Subtask..." value="${value}" style="flex: 1; padding: 8px;">
                 <button onclick="this.parentElement.remove()" style="border:none; background:none; cursor:pointer;">✕</button>
             `;
-            container.appendChild(div);
-        }
-
-        async function saveTaskFromModal() {
-            const title = document.getElementById('modalTitle').value.trim();
-            if (!title) {
-                alert('Title is required!');
-                return;
+                container.appendChild(div);
             }
 
-            const desc = document.getElementById('modalDesc').value;
-            const img = document.getElementById('modalImage').value;
-            const group = document.getElementById('modalGroup').value;
-            const attr = document.getElementById('modalAttribute').value;
-            const repeat = document.getElementById('modalRepeat').value;
-            const exp = parseInt(document.getElementById('modalExp').value) || 25;
-            const gold = parseInt(document.getElementById('modalGold').value) || 10;
-
-            // Photo Processing
-            let photoData = document.getElementById('modalPhotoBase64').value;
-            const photoFile = document.getElementById('modalPhotoFile').files[0];
-
-            if (photoFile) {
-                try {
-                    photoData = await compressImage(photoFile);
-                } catch (e) {
-                    console.error("Image processing failed", e);
+            async function saveTaskFromModal() {
+                const title = document.getElementById('modalTitle').value.trim();
+                if (!title) {
+                    alert('Title is required!');
+                    return;
                 }
-            }
 
-            // Tags
-            const tags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
+                const desc = document.getElementById('modalDesc').value;
+                const img = document.getElementById('modalImage').value;
+                const group = document.getElementById('modalGroup').value;
+                const attr = document.getElementById('modalAttribute').value;
+                const repeat = document.getElementById('modalRepeat').value;
+                const exp = parseInt(document.getElementById('modalExp').value) || 25;
+                const gold = parseInt(document.getElementById('modalGold').value) || 10;
 
-            // Subtasks
-            const subtaskInputs = document.querySelectorAll('#modalSubtasks .subtask-item input[type="text"]');
-            const subtasks = Array.from(subtaskInputs).map(input => ({
-                id: Date.now() + Math.random(),
-                title: input.value.trim(),
-                completed: false
-            })).filter(st => st.title);
+                // Photo Processing
+                let photoData = document.getElementById('modalPhotoBase64').value;
+                const photoFile = document.getElementById('modalPhotoFile').files[0];
 
-            if (editingTaskId) {
-                // Update Existing
-                const taskIndex = state.tasks.findIndex(t => t.id === editingTaskId);
-                if (taskIndex !== -1) {
-                    state.tasks[taskIndex] = {
-                        ...state.tasks[taskIndex],
-                        title, description: desc, image: img, photo: photoData, attribute: attr,
-                        groupId: group, tags, subtasks, repeat, rewardExp: exp, rewardGold: gold
-                    };
-                    showToast('Quest Updated', `Changes saved: ${title}`);
+                if (photoFile) {
+                    try {
+                        photoData = await compressImage(photoFile);
+                    } catch (e) {
+                        console.error("Image processing failed", e);
+                    }
                 }
-            } else {
-                // Create New
-                const newTask = {
-                    id: Date.now(),
-                    title: title,
-                    description: desc,
-                    image: img,
-                    photo: photoData,
-                    attribute: attr,
-                    groupId: group,
-                    tags: tags,
-                    subtasks: subtasks,
-                    repeat: repeat,
-                    rewardExp: exp,
-                    rewardGold: gold,
+
+                // Tags
+                const tags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
+
+                // Subtasks
+                const subtaskInputs = document.querySelectorAll('#modalSubtasks .subtask-item input[type="text"]');
+                const subtasks = Array.from(subtaskInputs).map(input => ({
+                    id: Date.now() + Math.random(),
+                    title: input.value.trim(),
                     completed: false
-                };
-                state.tasks.unshift(newTask);
-                showToast('Quest Created', `Accepted: ${title}`);
-            }
+                })).filter(st => st.title);
 
-            if (saveState()) {
-                // Intelligent Render/Close Logic
-                const projectModal = document.getElementById('projectModal');
-                if (projectModal && projectModal.classList.contains('show') && editingProjectId) {
-                    // We are in Project Mode
-                    renderProjectTasks(editingProjectId);
-                    // Do NOT call render() here as it kills the modal
+                if (editingTaskId) {
+                    // Update Existing
+                    const taskIndex = state.tasks.findIndex(t => t.id === editingTaskId);
+                    if (taskIndex !== -1) {
+                        state.tasks[taskIndex] = {
+                            ...state.tasks[taskIndex],
+                            title, description: desc, image: img, photo: photoData, attribute: attr,
+                            groupId: group, tags, subtasks, repeat, rewardExp: exp, rewardGold: gold,
+                            timeSpent: timeSpentSec // Update time
+                        };
+                        showToast('Quest Updated', `Changes saved: ${title}`);
+                    }
                 } else {
-                    // Standard Mode
-                    render();
-                }
-
-                closeTaskModal();
-                editingTaskId = null;
-            } else {
-                // Save failed (alert shown). Keep modal open.
-            }
-        }
-
-        // --- Helper: Image Compression ---
-        function compressImage(file) {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const maxWidth = 300; // Resize to max 300px
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > maxWidth) {
-                            height *= maxWidth / width;
-                            width = maxWidth;
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compress to JPEG
+                    // Create New
+                    const newTask = {
+                        id: Date.now(),
+                        title: title,
+                        description: desc,
+                        image: img,
+                        photo: photoData,
+                        attribute: attr,
+                        groupId: group,
+                        tags: tags,
+                        subtasks: subtasks,
+                        repeat: repeat,
+                        rewardExp: exp,
+                        rewardGold: gold,
+                        timeSpent: timeSpentSec, // Set time
+                        completed: false
                     };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        // --- Helper: Linkify ---
-        function linkify(text) {
-            if (!text) return '';
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            return text.replace(urlRegex, function (url) {
-                return `<a href="${url}" target="_blank" style="color: var(--accent-color); text-decoration: underline;" onclick="event.stopPropagation()">${url}</a>`;
-            });
-        }
-
-        function toggleTask(id) {
-            const task = state.tasks.find(t => t.id === id);
-            if (task && !task.completed) {
-                task.completed = true;
-                // Rewards
-                state.player.exp += task.rewardExp;
-                state.player.gold += task.rewardGold;
-                state.player.attributes[task.attribute] += 1; // Attribute scaling
-
-                // Check Level Up (Simple logic: Level * 100 EXP needed)
-                const expNeeded = state.player.level * 100;
-                let levelUp = false;
-                if (state.player.exp >= expNeeded) {
-                    state.player.level++;
-                    state.player.exp -= expNeeded;
-                    levelUp = true;
+                    state.tasks.unshift(newTask);
+                    showToast('Quest Created', `Accepted: ${title}`);
                 }
 
-                saveState();
-                render();
+                if (saveState()) {
+                    // Intelligent Render/Close Logic
+                    const projectModal = document.getElementById('projectModal');
+                    if (projectModal && projectModal.classList.contains('show') && editingProjectId) {
+                        // We are in Project Mode
+                        renderProjectTasks(editingProjectId);
+                        // Do NOT call render() here as it kills the modal
+                    } else {
+                        // Standard Mode
+                        render();
+                    }
 
-                // Show Toast
-                showToast(`Quest Complete!`, `EXP +${task.rewardExp} | Gold +${task.rewardGold}\n${levelUp ? '<b>LEVEL UP!</b>' : ''} ${attributesConfig[task.attribute].label.split(' ')[0]} +1`);
-            } else if (task && task.completed) {
-                // Return rewards logic
-                if (state.player.exp >= task.rewardExp) {
-                    task.completed = false;
-                    state.player.exp -= task.rewardExp;
-                    state.player.gold -= task.rewardGold;
-                    state.player.attributes[task.attribute] = Math.max(0, state.player.attributes[task.attribute] - 1);
+                    closeTaskModal();
+                    editingTaskId = null;
+                } else {
+                    // Save failed (alert shown). Keep modal open.
+                }
+            }
+
+            // --- Helper: Image Compression ---
+            function compressImage(file) {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const maxWidth = 300; // Resize to max 300px
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+                            resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compress to JPEG
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // --- Helper: Linkify ---
+            function linkify(text) {
+                if (!text) return '';
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                return text.replace(urlRegex, function (url) {
+                    return `<a href="${url}" target="_blank" style="color: var(--accent-color); text-decoration: underline;" onclick="event.stopPropagation()">${url}</a>`;
+                });
+            }
+
+            function toggleTask(id) {
+                const task = state.tasks.find(t => t.id === id);
+                if (task && !task.completed) {
+                    task.completed = true;
+                    // Rewards
+                    state.player.exp += task.rewardExp;
+                    state.player.gold += task.rewardGold;
+                    state.player.attributes[task.attribute] += 1; // Attribute scaling
+
+                    // Log Activity
+                    const group = state.player.groups.find(g => g.id === (task.groupId || 'default'));
+                    const projectTags = task.tags ? task.tags.map(tid => state.player.tags.find(t => t.id === tid)).filter(Boolean) : [];
+
+                    state.player.activities.unshift({
+                        id: 'act_' + Date.now(),
+                        type: 'TASK_COMPLETE',
+                        title: task.title,
+                        timestamp: Date.now(),
+                        details: {
+                            exp: task.rewardExp,
+                            gold: task.rewardGold,
+                            attribute: task.attribute,
+                            groupName: group ? group.name : 'Unknown',
+                            projects: projectTags.map(p => ({ name: p.name, color: p.color }))
+                        }
+                    });
+
+                    // Check Level Up (Simple logic: Level * 100 EXP needed)
+                    const expNeeded = state.player.level * 100;
+                    let levelUp = false;
+                    if (state.player.exp >= expNeeded) {
+                        state.player.level++;
+                        state.player.exp -= expNeeded;
+                        levelUp = true;
+                    }
+
+                    if (saveState()) {
+                        render();
+                        // Show Toast
+                        showToast(`Quest Complete!`, `EXP +${task.rewardExp} | Gold +${task.rewardGold}\n${levelUp ? '<b>LEVEL UP!</b>' : ''} ${attributesConfig[task.attribute].label.split(' ')[0]} +1`);
+                    } else {
+                        // Revert if save failed
+                        task.completed = false;
+                        state.player.exp -= task.rewardExp;
+                        state.player.gold -= task.rewardGold;
+                        state.player.attributes[task.attribute] -= 1;
+                        state.player.activities.shift(); // Remove activity
+                    }
+
+                } else if (task && task.completed) {
+                    // Return rewards logic
+                    if (state.player.exp >= task.rewardExp) {
+                        task.completed = false;
+                        state.player.exp -= task.rewardExp;
+                        state.player.gold -= task.rewardGold;
+                        state.player.attributes[task.attribute] = Math.max(0, state.player.attributes[task.attribute] - 1);
+
+                        // We don't remove activity from history for "Undo", to keep a record that it happened? 
+                        // Or maybe we should? For now, let's leave it as a historical record that it WAS completed.
+
+                        saveState();
+                        render();
+                    } else {
+                        alert("Not enough EXP to undo this action!");
+                    }
+                }
+            }
+
+            function deleteTask(id) {
+                if (confirm("Abandon this quest?")) {
+                    state.tasks = state.tasks.filter(t => t.id !== id);
                     saveState();
                     render();
-                } else {
-                    alert("Not enough EXP to undo this action!");
                 }
             }
-        }
 
-        function deleteTask(id) {
-            if (confirm("Abandon this quest?")) {
-                state.tasks = state.tasks.filter(t => t.id !== id);
-                saveState();
-                render();
-            }
-        }
+            // --- Status Page ---
+            function renderStatusPage() {
+                const p = state.player;
+                const expNeeded = p.level * 100;
+                const expPercent = (p.exp / expNeeded) * 100;
 
-        // --- Status Page ---
-        function renderStatusPage() {
-            const p = state.player;
-            const expNeeded = p.level * 100;
-            const expPercent = (p.exp / expNeeded) * 100;
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = '玩家狀態 (Player Status)';
 
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = '玩家狀態 (Player Status)';
+                const grid = document.createElement('div');
+                grid.className = 'stats-grid';
 
-            const grid = document.createElement('div');
-            grid.className = 'stats-grid';
-
-            // Profile Card
-            const profileCard = document.createElement('div');
-            profileCard.className = 'glass glass-card';
-            profileCard.innerHTML = `
+                // Profile Card
+                const profileCard = document.createElement('div');
+                profileCard.className = 'glass glass-card';
+                profileCard.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3>${p.name}</h3>
                 <span class="level-badge">LV. ${p.level}</span>
@@ -1900,190 +1951,259 @@
             </div>
         `;
 
-            // Chart Card
-            const chartCard = document.createElement('div');
-            chartCard.className = 'glass glass-card';
-            chartCard.innerHTML = `
+                // Chart Card
+                const chartCard = document.createElement('div');
+                chartCard.className = 'glass glass-card';
+                chartCard.innerHTML = `
             <h3>屬性分析 (Ability Radar)</h3>
             <div class="chart-container">
                 <canvas id="radarChart"></canvas>
             </div>
         `;
 
-            // Stats List Card
-            const statsListCard = document.createElement('div');
-            statsListCard.className = 'glass glass-card';
-            let statsHtml = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
-            for (const [key, val] of Object.entries(p.attributes)) {
-                statsHtml += `
+                // Stats List Card
+                const statsListCard = document.createElement('div');
+                statsListCard.className = 'glass glass-card';
+                let statsHtml = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
+                for (const [key, val] of Object.entries(p.attributes)) {
+                    statsHtml += `
                 <div style="display:flex; flex-direction:column; align-items:center; padding: 10px; background:rgba(255,255,255,0.3); border-radius:10px;">
                     <span style="font-size:0.8rem; opacity:0.8;">${attributesConfig[key].label}</span>
                     <span style="font-size:1.5rem; font-weight:bold; color:${attributesConfig[key].border}">${val}</span>
                 </div>
             `;
-            }
-            statsHtml += '</div>';
-            statsListCard.innerHTML = `<h3>詳細數值 (Details)</h3>${statsHtml}`;
-
-            grid.appendChild(profileCard);
-            grid.appendChild(chartCard);
-            grid.appendChild(statsListCard);
-
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(grid);
-
-            // Render Chart
-            renderChart();
-        }
-
-        function renderChart() {
-            const ctx = document.getElementById('radarChart').getContext('2d');
-            const labels = Object.keys(state.player.attributes).map(k => attributesConfig[k].label.split(' ')[0]);
-            const data = Object.values(state.player.attributes);
-
-            statsChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Player Stats',
-                        data: data,
-                        backgroundColor: 'rgba(107, 70, 193, 0.2)',
-                        borderColor: 'rgba(107, 70, 193, 1)',
-                        borderWidth: 2,
-                        pointBackgroundColor: 'rgba(107, 70, 193, 1)',
-                        pointBorderColor: '#fff',
-                        pointHoverBackgroundColor: '#fff',
-                        pointHoverBorderColor: 'rgba(107, 70, 193, 1)'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(0,0,0,0.1)' },
-                            grid: { color: 'rgba(0,0,0,0.1)' },
-                            pointLabels: {
-                                font: { size: 12, family: 'sans-serif' },
-                                color: '#4A5568'
-                            },
-                            ticks: { display: false, backdropColor: 'transparent' },
-                            suggestedMin: 0,
-                            suggestedMax: Math.max(...data) + 5 // Dynamic scaling
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
                 }
-            });
-        }
+                statsHtml += '</div>';
+                statsListCard.innerHTML = `<h3>詳細數值 (Details)</h3>${statsHtml}`;
 
-        // --- Management Modal Logic ---
-        function openManagementModal() {
-            renderManagementModalContent();
-            document.getElementById('managementModal').classList.add('show');
-        }
+                grid.appendChild(profileCard);
+                grid.appendChild(chartCard);
+                grid.appendChild(statsListCard);
 
-        function closeManagementModal() {
-            document.getElementById('managementModal').classList.remove('show');
-        }
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(grid);
 
-        function renderManagementModalContent() {
-            // Groups
-            const groupList = document.getElementById('manageGroupList');
-            groupList.innerHTML = state.player.groups.map(g => {
-                const isDefault = g.id === 'default';
-                return `
+                // Render Chart
+                renderChart();
+            }
+
+            function renderChart() {
+                const ctx = document.getElementById('radarChart').getContext('2d');
+                const labels = Object.keys(state.player.attributes).map(k => attributesConfig[k].label.split(' ')[0]);
+                const data = Object.values(state.player.attributes);
+
+                statsChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Player Stats',
+                            data: data,
+                            backgroundColor: 'rgba(107, 70, 193, 0.2)',
+                            borderColor: 'rgba(107, 70, 193, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(107, 70, 193, 1)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgba(107, 70, 193, 1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                angleLines: { color: 'rgba(0,0,0,0.1)' },
+                                grid: { color: 'rgba(0,0,0,0.1)' },
+                                pointLabels: {
+                                    font: { size: 12, family: 'sans-serif' },
+                                    color: '#4A5568'
+                                },
+                                ticks: { display: false, backdropColor: 'transparent' },
+                                suggestedMin: 0,
+                                suggestedMax: Math.max(...data) + 5 // Dynamic scaling
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+
+            // --- Management Modal Logic ---
+            function openManagementModal() {
+                renderManagementModalContent();
+                document.getElementById('managementModal').classList.add('show');
+            }
+
+            function closeManagementModal() {
+                document.getElementById('managementModal').classList.remove('show');
+            }
+
+            function renderManagementModalContent() {
+                // Groups
+                const groupList = document.getElementById('manageGroupList');
+                groupList.innerHTML = state.player.groups.map(g => {
+                    const isDefault = g.id === 'default';
+                    return `
                     <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 6px;">
                         <span>${g.name}</span>
                         ${!isDefault ? `<button onclick="deleteGroup('${g.id}')" style="background: none; border: none; color: #E53E3E; cursor: pointer; font-weight: bold;">✕</button>` : ''}
                     </li>
                 `;
-            }).join('');
+                }).join('');
 
-            // Tags
-            const tagList = document.getElementById('manageTagList');
-            tagList.innerHTML = state.player.tags.map(t => `
+                // Tags
+                const tagList = document.getElementById('manageTagList');
+                tagList.innerHTML = state.player.tags.map(t => `
                 <div style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(0,0,0,0.05); border-radius: 15px; border: 1px solid rgba(0,0,0,0.1);">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${t.color};"></span>
                     <span style="font-size: 0.9rem;">${t.name}</span>
                     <button onclick="deleteTag('${t.id}')" style="background: none; border: none; cursor: pointer; color: #E53E3E; font-weight: bold; margin-left: 5px;">✕</button>
                 </div>
             `).join('');
-        }
+            }
 
-        function addGroup() {
-            const input = document.getElementById('manageNewGroupInput');
-            const name = input.value.trim();
-            if (!name) return alert("Group name cannot be empty");
+            function addGroup() {
+                const input = document.getElementById('manageNewGroupInput');
+                const name = input.value.trim();
+                if (!name) return alert("Group name cannot be empty");
 
-            const id = 'g_' + Date.now();
-            state.player.groups.push({ id, name });
-            saveState();
-            renderManagementModalContent();
-            render(); // Update background
-            input.value = '';
-        }
+                const id = 'g_' + Date.now();
+                state.player.groups.push({ id, name });
+                saveState();
+                renderManagementModalContent();
+                render(); // Update background
+                input.value = '';
+            }
 
-        function deleteGroup(id) {
-            if (id === 'default') return;
-            if (!confirm("Delete this group? Tasks in this group will be moved to 'Default'.")) return;
+            function deleteGroup(id) {
+                if (id === 'default') return;
+                if (!confirm("Delete this group? Tasks in this group will be moved to 'Default'.")) return;
 
-            // Move tasks to default
-            state.tasks.forEach(t => {
-                if (t.groupId === id) t.groupId = 'default';
-            });
+                // Move tasks to default
+                state.tasks.forEach(t => {
+                    if (t.groupId === id) t.groupId = 'default';
+                });
 
-            state.player.groups = state.player.groups.filter(g => g.id !== id);
-            saveState();
-            renderManagementModalContent();
-            render();
-        }
+                state.player.groups = state.player.groups.filter(g => g.id !== id);
+                saveState();
+                renderManagementModalContent();
+                render();
+            }
 
-        function addTag() {
-            const input = document.getElementById('manageNewTagInput');
-            const color = document.getElementById('manageNewTagColor').value;
-            const name = input.value.trim();
-            if (!name) return alert("Project name cannot be empty");
+            function addTag() {
+                const input = document.getElementById('manageNewTagInput');
+                const color = document.getElementById('manageNewTagColor').value;
+                const name = input.value.trim();
+                if (!name) return alert("Project name cannot be empty");
 
-            const id = 't_' + Date.now();
-            state.player.tags.push({ id, name, color });
-            saveState();
-            renderManagementModalContent();
-            render();
-            input.value = '';
-        }
+                const id = 't_' + Date.now();
+                state.player.tags.push({ id, name, color });
+                saveState();
+                renderManagementModalContent();
+                render();
+                input.value = '';
+            }
 
-        function deleteTag(id) {
-            if (!confirm("Delete this project? It will be removed from all tasks.")) return;
+            function deleteTag(id) {
+                if (!confirm("Delete this project? It will be removed from all tasks.")) return;
 
-            // Remove tag from all tasks
-            state.tasks.forEach(t => {
-                if (t.tags) {
-                    t.tags = t.tags.filter(tid => tid !== id);
+                // Remove tag from all tasks
+                state.tasks.forEach(t => {
+                    if (t.tags) {
+                        t.tags = t.tags.filter(tid => tid !== id);
+                    }
+                });
+
+                state.player.tags = state.player.tags.filter(t => t.id !== id);
+                saveState();
+                renderManagementModalContent();
+                render();
+            }
+
+            // --- Activity Page ---
+            function renderActivityPage() {
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = '活動紀錄 (Activity Log)';
+
+                const timelineContainer = document.createElement('div');
+                timelineContainer.className = 'glass glass-card';
+                timelineContainer.style.padding = '20px';
+
+                if (!state.player.activities || state.player.activities.length === 0) {
+                    timelineContainer.innerHTML = '<div style="text-align:center; opacity:0.6;">No activity recorded yet. Complete tasks to see them here!</div>';
+                } else {
+                    // Group by Date
+                    const grouped = {};
+                    state.player.activities.forEach(act => {
+                        const date = new Date(act.timestamp).toLocaleDateString();
+                        if (!grouped[date]) grouped[date] = [];
+                        grouped[date].push(act);
+                    });
+
+                    let html = '';
+                    const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+
+                    sortedDates.forEach(date => {
+                        html += `<h3 style="margin: 20px 0 10px 0; font-size: 1rem; opacity: 0.7; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">${date}</h3>`;
+
+                        grouped[date].forEach(act => {
+                            const time = new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            const details = act.details || {};
+                            const attrConfig = attributesConfig[details.attribute] || { label: 'Unknown', color: '#ccc' };
+
+                            const projectBadges = details.projects ? details.projects.map(p =>
+                                `<span style="font-size: 0.75rem; background: ${p.color}44; color: ${p.color}; border: 1px solid ${p.color}; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">#${p.name}</span>`
+                            ).join('') : '';
+
+                            let timeBadge = '';
+                            if (details.timeSpent && details.timeSpent > 0) {
+                                const mins = Math.round(details.timeSpent / 60);
+                                timeBadge = `<span style="background: rgba(255, 99, 71, 0.2); color: tomato; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">🍅 ${mins}m</span>`;
+                            }
+
+                            html += `
+                            <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-start;">
+                                <div style="min-width: 60px; font-size: 0.9rem; opacity: 0.6; padding-top: 4px;">${time}</div>
+                                <div style="flex: 1; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                        <span style="font-weight: 600;">${act.title}</span>
+                                        <span class="badge" style="background: ${attrConfig.color}; color: white; font-size: 0.7rem;">${attrConfig.label.split(' ')[0]} +1</span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; opacity: 0.8; display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
+                                        ${projectBadges}
+                                        ${timeBadge}
+                                        <span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px;">📂 ${details.groupName}</span>
+                                        <span style="margin-left: auto; color: #ECC94B;">💰 +${details.gold}</span>
+                                        <span style="color: #6B46C1;">✨ +${details.exp} EXP</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        });
+                    });
+                    timelineContainer.innerHTML = html;
                 }
-            });
 
-            state.player.tags = state.player.tags.filter(t => t.id !== id);
-            saveState();
-            renderManagementModalContent();
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(timelineContainer);
+            }
+
+            // --- Toast Notification ---
+            function showToast(title, message) {
+                toastDiv.querySelector('.toast-message h4').innerHTML = title;
+                toastDiv.querySelector('.toast-message p').innerHTML = message;
+                toastDiv.classList.add('show');
+                setTimeout(() => toastDiv.classList.remove('show'), 3000);
+            }
+
+            // --- Init ---
             render();
-        }
 
-        // --- Toast Notification ---
-        function showToast(title, message) {
-            toastDiv.querySelector('.toast-message h4').innerHTML = title;
-            toastDiv.querySelector('.toast-message p').innerHTML = message;
-            toastDiv.classList.add('show');
-            setTimeout(() => toastDiv.classList.remove('show'), 3000);
-        }
-
-        // --- Init ---
-        render();
-
-    </script>
+        </script>
 </body>
 
 </html>
