@@ -2,7 +2,7 @@
   "name": "tasks-habits-building-game-system",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,7 +15,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/PeterWei078/tasks_habits_building_game_system/issues"
   },
