@@ -792,7 +792,19 @@
         saveState(); // Save the patched state immediately
 
         function saveState() {
-            localStorage.setItem('sl_data', JSON.stringify(state));
+            try {
+                localStorage.setItem('sl_data', JSON.stringify(state));
+                return true;
+            } catch (e) {
+                if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+                    alert("⚠️ Storage Limit Reached!\n\nYour browser's storage is full. Please delete some projects, tasks, or images to save new changes.");
+                    console.error("Storage limit reached:", e);
+                } else {
+                    console.error("Error saving state:", e);
+                    alert("Error saving data. Please check console.");
+                }
+                return false;
+            }
         }
 
         // --- Attributes Config ---
@@ -1179,113 +1191,118 @@
         let editingProjectId = null;
 
         function openProjectModal(projectId = null) {
-            editingProjectId = projectId;
-            const project = projectId ? state.player.tags.find(t => t.id === projectId) : null;
+            try {
+                editingProjectId = projectId;
+                const project = projectId ? state.player.tags.find(t => t.id === projectId) : null;
 
-            // Create Modal HTML if not exists (reusing a generic structure or creating new)
-            // For simplicity, we'll inject a specific modal for projects
-            let modal = document.getElementById('projectModal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'projectModal';
-                modal.className = 'modal-backdrop';
-                modal.innerHTML = `
-                    <div class="modal-content" style="max-width: 600px;">
-                        <div class="modal-header">
-                            <h2 id="projectModalTitle">New Project</h2>
-                            <button class="close-btn" onclick="document.getElementById('projectModal').classList.remove('show')">Close</button>
+                // Create Modal HTML if not exists (reusing a generic structure or creating new)
+                // For simplicity, we'll inject a specific modal for projects
+                let modal = document.getElementById('projectModal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'projectModal';
+                    modal.className = 'modal-backdrop';
+                    modal.innerHTML = `
+                        <div class="modal-content" style="max-width: 600px;">
+                            <div class="modal-header">
+                                <h2 id="projectModalTitle">New Project</h2>
+                                <button class="close-btn" onclick="document.getElementById('projectModal').classList.remove('show')">Close</button>
+                            </div>
+                            <div style="overflow-y: auto; max-height: 80vh; padding: 5px;">
+                                <div class="form-group">
+                                    <label>Project Name</label>
+                                    <input type="text" id="projName" placeholder="Enter project name">
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Group</label>
+                                        <select id="projGroup"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Color</label>
+                                        <input type="color" id="projColor" value="#6B46C1" style="height: 40px; cursor: pointer;">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Start Date</label>
+                                        <input type="date" id="projStart">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>End Date</label>
+                                        <input type="date" id="projEnd">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Description</label>
+                                    <textarea id="projDesc" rows="3" placeholder="Project goals..."></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Cover Photo</label>
+                                    <div id="projPhotosContainer" style="margin-bottom: 10px;"></div>
+                                    <div style="display: flex; gap: 5px; align-items: center;">
+                                        <input type="file" id="projPhotoInput" accept="image/*" style="flex: 1;">
+                                        <button class="btn" onclick="addProjectPhoto()">Upload</button>
+                                    </div>
+                                </div>
+
+                                <div class="form-section">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <h4>Related Quests</h4>
+                                        <!-- Use existing Task Modal to add task, pre-setting this project -->
+                                        <button class="btn" onclick="openTaskModalForProject()">+ Add Quest</button>
+                                    </div>
+                                    <div id="projTasksList"></div>
+                                </div>
+
+                                <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
+                                <button id="btnDeleteProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E;" onclick="deleteProject()">Delete Project</button>
+                            </div>
                         </div>
-                        <div style="overflow-y: auto; max-height: 80vh; padding: 5px;">
-                            <div class="form-group">
-                                <label>Project Name</label>
-                                <input type="text" id="projName" placeholder="Enter project name">
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Group</label>
-                                    <select id="projGroup"></select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Color</label>
-                                    <input type="color" id="projColor" value="#6B46C1" style="height: 40px; cursor: pointer;">
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Start Date</label>
-                                    <input type="date" id="projStart">
-                                </div>
-                                <div class="form-group">
-                                    <label>End Date</label>
-                                    <input type="date" id="projEnd">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Description</label>
-                                <textarea id="projDesc" rows="3" placeholder="Project goals..."></textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Cover Photo</label>
-                                <div id="projPhotosContainer" style="margin-bottom: 10px;"></div>
-                                <div style="display: flex; gap: 5px; align-items: center;">
-                                    <input type="file" id="projPhotoInput" accept="image/*" style="flex: 1;">
-                                    <button class="btn" onclick="addProjectPhoto()">Upload</button>
-                                </div>
-                            </div>
+                    `;
+                    document.body.appendChild(modal);
+                }
 
-                             <div class="form-section">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                    <h4>Related Quests</h4>
-                                    <!-- Use existing Task Modal to add task, pre-setting this project -->
-                                    <button class="btn" onclick="openTaskModalForProject()">+ Add Quest</button>
-                                </div>
-                                <div id="projTasksList"></div>
-                            </div>
+                // Populate Fields
+                const titleEl = document.getElementById('projectModalTitle');
+                const groupSelect = document.getElementById('projGroup');
+                groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
 
-                            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
-                            <button id="btnDeleteProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E;" onclick="deleteProject()">Delete Project</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
+                const btnDelete = document.getElementById('btnDeleteProject');
+
+                // Clear or Set Values
+                if (project) {
+                    titleEl.textContent = 'Edit Project';
+                    document.getElementById('projName').value = project.name;
+                    document.getElementById('projGroup').value = project.groupId || 'default';
+                    document.getElementById('projColor').value = project.color || '#6B46C1';
+                    document.getElementById('projStart').value = project.startDate || '';
+                    document.getElementById('projEnd').value = project.endDate || '';
+                    document.getElementById('projDesc').value = project.description || '';
+                    btnDelete.style.display = 'block';
+
+                    renderProjectPhotos(project.photos || []);
+                    renderProjectTasks(project.id);
+                } else {
+                    titleEl.textContent = 'New Project';
+                    document.getElementById('projName').value = '';
+                    document.getElementById('projGroup').value = 'default';
+                    document.getElementById('projColor').value = '#6B46C1';
+                    document.getElementById('projStart').value = '';
+                    document.getElementById('projEnd').value = '';
+                    document.getElementById('projDesc').value = '';
+                    btnDelete.style.display = 'none';
+
+                    renderProjectPhotos([]);
+                    document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save project first to add tasks.</div>';
+                }
+
+                modal.classList.add('show');
+            } catch (e) {
+                console.error("Error opening project modal:", e);
+                alert("Error opening project. Check console for details.");
             }
-
-            // Populate Fields
-            const titleEl = document.getElementById('projectModalTitle');
-            const groupSelect = document.getElementById('projGroup');
-            groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
-
-            const btnDelete = document.getElementById('btnDeleteProject');
-
-            // Clear or Set Values
-            if (project) {
-                titleEl.textContent = 'Edit Project';
-                document.getElementById('projName').value = project.name;
-                document.getElementById('projGroup').value = project.groupId || 'default';
-                document.getElementById('projColor').value = project.color || '#6B46C1';
-                document.getElementById('projStart').value = project.startDate || '';
-                document.getElementById('projEnd').value = project.endDate || '';
-                document.getElementById('projDesc').value = project.description || '';
-                btnDelete.style.display = 'block';
-
-                renderProjectPhotos(project.photos || []);
-                renderProjectTasks(project.id);
-            } else {
-                titleEl.textContent = 'New Project';
-                document.getElementById('projName').value = '';
-                document.getElementById('projGroup').value = 'default';
-                document.getElementById('projColor').value = '#6B46C1';
-                document.getElementById('projStart').value = '';
-                document.getElementById('projEnd').value = '';
-                document.getElementById('projDesc').value = '';
-                btnDelete.style.display = 'none';
-
-                renderProjectPhotos([]);
-                document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save project first to add tasks.</div>';
-            }
-
-            modal.classList.add('show');
         }
 
         function renderProjectPhotos(photos) {
@@ -1394,11 +1411,13 @@
                 editingProjectId = newProject.id; // Set ID so we can add tasks now
             }
 
-            saveState();
-            renderProjectsPage(); // Refresh bg
-
-            // If strictly saving and closing:
-            document.getElementById('projectModal').classList.remove('show');
+            if (saveState()) {
+                renderProjectsPage(); // Refresh bg
+                // If strictly saving and closing:
+                document.getElementById('projectModal').classList.remove('show');
+            } else {
+                // Save failed (alert shown in saveState). Keep modal open.
+            }
             // If we want to keep open to add tasks, we'd need to re-render modal content with new ID.
         }
 
@@ -1414,9 +1433,10 @@
             });
 
             state.player.tags = state.player.tags.filter(t => t.id !== editingProjectId);
-            saveState();
-            renderProjectsPage();
-            document.getElementById('projectModal').classList.remove('show');
+            if (saveState()) {
+                renderProjectsPage();
+                document.getElementById('projectModal').classList.remove('show');
+            }
         }
 
 
@@ -1740,21 +1760,23 @@
                 showToast('Quest Created', `Accepted: ${title}`);
             }
 
-            saveState();
+            if (saveState()) {
+                // Intelligent Render/Close Logic
+                const projectModal = document.getElementById('projectModal');
+                if (projectModal && projectModal.classList.contains('show') && editingProjectId) {
+                    // We are in Project Mode
+                    renderProjectTasks(editingProjectId);
+                    // Do NOT call render() here as it kills the modal
+                } else {
+                    // Standard Mode
+                    render();
+                }
 
-            // Intelligent Render/Close Logic
-            const projectModal = document.getElementById('projectModal');
-            if (projectModal && projectModal.classList.contains('show') && editingProjectId) {
-                // We are in Project Mode
-                renderProjectTasks(editingProjectId);
-                // Do NOT call render() here as it kills the modal
+                closeTaskModal();
+                editingTaskId = null;
             } else {
-                // Standard Mode
-                render();
+                // Save failed (alert shown). Keep modal open.
             }
-
-            closeTaskModal();
-            editingTaskId = null;
         }
 
         // --- Helper: Image Compression ---
