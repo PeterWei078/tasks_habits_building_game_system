@@ -752,7 +752,8 @@
                     { id: 'daily', name: '日常 (Daily)', color: '#4299E1' },
                     { id: 'urgent', name: '緊急 (Urgent)', color: '#F56565' },
                     { id: 'longterm', name: '長期 (Long-term)', color: '#48BB78' }
-                ]
+                ],
+                totalFocusTime: 0
             },
             tasks: [
                 { id: 1, title: "晨跑 3 公里 (Morning Run)", attribute: "agility", completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
@@ -769,6 +770,9 @@
         }
         if (!state.player.tags) {
             state.player.tags = defaultState.player.tags;
+        }
+        if (typeof state.player.totalFocusTime === 'undefined') {
+            state.player.totalFocusTime = 0;
         }
         // Ensure attributes exist
         if (!state.player.attributes.dexterity) state.player.attributes.dexterity = 5;
@@ -813,8 +817,270 @@
             contentDiv.innerHTML = '';
             if (currentTab === 'tasks') renderTasksPage();
             else if (currentTab === 'status') renderStatusPage();
+            else if (currentTab === 'focus') renderFocusPage();
+            else if (currentTab === 'statistics') renderStatisticsPage();
             else renderPlaceholderPage();
         }
+
+        // --- Focus & Pomodoro ---
+        let timerInterval;
+        let timeLeft = 25 * 60;
+        let isTimerRunning = false;
+        let timerMode = 'pomodoro'; // pomodoro, short, long
+        let selectedFocusTaskId = null;
+
+        function renderFocusPage() {
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '專注 (Focus)';
+
+            // Task Selector
+            const taskSelector = document.createElement('div');
+            taskSelector.className = 'glass glass-card';
+            taskSelector.style.padding = '20px';
+            taskSelector.style.marginBottom = '20px';
+
+            // Filter incomplete tasks
+            const incompleteTasks = state.tasks.filter(t => !t.completed);
+
+            taskSelector.innerHTML = `
+                <h3 style="margin-bottom: 10px;">Select Task to Focus On</h3>
+                <select id="focusTaskSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: inherit;" onchange="selectedFocusTaskId = this.value === 'general' ? null : this.value">
+                    <option value="general" ${selectedFocusTaskId === null ? 'selected' : ''}>🎯 General Focus (No specific task)</option>
+                    ${incompleteTasks.map(t => `<option value="${t.id}" ${selectedFocusTaskId == t.id ? 'selected' : ''}>${t.title}</option>`).join('')}
+                </select>
+            `;
+
+            // Timer Display
+            const timerCard = document.createElement('div');
+            timerCard.className = 'glass glass-card';
+            timerCard.style.textAlign = 'center';
+            timerCard.style.padding = '40px';
+            timerCard.innerHTML = `
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;">
+                    <button class="btn ${timerMode === 'pomodoro' ? 'btn-primary' : ''}" onclick="setTimerMode('pomodoro')">🍅 Pomodoro (25m)</button>
+                    <button class="btn ${timerMode === 'short' ? 'btn-primary' : ''}" onclick="setTimerMode('short')">☕ Short Break (5m)</button>
+                    <button class="btn ${timerMode === 'long' ? 'btn-primary' : ''}" onclick="setTimerMode('long')">💤 Long Break (15m)</button>
+                </div>
+                
+                <div style="position: relative; width: 250px; height: 250px; margin: 0 auto 30px;">
+                    <svg width="250" height="250" viewBox="0 0 250 250">
+                        <circle cx="125" cy="125" r="110" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="10" />
+                        <circle id="timer-progress" cx="125" cy="125" r="110" fill="none" stroke="#667EEA" stroke-width="10"
+                            stroke-dasharray="691" stroke-dashoffset="0" transform="rotate(-90 125 125)" style="transition: stroke-dashoffset 1s linear;" />
+                    </svg>
+                    <div id="timer-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 3.5rem; font-weight: bold; font-family: monospace;">
+                        ${formatTime(timeLeft)}
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 20px;">
+                    <button class="btn btn-primary" style="padding: 10px 40px; font-size: 1.2rem;" onclick="toggleTimer()">${isTimerRunning ? '⏸ Pause' : '▶ Start'}</button>
+                    <button class="btn" style="padding: 10px 20px; background: rgba(255,255,255,0.2);" onclick="resetTimer()">↺ Reset</button>
+                </div>
+            `;
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(taskSelector);
+            contentDiv.appendChild(timerCard);
+
+            updateTimerProgress();
+        }
+
+        function setTimerMode(mode) {
+            timerMode = mode;
+            pauseTimer();
+            if (mode === 'pomodoro') timeLeft = 25 * 60;
+            else if (mode === 'short') timeLeft = 5 * 60;
+            else if (mode === 'long') timeLeft = 15 * 60;
+            render();
+        }
+
+        function toggleTimer() {
+            if (isTimerRunning) pauseTimer();
+            else startTimer();
+            render();
+        }
+
+        function startTimer() {
+            if (isTimerRunning) return;
+            isTimerRunning = true;
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+
+                    // Track time if focusing (not break)
+                    if (timerMode === 'pomodoro') {
+                        // Add to global total
+                        state.player.totalFocusTime = (state.player.totalFocusTime || 0) + 1;
+
+                        // Add to specific task if selected
+                        if (selectedFocusTaskId) {
+                            const task = state.tasks.find(t => t.id == selectedFocusTaskId);
+                            if (task) {
+                                task.timeSpent = (task.timeSpent || 0) + 1;
+                            }
+                        }
+
+                        // Save every 10 seconds to avoid too many writes, or strictly on pause
+                        if (timeLeft % 10 === 0) saveState();
+                    }
+
+                    updateTimerUI(); // Efficient update
+                } else {
+                    pauseTimer();
+                    alert("Time's up!");
+                    if (timerMode === 'pomodoro') {
+                        showToast("Focus Complete!", "Great job! Take a break.");
+                        state.player.gold += 10;
+                        state.player.exp += 20;
+                        checkLevelUp();
+                        saveState();
+                    }
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isTimerRunning = false;
+            clearInterval(timerInterval);
+            saveState();
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            setTimerMode(timerMode);
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function updateTimerUI() {
+            // Update Text
+            const timeDisplay = document.getElementById('timer-text');
+            if (timeDisplay) timeDisplay.textContent = formatTime(timeLeft);
+
+            // Update Circle
+            updateTimerProgress();
+        }
+
+        function updateTimerProgress() {
+            const circle = document.getElementById('timer-progress');
+            if (!circle) return;
+
+            let totalTime;
+            if (timerMode === 'pomodoro') totalTime = 25 * 60;
+            else if (timerMode === 'short') totalTime = 5 * 60;
+            else totalTime = 15 * 60;
+
+            const percentage = timeLeft / totalTime;
+            const circumference = 2 * Math.PI * 110; // r=110
+            const offset = circumference * (1 - percentage);
+
+            circle.style.strokeDashoffset = offset;
+        }
+
+        // --- Statistics Page ---
+        function renderStatisticsPage() {
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '統計 (Statistics)';
+
+            // Global Stats
+            const totalHours = ((state.player.totalFocusTime || 0) / 3600).toFixed(1);
+            const globalStats = document.createElement('div');
+            globalStats.className = 'glass glass-card';
+            globalStats.style.padding = '20px';
+            globalStats.style.marginBottom = '20px';
+            globalStats.style.display = 'flex';
+            globalStats.style.justifyContent = 'space-around';
+            globalStats.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold;">${totalHours}h</div>
+                    <div style="opacity: 0.7;">Total Focus Time</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 2rem; font-weight: bold;">${state.tasks.filter(t => t.completed).length}</div>
+                    <div style="opacity: 0.7;">Completed Quests</div>
+                </div>
+            `;
+
+            // Project Stats (By Tag)
+            const projectStats = document.createElement('div');
+            projectStats.className = 'glass glass-card';
+            projectStats.style.padding = '20px';
+            projectStats.style.marginBottom = '20px';
+
+            // Aggregate time by tag (Project)
+            const projectTimes = {};
+            state.tasks.forEach(t => {
+                if (t.timeSpent > 0 && t.tags) {
+                    t.tags.forEach(tagId => {
+                        const tag = state.player.tags.find(tag => tag.id === tagId);
+                        if (tag) {
+                            projectTimes[tag.name] = (projectTimes[tag.name] || 0) + t.timeSpent;
+                        }
+                    });
+                }
+            });
+
+            // Calculate max for bar scaling
+            const maxTime = Math.max(...Object.values(projectTimes), 1);
+
+            let projectBars = Object.keys(projectTimes).map(name => {
+                const seconds = projectTimes[name];
+                const minutes = Math.round(seconds / 60);
+                const percent = (seconds / maxTime) * 100;
+                return `
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>${name}</span>
+                            <span>${minutes} min</span>
+                        </div>
+                        <div style="height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden;">
+                            <div style="width: ${percent}%; height: 100%; background: #667EEA;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (!projectBars) projectBars = '<div style="text-align:center; opacity:0.6;">No focus time recorded for projects yet.</div>';
+
+            projectStats.innerHTML = `
+                <h3>Project Focus Time</h3>
+                <div style="margin-top: 15px;">${projectBars}</div>
+            `;
+
+            // Task Stats (List)
+            const taskStats = document.createElement('div');
+            taskStats.className = 'glass glass-card';
+            taskStats.style.padding = '20px';
+
+            const tasksWithTime = state.tasks.filter(t => t.timeSpent > 0).sort((a, b) => b.timeSpent - a.timeSpent);
+
+            let taskListHtml = tasksWithTime.map(t => `
+                <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span>${t.title}</span>
+                    <span>${Math.round(t.timeSpent / 60)} min</span>
+                </div>
+            `).join('');
+
+            if (!taskListHtml) taskListHtml = '<div style="text-align:center; opacity:0.6;">No focus time recorded for tasks yet.</div>';
+
+            taskStats.innerHTML = `
+                <h3>Task Focus Time</h3>
+                <div style="margin-top: 15px;">${taskListHtml}</div>
+            `;
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(globalStats);
+            contentDiv.appendChild(projectStats);
+            contentDiv.appendChild(taskStats);
+        }
+
 
         function renderPlaceholderPage() {
             const title = document.createElement('h2');
