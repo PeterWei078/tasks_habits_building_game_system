@@ -22,5 +22,8 @@
   "homepage": "https://github.com/PeterWei078/tasks_habits_building_game_system#readme",
   "devDependencies": {
     "vite": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
