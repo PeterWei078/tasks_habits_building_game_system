@@ -1170,7 +1170,8 @@
                     const card = document.createElement('div');
                     card.className = 'glass glass-card';
                     card.style.cursor = 'pointer';
-                    card.onclick = () => openProjectModal(project.id);
+                    // Force global function call via attribute
+                    card.setAttribute('onclick', `openProjectModal('${project.id}')`);
 
                     // Calculate progress
                     const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(project.id));
@@ -1202,10 +1203,16 @@
             // --- Project Modal ---
             let editingProjectId = null;
 
+            // --- Modal Logic : Projects ---
             function openProjectModal(projectId = null) {
                 try {
                     editingProjectId = projectId;
                     const project = projectId ? state.player.tags.find(t => t.id === projectId) : null;
+
+                    // Check if state search failed
+                    if (projectId && !project) {
+                        alert(`Critical: Project ID ${projectId} not found in state!`);
+                    }
 
                     // Create Modal HTML if not exists (reusing a generic structure or creating new)
                     // For simplicity, we'll inject a specific modal for projects
@@ -1295,8 +1302,10 @@
                         btnDelete.style.display = 'block';
 
                         renderProjectPhotos(project.photos || []);
-                        renderProjectTasks(project.id);
+                        renderProjectTasks(projectId);
+
                     } else {
+                        // New
                         titleEl.textContent = 'New Project';
                         document.getElementById('projName').value = '';
                         document.getElementById('projGroup').value = 'default';
@@ -1396,6 +1405,9 @@
                     const description = document.getElementById('projDesc').value;
                     const photos = JSON.parse(document.getElementById('projPhotosContainer').dataset.photos || '[]');
 
+                    // DEBUG ALERT
+                    // alert(`Saving Project... ID: ${editingProjectId}`);
+
                     if (editingProjectId) {
                         // Update
                         const project = state.player.tags.find(t => t.id === editingProjectId);
@@ -1407,6 +1419,8 @@
                             project.endDate = endDate;
                             project.description = description;
                             project.photos = photos;
+                        } else {
+                            alert("Critical: Project ID not found in state!");
                         }
                     } else {
                         // Create
@@ -1616,7 +1630,8 @@
             function openTaskModal(taskId = null, prefillTag = null) {
                 const modal = document.getElementById('taskModal');
                 const titleEl = modal.querySelector('.modal-header h2');
-                const saveBtn = modal.querySelector('.modal-content > .btn-primary');
+                // FIXED selector: button is nested in form-section, not direct child
+                const saveBtn = modal.querySelector('.btn-primary');
 
                 // Populate Dropdowns
                 const groupSelect = document.getElementById('modalGroup');
@@ -1710,93 +1725,107 @@
             }
 
             async function saveTaskFromModal() {
-                const title = document.getElementById('modalTitle').value.trim();
-                if (!title) {
-                    alert('Title is required!');
-                    return;
-                }
-
-                const desc = document.getElementById('modalDesc').value;
-                const img = document.getElementById('modalImage').value;
-                const group = document.getElementById('modalGroup').value;
-                const attr = document.getElementById('modalAttribute').value;
-                const repeat = document.getElementById('modalRepeat').value;
-                const exp = parseInt(document.getElementById('modalExp').value) || 25;
-                const gold = parseInt(document.getElementById('modalGold').value) || 10;
-
-                // Photo Processing
-                let photoData = document.getElementById('modalPhotoBase64').value;
-                const photoFile = document.getElementById('modalPhotoFile').files[0];
-
-                if (photoFile) {
-                    try {
-                        photoData = await compressImage(photoFile);
-                    } catch (e) {
-                        console.error("Image processing failed", e);
+                try {
+                    console.log("saveTaskFromModal called"); // DEBUG
+                    const title = document.getElementById('modalTitle').value.trim();
+                    if (!title) {
+                        alert('Title is required!');
+                        return;
                     }
-                }
 
-                // Tags
-                const tags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
+                    const desc = document.getElementById('modalDesc').value;
+                    const img = document.getElementById('modalImage').value;
+                    const group = document.getElementById('modalGroup').value;
+                    const attr = document.getElementById('modalAttribute').value;
+                    const repeat = document.getElementById('modalRepeat').value;
+                    const exp = parseInt(document.getElementById('modalExp').value) || 25;
+                    const gold = parseInt(document.getElementById('modalGold').value) || 10;
 
-                // Subtasks
-                const subtaskInputs = document.querySelectorAll('#modalSubtasks .subtask-item input[type="text"]');
-                const subtasks = Array.from(subtaskInputs).map(input => ({
-                    id: Date.now() + Math.random(),
-                    title: input.value.trim(),
-                    completed: false
-                })).filter(st => st.title);
+                    // Critical Fix: Define timeSpent variables
+                    const timeSpentMin = parseInt(document.getElementById('modalTimeSpent').value) || 0;
+                    const timeSpentSec = timeSpentMin * 60;
 
-                if (editingTaskId) {
-                    // Update Existing
-                    const taskIndex = state.tasks.findIndex(t => t.id === editingTaskId);
-                    if (taskIndex !== -1) {
-                        state.tasks[taskIndex] = {
-                            ...state.tasks[taskIndex],
-                            title, description: desc, image: img, photo: photoData, attribute: attr,
-                            groupId: group, tags, subtasks, repeat, rewardExp: exp, rewardGold: gold,
-                            timeSpent: timeSpentSec // Update time
-                        };
-                        showToast('Quest Updated', `Changes saved: ${title}`);
+                    // Photo Processing
+                    let photoData = document.getElementById('modalPhotoBase64').value;
+                    const photoFile = document.getElementById('modalPhotoFile').files[0];
+
+                    if (photoFile) {
+                        try {
+                            photoData = await compressImage(photoFile);
+                        } catch (e) {
+                            console.error("Image processing failed", e);
+                        }
                     }
-                } else {
-                    // Create New
-                    const newTask = {
-                        id: Date.now(),
-                        title: title,
-                        description: desc,
-                        image: img,
-                        photo: photoData,
-                        attribute: attr,
-                        groupId: group,
-                        tags: tags,
-                        subtasks: subtasks,
-                        repeat: repeat,
-                        rewardExp: exp,
-                        rewardGold: gold,
-                        timeSpent: timeSpentSec, // Set time
+
+                    // Tags
+                    const tags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
+
+                    // Subtasks
+                    const subtaskInputs = document.querySelectorAll('#modalSubtasks .subtask-item input[type="text"]');
+                    const subtasks = Array.from(subtaskInputs).map(input => ({
+                        id: Date.now() + Math.random(),
+                        title: input.value.trim(),
                         completed: false
-                    };
-                    state.tasks.unshift(newTask);
-                    showToast('Quest Created', `Accepted: ${title}`);
-                }
+                    })).filter(st => st.title);
 
-                if (saveState()) {
-                    // Intelligent Render/Close Logic
-                    const projectModal = document.getElementById('projectModal');
-                    if (projectModal && projectModal.classList.contains('show') && editingProjectId) {
-                        // We are in Project Mode
-                        renderProjectTasks(editingProjectId);
-                        // Do NOT call render() here as it kills the modal
+                    if (editingTaskId) {
+                        // Update Existing
+                        const taskIndex = state.tasks.findIndex(t => t.id === editingTaskId);
+                        if (taskIndex !== -1) {
+                            state.tasks[taskIndex] = {
+                                ...state.tasks[taskIndex],
+                                title, description: desc, image: img, photo: photoData, attribute: attr,
+                                groupId: group, tags, subtasks, repeat, rewardExp: exp, rewardGold: gold,
+                                timeSpent: timeSpentSec // Update time
+                            };
+                            showToast('Quest Updated', `Changes saved: ${title}`);
+                        } else {
+                            alert("Critical: Task ID not found in state!");
+                        }
                     } else {
-                        // Standard Mode
-                        render();
+                        // Create New
+                        const newTask = {
+                            id: Date.now(),
+                            title: title,
+                            description: desc,
+                            image: img,
+                            photo: photoData,
+                            attribute: attr,
+                            groupId: group,
+                            tags: tags,
+                            subtasks: subtasks,
+                            repeat: repeat,
+                            rewardExp: exp,
+                            rewardGold: gold,
+                            timeSpent: timeSpentSec, // Set time
+                            completed: false
+                        };
+                        state.tasks.unshift(newTask);
+                        showToast('Quest Created', `Accepted: ${title}`);
                     }
 
-                    closeTaskModal();
-                    editingTaskId = null;
-                } else {
-                    // Save failed (alert shown). Keep modal open.
+                    const saveResult = saveState();
+
+                    if (saveResult) {
+                        // Intelligent Render/Close Logic
+                        const projectModal = document.getElementById('projectModal');
+                        if (projectModal && projectModal.classList.contains('show') && editingProjectId) {
+                            // We are in Project Mode
+                            renderProjectTasks(editingProjectId);
+                            // Do NOT call render() here as it kills the modal
+                        } else {
+                            // Standard Mode
+                            render();
+                        }
+
+                        closeTaskModal();
+                        editingTaskId = null;
+                    } else {
+                        // Save failed (alert shown). Keep modal open.
+                    }
+                } catch (e) {
+                    console.error("Critical error saving task:", e);
+                    alert("Critical Error Saving Task:\n" + e.message);
                 }
             }
 
@@ -1976,15 +2005,92 @@
                 statsHtml += '</div>';
                 statsListCard.innerHTML = `<h3>詳細數值 (Details)</h3>${statsHtml}`;
 
+                // --- Storage Manager Card ---
+                const storageCard = document.createElement('div');
+                storageCard.className = 'glass glass-card';
+
+                const storageUsage = calculateStorageUsage();
+                const usagePercent = Math.min(100, (storageUsage.used / storageUsage.max) * 100);
+                const usageColor = usagePercent > 90 ? '#E53E3E' : (usagePercent > 70 ? '#ECC94B' : '#48BB78');
+
+                storageCard.innerHTML = `
+                    <h3>儲存空間 (Storage)</h3>
+                    <div style="margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;">
+                            <span>Used: ${(storageUsage.used / 1024 / 1024).toFixed(2)} MB</span>
+                            <span>Limit: ~5 MB</span>
+                        </div>
+                        <div style="height: 10px; background: rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden;">
+                            <div style="height: 100%; width: ${usagePercent}%; background: ${usageColor}; transition: width 0.5s;"></div>
+                        </div>
+                        <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 5px; text-align: right;">
+                             ${usagePercent.toFixed(1)}% Full
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button class="btn" style="background: rgba(229, 62, 62, 0.1); color: #E53E3E; border: 1px solid rgba(229, 62, 62, 0.3);" onclick="clearEntityImages('project')">
+                            🗑️ Clear Project Photos
+                        </button>
+                        <button class="btn" style="background: rgba(229, 62, 62, 0.1); color: #E53E3E; border: 1px solid rgba(229, 62, 62, 0.3);" onclick="clearEntityImages('task')">
+                            🗑️ Clear Task Images
+                        </button>
+                    </div>
+                `;
+
                 grid.appendChild(profileCard);
                 grid.appendChild(chartCard);
                 grid.appendChild(statsListCard);
+                grid.appendChild(storageCard);
 
                 contentDiv.appendChild(title);
                 contentDiv.appendChild(grid);
 
                 // Render Chart
                 renderChart();
+            }
+
+            function calculateStorageUsage() {
+                let used = 0;
+                try {
+                    const data = JSON.stringify(state);
+                    used = new Blob([data]).size; // Accurate byte size
+                } catch (e) {
+                    // Fallback approximation
+                    used = JSON.stringify(state).length;
+                }
+                return {
+                    used: used,
+                    max: 5 * 1024 * 1024 // 5MB limit
+                };
+            }
+
+            function clearEntityImages(type) {
+                if (!confirm(`Are you sure you want to delete all ${type} images? This cannot be undone.`)) return;
+
+                let count = 0;
+                if (type === 'project') {
+                    state.player.tags.forEach(p => {
+                        if (p.photos && p.photos.length > 0) {
+                            p.photos = [];
+                            count++;
+                        }
+                    });
+                } else if (type === 'task') {
+                    state.tasks.forEach(t => {
+                        if (t.image || t.photo) {
+                            t.image = '';
+                            t.photo = null;
+                            count++;
+                        }
+                    });
+                }
+
+                if (saveState()) {
+                    alert(`Cleared images from ${count} ${type}s.`);
+                    renderStatusPage(); // Refresh to show new storage
+                } else {
+                    alert("Error saving cleaned data.");
+                }
             }
 
             function renderChart() {
