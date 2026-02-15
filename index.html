@@ -2055,8 +2055,9 @@
                     const data = JSON.stringify(state);
                     used = new Blob([data]).size; // Accurate byte size
                 } catch (e) {
-                    // Fallback approximation
-                    used = JSON.stringify(state).length;
+                    console.error("Storage Calculation Error:", e);
+                    // Fallback to 0 if stringify fails (e.g. circular dependency)
+                    used = 0;
                 }
                 return {
                     used: used,
