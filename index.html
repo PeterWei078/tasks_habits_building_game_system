@@ -652,7 +652,7 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>Tags</label>
+                    <label>Projects</label>
                     <div id="modalTags" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
                 </div>
             </div>
@@ -711,10 +711,10 @@
                 </div>
 
                 <!-- Tags Section -->
-                <h3 style="margin-bottom: 10px;">Tags</h3>
+                <h3 style="margin-bottom: 10px;">Projects</h3>
                 <div id="manageTagList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;"></div>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="manageNewTagInput" placeholder="New Tag Name" style="flex: 1;">
+                    <input type="text" id="manageNewTagInput" placeholder="New Project Name" style="flex: 1;">
                     <input type="color" id="manageNewTagColor" value="#6B46C1"
                         style="width: 40px; height: 40px; border: none; background: none; cursor: pointer;">
                     <button class="btn btn-primary" onclick="addTag()">Add</button>
@@ -1426,7 +1426,7 @@
             const input = document.getElementById('manageNewTagInput');
             const color = document.getElementById('manageNewTagColor').value;
             const name = input.value.trim();
-            if (!name) return alert("Tag name cannot be empty");
+            if (!name) return alert("Project name cannot be empty");
 
             const id = 't_' + Date.now();
             state.player.tags.push({ id, name, color });
@@ -1437,7 +1437,7 @@
         }
 
         function deleteTag(id) {
-            if (!confirm("Delete this tag? It will be removed from all tasks.")) return;
+            if (!confirm("Delete this project? It will be removed from all tasks.")) return;
 
             // Remove tag from all tasks
             state.tasks.forEach(t => {
