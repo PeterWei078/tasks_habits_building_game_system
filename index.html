@@ -167,6 +167,8 @@
         }
 
         input[type="text"],
+        input[type="number"],
+        textarea,
         select {
             width: 100%;
             padding: 12px;
@@ -179,6 +181,8 @@
         }
 
         input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus,
         select:focus {
             border-color: var(--accent-color);
         }
@@ -189,6 +193,14 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 12px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .task-item:hover {
+            background: rgba(255, 255, 255, 0.5);
         }
 
         .task-content {
@@ -208,6 +220,8 @@
             align-items: center;
             justify-content: center;
             transition: background 0.2s;
+            flex-shrink: 0;
+            /* Prevent shrinking */
         }
 
         .checkbox.checked {
@@ -223,6 +237,7 @@
         .task-text {
             font-size: 1.1rem;
             transition: color 0.2s;
+            font-weight: 600;
         }
 
         .task-text.completed {
@@ -263,6 +278,164 @@
         .badge-cha {
             background: #F687B3;
             color: #702459;
+        }
+
+        .badge-dex {
+            background: #D6BCFA;
+            color: #553C9A;
+        }
+
+        .badge-luk {
+            background: #FBD38D;
+            color: #9C4221;
+        }
+
+        .badge-wil {
+            background: #E2E8F0;
+            color: #4A5568;
+        }
+
+        /* Group & Tag UI */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .filter-chip {
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            border: 1px solid transparent;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .filter-chip.active {
+            background: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 10px rgba(107, 70, 193, 0.3);
+        }
+
+        .filter-chip:hover {
+            transform: translateY(-1px);
+        }
+
+        .group-selector {
+            margin-bottom: 15px;
+        }
+
+        /* Modal Styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-backdrop.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.95);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .modal-backdrop.show .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section {
+            background: #F7FAFC;
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #E2E8F0;
+        }
+
+        .form-section h4 {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
         /* Stats Page */
@@ -363,21 +536,6 @@
                 font-size: 1.2rem;
             }
         }
-
-        .badge-dex {
-            background: #D6BCFA;
-            color: #553C9A;
-        }
-
-        .badge-luk {
-            background: #FBD38D;
-            color: #9C4221;
-        }
-
-        .badge-wil {
-            background: #E2E8F0;
-            color: #4A5568;
-        }
     </style>
 </head>
 
@@ -428,13 +586,6 @@
                     <span class="nav-icon">💭</span>
                     <span class="nav-text">感想 (Reflections)</span>
                 </li>
-
-                <!-- System -->
-                <li class="nav-category">系統 (System)</li>
-                <li class="nav-item" id="nav-settings" onclick="switchTab('settings')">
-                    <span class="nav-icon">⚙️</span>
-                    <span class="nav-text">設置 (Settings)</span>
-                </li>
             </ul>
         </aside>
 
@@ -451,6 +602,124 @@
         <div class="toast-message">
             <h4>Level Up!</h4>
             <p>Strength +1</p>
+        </div>
+    </div>
+
+    <!-- Create Task Modal -->
+    <div id="taskModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Task</h2>
+                <button class="close-btn" onclick="closeTaskModal()">Cancel</button>
+            </div>
+
+            <!-- Title & Desc -->
+            <div class="form-section">
+                <h4>Basic Information</h4>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <input type="text" id="modalTitle" placeholder="Task Title (Required)"
+                        style="font-size: 1.2rem; font-weight: bold; padding: 15px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <textarea id="modalDesc" placeholder="Description..." rows="3"
+                        style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.1); resize: none;"></textarea>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="modalImage" placeholder="URL (Optional)">
+                </div>
+                <div class="form-group">
+                    <label
+                        style="display:block; margin-bottom:5px; font-size:0.9rem; color:var(--text-secondary);">Photo
+                        (Upload)</label>
+                    <input type="file" id="modalPhotoFile" accept="image/*" style="padding: 10px;">
+                    <img id="modalPhotoPreview"
+                        style="max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 10px; display: none;">
+                    <input type="hidden" id="modalPhotoBase64">
+                </div>
+            </div>
+
+            <!-- Lists & Tags -->
+            <div class="form-section">
+                <h4>Associated Lists</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Group</label>
+                        <select id="modalGroup"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Attribute</label>
+                        <select id="modalAttribute"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Tags</label>
+                    <div id="modalTags" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+            </div>
+
+            <!-- Subtasks -->
+            <div class="form-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h4>Subtasks</h4>
+                    <button class="btn" style="padding: 5px 10px; font-size: 0.8rem;" onclick="addSubtaskInput()">+
+                        Add</button>
+                </div>
+                <div id="modalSubtasks"></div>
+            </div>
+
+            <!-- Rewards & Repeat -->
+            <div class="form-section">
+                <h4>Settings</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Repeat From</label>
+                        <select id="modalRepeat">
+                            <option value="none">No Repeat</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Reward (EXP/Gold)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="modalExp" value="25" style="width: 80px;" placeholder="EXP">
+                            <input type="number" id="modalGold" value="10" style="width: 80px;" placeholder="Gold">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px;"
+                onclick="saveTaskFromModal()">Create Task</button>
+        </div>
+    </div>
+
+    <!-- Management Modal -->
+    <div id="managementModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Lists</h2>
+                <button class="close-btn" onclick="closeManagementModal()">Close</button>
+            </div>
+            <div style="overflow-y: auto; padding: 10px;">
+                <!-- Groups Section -->
+                <h3 style="margin-bottom: 10px;">Groups</h3>
+                <ul id="manageGroupList" style="list-style: none; margin-bottom: 15px;"></ul>
+                <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+                    <input type="text" id="manageNewGroupInput" placeholder="New Group Name" style="flex: 1;">
+                    <button class="btn btn-primary" onclick="addGroup()">Add</button>
+                </div>
+
+                <!-- Tags Section -->
+                <h3 style="margin-bottom: 10px;">Tags</h3>
+                <div id="manageTagList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;"></div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="manageNewTagInput" placeholder="New Tag Name" style="flex: 1;">
+                    <input type="color" id="manageNewTagColor" value="#6B46C1"
+                        style="width: 40px; height: 40px; border: none; background: none; cursor: pointer;">
+                    <button class="btn btn-primary" onclick="addTag()">Add</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -471,16 +740,42 @@
                     dexterity: 5,
                     luck: 5,
                     willpower: 5
-                }
+                },
+                // Groups & Tags
+                groups: [
+                    { id: 'default', name: '預設 (Default)' },
+                    { id: 'work', name: '工作 (Work)' },
+                    { id: 'learning', name: '學習 (Learning)' },
+                    { id: 'health', name: '健康 (Health)' }
+                ],
+                tags: [
+                    { id: 'daily', name: '日常 (Daily)', color: '#4299E1' },
+                    { id: 'urgent', name: '緊急 (Urgent)', color: '#F56565' },
+                    { id: 'longterm', name: '長期 (Long-term)', color: '#48BB78' }
+                ]
             },
             tasks: [
-                { id: 1, title: "晨跑 3 公里 (Morning Run)", attribute: "agility", completed: false, rewardExp: 20, rewardGold: 10 },
-                { id: 2, title: "閱讀 30 分鐘 (Read Book)", attribute: "intelligence", completed: false, rewardExp: 15, rewardGold: 5 },
-                { id: 3, title: "完成每日規劃 (Daily Plan)", attribute: "willpower", completed: true, rewardExp: 10, rewardGold: 5 }
+                { id: 1, title: "晨跑 3 公里 (Morning Run)", attribute: "agility", completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
+                { id: 2, title: "閱讀 30 分鐘 (Read Book)", attribute: "intelligence", completed: false, rewardExp: 15, rewardGold: 5, groupId: 'learning', tags: ['longterm'] }
             ]
         };
 
         let state = JSON.parse(localStorage.getItem('sl_data')) || defaultState;
+
+        // --- Data Migration / Safety Check ---
+        // Ensure groups and tags exist if loading from old local storage
+        if (!state.player.groups) {
+            state.player.groups = defaultState.player.groups;
+        }
+        if (!state.player.tags) {
+            state.player.tags = defaultState.player.tags;
+        }
+        // Ensure attributes exist
+        if (!state.player.attributes.dexterity) state.player.attributes.dexterity = 5;
+        if (!state.player.attributes.luck) state.player.attributes.luck = 5;
+        if (!state.player.attributes.willpower) state.player.attributes.willpower = 5;
+
+        saveState(); // Save the patched state immediately
 
         function saveState() {
             localStorage.setItem('sl_data', JSON.stringify(state));
@@ -541,24 +836,73 @@
         }
 
         // --- Task Page ---
+        // --- Filter State ---
+        let currentGroupId = 'default';
+        let currentTagFilter = null; // null means all tags
+        let editingTaskId = null;
+
         function renderTasksPage() {
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '每日任務 (Daily Quests)';
+            title.textContent = '專案任務 (Project Quests)';
 
-            // Add Task Form
-            const formCard = document.createElement('div');
-            formCard.className = 'glass glass-card';
-            formCard.innerHTML = `
-            <h3>新增任務 (New Quest)</h3>
-            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <input type="text" id="newTaskInput" placeholder="輸入任務名稱..." style="flex: 2; min-width: 200px;">
-                <select id="newAttrSelect" style="flex: 1; min-width: 120px;">
-                    ${Object.keys(attributesConfig).map(key => `<option value="${key}">${attributesConfig[key].label}</option>`).join('')}
-                </select>
-                <button class="btn btn-primary" onclick="addTask()">＋ 接受任務</button>
-            </div>
-        `;
+            // Group Filters (Tabs style)
+            const groupFilterContainer = document.createElement('div');
+            groupFilterContainer.className = 'filter-bar';
+            state.player.groups.forEach(group => {
+                const chip = document.createElement('div');
+                chip.className = `filter-chip ${currentGroupId === group.id ? 'active' : ''}`;
+                chip.textContent = group.name;
+                chip.onclick = () => {
+                    currentGroupId = group.id;
+                    render();
+                };
+                groupFilterContainer.appendChild(chip);
+            });
+
+            // Tag Filters
+            const tagFilterContainer = document.createElement('div');
+            tagFilterContainer.className = 'filter-bar';
+
+            // "All" Tag Option
+            const allTagChip = document.createElement('div');
+            allTagChip.className = `filter-chip ${currentTagFilter === null ? 'active' : ''}`;
+            allTagChip.textContent = '# 全部 (All)';
+            allTagChip.onclick = () => {
+                currentTagFilter = null;
+                render();
+            };
+            tagFilterContainer.appendChild(allTagChip);
+
+            state.player.tags.forEach(tag => {
+                const chip = document.createElement('div');
+                chip.className = `filter-chip ${currentTagFilter === tag.id ? 'active' : ''}`;
+                chip.textContent = `# ${tag.name}`;
+                chip.style.borderColor = currentTagFilter === tag.id ? 'transparent' : tag.color; // Subtle hint
+                chip.onclick = () => {
+                    currentTagFilter = currentTagFilter === tag.id ? null : tag.id; // Toggle
+                    render();
+                };
+                tagFilterContainer.appendChild(chip);
+            });
+
+
+            // Add Task Button (Replaces inline form)
+            const actionCard = document.createElement('div');
+            actionCard.className = 'glass glass-card';
+            actionCard.style.display = 'flex';
+            actionCard.style.justifyContent = 'space-between';
+            actionCard.style.alignItems = 'center';
+            actionCard.innerHTML = `
+                <div>
+                    <h3 style="margin: 0;">Create New Task</h3>
+                    <p style="opacity: 0.6; font-size: 0.9rem;">Define your goals and rewards</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn" onclick="openManagementModal()" style="background: rgba(255,255,255,0.5);">⚙️ Manage Lists</button>
+                    <button class="btn btn-primary" onclick="openTaskModal()">+ New Task</button>
+                </div>
+            `;
 
             // Task List
             const listCard = document.createElement('div');
@@ -566,23 +910,57 @@
             listCard.innerHTML = `<h3>任務列表 (Quest List)</h3><div id="taskList" style="margin-top: 15px;"></div>`;
 
             contentDiv.appendChild(title);
-            contentDiv.appendChild(formCard);
+            contentDiv.appendChild(groupFilterContainer);
+            contentDiv.appendChild(tagFilterContainer);
+            contentDiv.appendChild(actionCard);
             contentDiv.appendChild(listCard);
 
             const listContainer = document.getElementById('taskList');
 
-            state.tasks.forEach(task => {
+            // Filter Logic
+            const filteredTasks = state.tasks.filter(t => {
+                const groupMatch = t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'; // Backward compat
+                const tagMatch = currentTagFilter ? (t.tags && t.tags.includes(currentTagFilter)) : true;
+                return groupMatch && tagMatch;
+            });
+
+            if (filteredTasks.length === 0) {
+                listContainer.innerHTML = `<div style="text-align:center; opacity:0.6; padding: 20px;">此分組或標籤下暫無任務。</div>`;
+                return;
+            }
+
+            filteredTasks.forEach(task => {
                 const item = document.createElement('div');
                 item.className = 'task-item';
                 const attrConfig = attributesConfig[task.attribute];
 
+                // Render Tags
+                const tagsHtml = task.tags ? task.tags.map(tagId => {
+                    const tagInfo = state.player.tags.find(t => t.id === tagId);
+                    return tagInfo ? `<span style="font-size: 0.75rem; color: ${tagInfo.color}; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; margin-right: 5px;">#${tagInfo.name.split(' ')[0]}</span>` : '';
+                }).join('') : '';
+
+                // Subtasks Progress
+                let subtaskHtml = '';
+                if (task.subtasks && task.subtasks.length > 0) {
+                    const completed = task.subtasks.filter(st => st.completed).length;
+                    const total = task.subtasks.length;
+                    subtaskHtml = `<div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">Subtasks: ${completed}/${total}</div>`;
+                }
+
                 item.innerHTML = `
-                <div class="task-content">
-                    <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask(${task.id})"></div>
+                <div class="task-content" onclick="openTaskModal(${task.id})" style="cursor: pointer;">
+                    <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTask(${task.id})"></div>
                     <div>
-                        <div class="task-text ${task.completed ? 'completed' : ''}">${task.title}</div>
-                        <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 4px;">
-                            Rewards: EXP +${task.rewardExp}, Gold +${task.rewardGold}
+                        <div class="task-text ${task.completed ? 'completed' : ''}">${task.title} ${task.image ? `<a href="${task.image}" target="_blank" onclick="event.stopPropagation()" style="margin-left: 5px; opacity: 0.7; text-decoration: none;" title="Open Link">🔗</a>` : ''}</div>
+                        ${task.description ? `<div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px; white-space: pre-wrap;">${linkify(task.description)}</div>` : ''}
+                        ${task.photo ? `<img src="${task.photo}" style="max-width: 100px; max-height: 100px; border-radius: 8px; margin-top: 8px; border: 2px solid rgba(255,255,255,0.5);" onclick="event.stopPropagation(); window.open(this.src)">` : ''}
+                         ${subtaskHtml}
+                        <div style="margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
+                            ${tagsHtml}
+                            <div style="font-size: 0.8rem; opacity: 0.7;">
+                                Rewards: EXP +${task.rewardExp}, Gold +${task.rewardGold}
+                            </div>
                         </div>
                     </div>
                     <span class="badge ${attrConfig.badgeClass}">${attrConfig.label.split(' ')[1]}</span>
@@ -593,25 +971,230 @@
             });
         }
 
-        function addTask() {
-            const input = document.getElementById('newTaskInput');
-            const select = document.getElementById('newAttrSelect');
-            const title = input.value.trim();
-            if (!title) return;
+        // --- Modal Logic ---
+        function openTaskModal(taskId = null) {
+            const modal = document.getElementById('taskModal');
+            const titleEl = modal.querySelector('.modal-header h2');
+            const saveBtn = modal.querySelector('.modal-content > .btn-primary');
 
-            const newTask = {
-                id: Date.now(),
-                title: title,
-                attribute: select.value,
-                completed: false,
-                rewardExp: 25, // Fixed rewards for now
-                rewardGold: 10
-            };
+            // Populate Dropdowns
+            const groupSelect = document.getElementById('modalGroup');
+            groupSelect.innerHTML = state.player.groups.map(g => `<option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${g.name}</option>`).join('');
 
-            state.tasks.unshift(newTask);
+            const attrSelect = document.getElementById('modalAttribute');
+            attrSelect.innerHTML = Object.keys(attributesConfig).map(key => `<option value="${key}">${attributesConfig[key].label}</option>`).join('');
+
+            // Reset Subtasks
+            document.getElementById('modalSubtasks').innerHTML = '';
+
+            if (taskId) {
+                // Edit Mode
+                editingTaskId = taskId;
+                const task = state.tasks.find(t => t.id === taskId);
+                if (!task) return;
+
+                titleEl.textContent = 'Edit Task';
+                saveBtn.textContent = 'Save Changes';
+
+                document.getElementById('modalTitle').value = task.title;
+                document.getElementById('modalDesc').value = task.description || '';
+                document.getElementById('modalImage').value = task.image || '';
+
+                // Photo Preview
+                const photoPreview = document.getElementById('modalPhotoPreview');
+                const photoBase64 = document.getElementById('modalPhotoBase64');
+                if (task.photo) {
+                    photoPreview.src = task.photo;
+                    photoPreview.style.display = 'block';
+                    photoBase64.value = task.photo;
+                } else {
+                    photoPreview.style.display = 'none';
+                    photoBase64.value = '';
+                }
+                document.getElementById('modalPhotoFile').value = ''; // Reset file input
+
+                // Select Group & Attribute
+                groupSelect.value = task.groupId || 'default';
+                attrSelect.value = task.attribute || 'strength';
+
+                // Populate Tags
+                const tagsContainer = document.getElementById('modalTags');
+                tagsContainer.innerHTML = state.player.tags.map(t => `
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 15px;">
+                        <input type="checkbox" name="modalTag" value="${t.id}" ${task.tags && task.tags.includes(t.id) ? 'checked' : ''}>
+                        <span style="font-size: 0.8rem; color:${t.color};">#${t.name.split(' ')[0]}</span>
+                    </label>
+                `).join('');
+
+                // Populate Subtasks
+                if (task.subtasks) {
+                    task.subtasks.forEach(st => addSubtaskInput(st.title));
+                }
+
+                // Repeat & Rewards
+                document.getElementById('modalRepeat').value = task.repeat || 'none';
+                document.getElementById('modalExp').value = task.rewardExp || 25;
+                document.getElementById('modalGold').value = task.rewardGold || 10;
+
+            } else {
+                // Create Mode
+                editingTaskId = null;
+                titleEl.textContent = 'New Task';
+                saveBtn.textContent = 'Create Task';
+
+                document.getElementById('modalTitle').value = '';
+                document.getElementById('modalDesc').value = '';
+                document.getElementById('modalImage').value = '';
+
+                // Populate Tags (Unchecked)
+                const tagsContainer = document.getElementById('modalTags');
+                tagsContainer.innerHTML = state.player.tags.map(t => `
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 15px;">
+                        <input type="checkbox" name="modalTag" value="${t.id}">
+                        <span style="font-size: 0.8rem; color:${t.color};">#${t.name.split(' ')[0]}</span>
+                    </label>
+                `).join('');
+
+                document.getElementById('modalRepeat').value = 'none';
+                document.getElementById('modalExp').value = 25;
+                document.getElementById('modalGold').value = 10;
+
+                document.getElementById('modalPhotoFile').value = '';
+                document.getElementById('modalPhotoPreview').style.display = 'none';
+                document.getElementById('modalPhotoBase64').value = '';
+            }
+
+            modal.classList.add('show');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.remove('show');
+        }
+
+        function addSubtaskInput(value = '') {
+            const container = document.getElementById('modalSubtasks');
+            const div = document.createElement('div');
+            div.className = 'subtask-item';
+            div.innerHTML = `
+                <input type="checkbox" disabled style="width: 20px; height: 20px;">
+                <input type="text" placeholder="Subtask..." value="${value}" style="flex: 1; padding: 8px;">
+                <button onclick="this.parentElement.remove()" style="border:none; background:none; cursor:pointer;">✕</button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function saveTaskFromModal() {
+            const title = document.getElementById('modalTitle').value.trim();
+            if (!title) {
+                alert('Title is required!');
+                return;
+            }
+
+            const desc = document.getElementById('modalDesc').value;
+            const img = document.getElementById('modalImage').value;
+            const group = document.getElementById('modalGroup').value;
+            const attr = document.getElementById('modalAttribute').value;
+            const repeat = document.getElementById('modalRepeat').value;
+            const exp = parseInt(document.getElementById('modalExp').value) || 25;
+            const gold = parseInt(document.getElementById('modalGold').value) || 10;
+
+            // Photo Processing
+            let photoData = document.getElementById('modalPhotoBase64').value;
+            const photoFile = document.getElementById('modalPhotoFile').files[0];
+
+            if (photoFile) {
+                try {
+                    photoData = await compressImage(photoFile);
+                } catch (e) {
+                    console.error("Image processing failed", e);
+                }
+            }
+
+            // Tags
+            const tags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
+
+            // Subtasks
+            const subtaskInputs = document.querySelectorAll('#modalSubtasks .subtask-item input[type="text"]');
+            const subtasks = Array.from(subtaskInputs).map(input => ({
+                id: Date.now() + Math.random(),
+                title: input.value.trim(),
+                completed: false
+            })).filter(st => st.title);
+
+            if (editingTaskId) {
+                // Update Existing
+                const taskIndex = state.tasks.findIndex(t => t.id === editingTaskId);
+                if (taskIndex !== -1) {
+                    state.tasks[taskIndex] = {
+                        ...state.tasks[taskIndex],
+                        title, description: desc, image: img, photo: photoData, attribute: attr,
+                        groupId: group, tags, subtasks, repeat, rewardExp: exp, rewardGold: gold
+                    };
+                    showToast('Quest Updated', `Changes saved: ${title}`);
+                }
+            } else {
+                // Create New
+                const newTask = {
+                    id: Date.now(),
+                    title: title,
+                    description: desc,
+                    image: img,
+                    photo: photoData,
+                    attribute: attr,
+                    groupId: group,
+                    tags: tags,
+                    subtasks: subtasks,
+                    repeat: repeat,
+                    rewardExp: exp,
+                    rewardGold: gold,
+                    completed: false
+                };
+                state.tasks.unshift(newTask);
+                showToast('Quest Created', `Accepted: ${title}`);
+            }
+
             saveState();
             render();
-            input.value = '';
+            closeTaskModal();
+            editingTaskId = null;
+        }
+
+        // --- Helper: Image Compression ---
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxWidth = 300; // Resize to max 300px
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7)); // Compress to JPEG
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // --- Helper: Linkify ---
+        function linkify(text) {
+            if (!text) return '';
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlRegex, function (url) {
+                return `<a href="${url}" target="_blank" style="color: var(--accent-color); text-decoration: underline;" onclick="event.stopPropagation()">${url}</a>`;
+            });
         }
 
         function toggleTask(id) {
@@ -638,10 +1221,7 @@
                 // Show Toast
                 showToast(`Quest Complete!`, `EXP +${task.rewardExp} | Gold +${task.rewardGold}\n${levelUp ? '<b>LEVEL UP!</b>' : ''} ${attributesConfig[task.attribute].label.split(' ')[0]} +1`);
             } else if (task && task.completed) {
-                // Optional: Untoggle (usually RPGs don't allow un-completing quests easily, but for a to-do app...)
-                // Let's allow un-toggle but decide if we take back rewards. 
-                // For simplicity in this demo, we just toggle state but don't revert rewards to prevent abuse (farming).
-                // Or we revert rewards. Let's revert rewards to be fair.
+                // Return rewards logic
                 if (state.player.exp >= task.rewardExp) {
                     task.completed = false;
                     state.player.exp -= task.rewardExp;
@@ -780,10 +1360,102 @@
             });
         }
 
+        // --- Management Modal Logic ---
+        function openManagementModal() {
+            renderManagementModalContent();
+            document.getElementById('managementModal').classList.add('show');
+        }
+
+        function closeManagementModal() {
+            document.getElementById('managementModal').classList.remove('show');
+        }
+
+        function renderManagementModalContent() {
+            // Groups
+            const groupList = document.getElementById('manageGroupList');
+            groupList.innerHTML = state.player.groups.map(g => {
+                const isDefault = g.id === 'default';
+                return `
+                    <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 6px;">
+                        <span>${g.name}</span>
+                        ${!isDefault ? `<button onclick="deleteGroup('${g.id}')" style="background: none; border: none; color: #E53E3E; cursor: pointer; font-weight: bold;">✕</button>` : ''}
+                    </li>
+                `;
+            }).join('');
+
+            // Tags
+            const tagList = document.getElementById('manageTagList');
+            tagList.innerHTML = state.player.tags.map(t => `
+                <div style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(0,0,0,0.05); border-radius: 15px; border: 1px solid rgba(0,0,0,0.1);">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${t.color};"></span>
+                    <span style="font-size: 0.9rem;">${t.name}</span>
+                    <button onclick="deleteTag('${t.id}')" style="background: none; border: none; cursor: pointer; color: #E53E3E; font-weight: bold; margin-left: 5px;">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function addGroup() {
+            const input = document.getElementById('manageNewGroupInput');
+            const name = input.value.trim();
+            if (!name) return alert("Group name cannot be empty");
+
+            const id = 'g_' + Date.now();
+            state.player.groups.push({ id, name });
+            saveState();
+            renderManagementModalContent();
+            render(); // Update background
+            input.value = '';
+        }
+
+        function deleteGroup(id) {
+            if (id === 'default') return;
+            if (!confirm("Delete this group? Tasks in this group will be moved to 'Default'.")) return;
+
+            // Move tasks to default
+            state.tasks.forEach(t => {
+                if (t.groupId === id) t.groupId = 'default';
+            });
+
+            state.player.groups = state.player.groups.filter(g => g.id !== id);
+            saveState();
+            renderManagementModalContent();
+            render();
+        }
+
+        function addTag() {
+            const input = document.getElementById('manageNewTagInput');
+            const color = document.getElementById('manageNewTagColor').value;
+            const name = input.value.trim();
+            if (!name) return alert("Tag name cannot be empty");
+
+            const id = 't_' + Date.now();
+            state.player.tags.push({ id, name, color });
+            saveState();
+            renderManagementModalContent();
+            render();
+            input.value = '';
+        }
+
+        function deleteTag(id) {
+            if (!confirm("Delete this tag? It will be removed from all tasks.")) return;
+
+            // Remove tag from all tasks
+            state.tasks.forEach(t => {
+                if (t.tags) {
+                    t.tags = t.tags.filter(tid => tid !== id);
+                }
+            });
+
+            state.player.tags = state.player.tags.filter(t => t.id !== id);
+            saveState();
+            renderManagementModalContent();
+            render();
+        }
+
         // --- Toast Notification ---
         function showToast(title, message) {
-            toastDiv.querySelector('div h4').innerHTML = title;
-            toastDiv.querySelector('div p').innerHTML = message;
+            toastDiv.querySelector('.toast-message h4').innerHTML = title;
+            toastDiv.querySelector('.toast-message p').innerHTML = message;
             toastDiv.classList.add('show');
             setTimeout(() => toastDiv.classList.remove('show'), 3000);
         }
