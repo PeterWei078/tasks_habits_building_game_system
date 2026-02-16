@@ -1732,6 +1732,52 @@
                     document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save project first to add tasks.</div>';
                 }
 
+                // Add Complete Button Logic
+                const modalContent = modal.querySelector('.modal-content > div:nth-child(2)'); // Scrollable area
+                let completeBtn = document.getElementById('btnCompleteProject');
+
+                // If button doesn't exist, create it (backwards compatibility if we didn't re-create modal)
+                if (!completeBtn && project) {
+                    const btnContainer = document.createElement('div');
+                    btnContainer.style.display = 'flex';
+                    btnContainer.style.gap = '10px';
+                    btnContainer.style.marginTop = '10px';
+
+                    completeBtn = document.createElement('button');
+                    completeBtn.id = 'btnCompleteProject';
+                    completeBtn.className = 'btn';
+                    completeBtn.style.flex = '1';
+
+                    // Move Delete button inside
+                    btnDelete.style.width = 'auto'; // Reset width
+                    btnDelete.style.flex = '1';
+                    btnDelete.style.marginTop = '0';
+                    btnDelete.parentNode.insertBefore(btnContainer, btnDelete);
+                    btnContainer.appendChild(completeBtn);
+                    btnContainer.appendChild(btnDelete);
+                }
+
+                if (project) {
+                    if (project.completed) {
+                        completeBtn.textContent = '🔄 Restore Project';
+                        completeBtn.style.background = 'rgba(72, 187, 120, 0.2)';
+                        completeBtn.style.color = '#48BB78';
+                        completeBtn.style.border = '1px solid #48BB78';
+                        titleEl.innerHTML = 'Edit Project <span style="font-size:0.8rem; background:#48BB78; color:white; padding:2px 6px; border-radius:4px; vertical-align:middle;">Completed 🏆</span>';
+                    } else {
+                        completeBtn.textContent = '✨ Complete Project';
+                        completeBtn.style.background = '#48BB78'; // Green
+                        completeBtn.style.color = 'white';
+                        completeBtn.style.border = 'none';
+                        titleEl.textContent = 'Edit Project'; // Reset title
+                    }
+                    completeBtn.onclick = () => toggleProjectCompletion(project.id);
+                    completeBtn.style.display = 'block';
+                } else {
+                    // New Project
+                    if (completeBtn) completeBtn.style.display = 'none';
+                }
+
                 modal.classList.add('show');
             } catch (e) {
                 console.error("Error opening project modal:", e);
@@ -1848,21 +1894,45 @@
                         photos
                     };
                     state.player.tags.push(newProject);
-                    editingProjectId = newProject.id; // Set ID so we can add tasks now
+                    editingProjectId = newProject.id; // Switch to edit mode
                 }
 
-                if (saveState()) {
-                    renderProjectsPage(); // Refresh bg
-                    // If strictly saving and closing:
-                    document.getElementById('projectModal').classList.remove('show');
-                } else {
-                    // Save failed (alert shown in saveState). Keep modal open.
-                }
-                // If we want to keep open to add tasks, we'd need to re-render modal content with new ID.
+                saveState();
+                render(); // Update UI
+                renderManageGroups(); // Update list if open
+
+                // Refresh modal to show new state (like "Delete" button appearing)
+                openProjectModal(editingProjectId);
+                showToast("Project Saved", "Changes have been successfully saved.");
+
             } catch (e) {
-                console.error("Critical error saving project:", e);
-                alert("Critical Error Saving Project:\n" + e.message);
+                console.error("Error saving project:", e);
+                alert("Error saving project: " + e.message);
             }
+        }
+
+        function toggleProjectCompletion(projectId) {
+            const project = state.player.tags.find(t => t.id === projectId);
+            if (!project) return;
+
+            project.completed = !project.completed;
+            saveState();
+
+            // UI Feedback
+            if (project.completed) {
+                showToast("🏆 Project Completed!", `Congratulations! "${project.name}" is finished.`);
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            } else {
+                showToast("Project Restored", `"${project.name}" is active again.`);
+            }
+
+            // Refresh Views
+            render();
+            openProjectModal(projectId); // Re-render modal to toggle button state
         }
 
         function deleteProject() {
@@ -2678,9 +2748,10 @@
                     tagList.style.display = 'block';
 
                     tagList.innerHTML = state.player.tags.map(t => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(0,0,0,0.05); border-radius: 8px; margin-bottom: 8px; border-left: 4px solid ${t.color || '#ccc'};">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: ${t.completed ? 'rgba(72, 187, 120, 0.1)' : 'rgba(0,0,0,0.05)'}; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid ${t.color || '#ccc'}; ${t.completed ? 'opacity: 0.8;' : ''}">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-weight: bold;">${t.name}</span>
+                            <span style="font-weight: bold; ${t.completed ? 'text-decoration: line-through; color: #48BB78;' : ''}">${t.name}</span>
+                            ${t.completed ? '<span>🏆</span>' : ''}
                             <span style="font-size: 0.8rem; opacity: 0.6;">(${state.tasks.filter(task => task.tags && task.tags.includes(t.id)).length} quests)</span>
                         </div>
                         <div style="display: flex; gap: 10px;">
