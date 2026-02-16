@@ -358,6 +358,11 @@
             /* Higher than default 2000 */
         }
 
+        #editArchiveModal {
+            z-index: 2200;
+            /* Highest for edits */
+        }
+
         .modal-content {
             background: rgba(255, 255, 255, 0.95);
             width: 90%;
@@ -1020,7 +1025,8 @@
                     { id: '4', title: '遊戲手柄 (Game Controller)', description: '購買新裝備', price: 300, category: 'Entertainment', icon: '🎮' },
                     { id: '5', title: '早睡徽章 (Early Sleep Badge)', description: '連續早睡獎勵', price: 50, category: 'Badge', icon: '🌙' },
                 ],
-                inventory: []
+                inventory: [],
+                achievements: [] // Archived completed projects
             },
             tasks: [
                 { id: 1, title: "晨跑 3 公里 (Morning Run)", attribute: "agility", completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
@@ -1052,6 +1058,7 @@
         // Ensure Store Data exists
         if (!state.player.shopItems) state.player.shopItems = defaultState.player.shopItems;
         if (!state.player.inventory) state.player.inventory = [];
+        if (!state.player.achievements) state.player.achievements = [];
         if (typeof state.player.gold === 'undefined') state.player.gold = 0;
 
         saveState(); // Save the patched state immediately
@@ -1108,6 +1115,7 @@
             else if (currentTab === 'projects') renderProjectsPage();
             else if (currentTab === 'statistics') renderStatisticsPage();
             else if (currentTab === 'store') renderStorePage();
+            else if (currentTab === 'achievements') renderAchievementsPage();
             else if (currentTab === 'activity') {
                 console.log("Calling renderActivityPage..."); // DEBUG
                 renderActivityPage();
@@ -1688,12 +1696,38 @@
                                     <div id="projTasksList"></div>
                                 </div>
 
-                                <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
-                                <button id="btnDeleteProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E;" onclick="deleteProject()">Delete Project</button>
-                            </div>
+                                <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
+                                <button type="button" id="btnDeleteProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E;" onclick="deleteProject()">Delete Project</button>
                         </div>
                     `;
                     document.body.appendChild(modal);
+                }
+
+                // --- Edit Archive Modal ---
+                if (!document.getElementById('editArchiveModal')) {
+                    const editModal = document.createElement('div');
+                    editModal.id = 'editArchiveModal';
+                    editModal.className = 'modal-backdrop';
+                    editModal.innerHTML = `
+                        <div class="modal-content" style="max-width: 400px;">
+                            <div class="modal-header">
+                                <h2>Edit Achievement</h2>
+                                <button class="close-btn" onclick="document.getElementById('editArchiveModal').classList.remove('show')">Close</button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label>Project Name</label>
+                                    <input type="text" id="editAchieveName" class="form-control" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Completion Date</label>
+                                    <input type="date" id="editAchieveDate" class="form-control" style="width: 100%; padding: 8px;">
+                                </div>
+                                <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveAchievementEdit()">Save Changes</button>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(editModal);
                 }
 
                 // Populate Fields
@@ -1916,10 +1950,10 @@
             if (!project) return;
 
             project.completed = !project.completed;
-            saveState();
 
-            // UI Feedback
+            // Track Date
             if (project.completed) {
+                project.completedDate = Date.now();
                 showToast("🏆 Project Completed!", `Congratulations! "${project.name}" is finished.`);
                 confetti({
                     particleCount: 100,
@@ -1927,8 +1961,11 @@
                     origin: { y: 0.6 }
                 });
             } else {
+                delete project.completedDate; // Remove date if unchecked
                 showToast("Project Restored", `"${project.name}" is active again.`);
             }
+
+            saveState();
 
             // Refresh Views
             render();
@@ -1937,19 +1974,29 @@
 
         function deleteProject() {
             if (!editingProjectId) return;
-            if (!confirm("Delete this project? Linked tasks will remain but lose this project tag.")) return;
+            // Use deleteTag logic which handles archiving and confirmation
+            // We set a flag or just call it. deleteTag will ask for confirmation.
+            // Note: deleteTag calls render() which might close the modal if we are not careful, 
+            // but since modal is appended to body, it should be fine. 
+            // We manually close the modal after deletion.
 
-            // Remove tag from tasks
-            state.tasks.forEach(t => {
-                if (t.tags) {
-                    t.tags = t.tags.filter(id => id !== editingProjectId);
+            // To avoid double confirmation if deleteTag has one, we can just call deleteTag.
+            // But deleteTag's confirmation is "Delete this project?".
+            // The user wanted "Delete this project? Linked tasks will remain..."
+            // Let's rely on deleteTag's confirmation for consistency or update deleteTag if needed.
+            // For now, simple Delegation.
+
+            const project = state.player.tags.find(t => t.id === editingProjectId);
+            if (project) {
+                // Manually call deleteTag Logic to control flow if needed, OR just call it.
+                // Converting deleteTag to return boolean is best.
+                // But here I will just call it and assume if state changed, it worked.
+                const initialLength = state.player.tags.length;
+                deleteTag(editingProjectId);
+                if (state.player.tags.length < initialLength) {
+                    const modal = document.getElementById('projectModal');
+                    if (modal) modal.classList.remove('show');
                 }
-            });
-
-            state.player.tags = state.player.tags.filter(t => t.id !== editingProjectId);
-            if (saveState()) {
-                renderProjectsPage();
-                document.getElementById('projectModal').classList.remove('show');
             }
         }
 
@@ -2822,7 +2869,17 @@
         }
 
         function deleteTag(id) {
-            if (!confirm("Delete this project? It will be removed from all tasks.")) return;
+            if (!confirm("Delete this project?")) return;
+
+            const project = state.player.tags.find(t => t.id === id);
+
+            // Archive if completed
+            if (project && project.completed) {
+                // Remove circular/large data if necessary, or just keep as is
+                // We keep photos for the record
+                state.player.achievements.push(project);
+                showToast("Project Archived", "Completed project moved to Achievements.");
+            }
 
             // Remove tag from all tasks
             state.tasks.forEach(t => {
@@ -2833,8 +2890,239 @@
 
             state.player.tags = state.player.tags.filter(t => t.id !== id);
             saveState();
-            renderManagementModalContent();
+            renderManageGroups();
             render();
+        }
+
+        // --- Achievements Page ---
+        function renderAchievementsPage() {
+            // Ensure Edit Modal Exists (Lazy Load)
+            if (!document.getElementById('editArchiveModal')) {
+                const editModal = document.createElement('div');
+                editModal.id = 'editArchiveModal';
+                editModal.className = 'modal-backdrop';
+                editModal.innerHTML = `
+                    <div class="modal-content" style="max-width: 400px;">
+                        <div class="modal-header">
+                            <h2>Edit Achievement</h2>
+                            <button class="close-btn" onclick="document.getElementById('editArchiveModal').classList.remove('show')">Close</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>Project Name</label>
+                                <input type="text" id="editAchieveName" class="form-control" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div class="form-group">
+                                <label>Completion Date</label>
+                                <input type="date" id="editAchieveDate" class="form-control" style="width: 100%; padding: 8px;">
+                            </div>
+                            <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveAchievementEdit()">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(editModal);
+            }
+
+            contentDiv.innerHTML = '';
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '成就 (Achievements)';
+
+            // Header Controls (Filter/View - Optional, keeping simple for now)
+            // const controls = document.createElement('div'); ...
+
+            // Grid
+            const grid = document.createElement('div');
+            grid.className = 'shop-grid'; // Reuse grid layout
+
+            // Calculate Counts per Group
+            // 1. Get all completed tags (Active + Archived)
+            const allCompletedProjects = [
+                ...state.player.tags.filter(t => t.completed),
+                ...state.player.achievements
+            ];
+
+            // 2. Map Groups
+            if (state.player.groups && state.player.groups.length > 0) {
+                grid.innerHTML = state.player.groups.map(group => {
+                    const count = allCompletedProjects.filter(p => p.groupId === group.id).length;
+
+                    // Icon Mapping (Simple heuristic or hardcoded)
+                    let icon = '📁';
+                    if (group.id === 'work') icon = '💼';
+                    else if (group.id === 'learning') icon = '📚';
+                    else if (group.id === 'health') icon = '💪';
+                    else if (group.name.includes('Travel') || group.name.includes('旅行')) icon = '✈️'; // Example
+                    else if (group.name.includes('Life') || group.name.includes('生活')) icon = '🎉';
+
+                    return `
+                        <div class="glass glass-card" onclick="openAchievementGroupModal('${group.id}')" style="padding: 20px; display: flex; align-items: center; justify-content: space-between; min-height: 100px; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                                    ${icon}
+                                </div>
+                                <h3 style="margin: 0;">${group.name}</h3>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.05); padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 1.1rem;">
+                                ${count}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                grid.innerHTML = '<div style="opacity:0.6; padding:20px;">No groups defined.</div>';
+            }
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(grid);
+        }
+
+        function openAchievementGroupModal(groupId) {
+            const group = state.player.groups.find(g => g.id === groupId);
+            if (!group) return;
+
+            // Get Completed Projects
+            const allCompletedProjects = [
+                ...state.player.tags.filter(t => t.completed),
+                ...state.player.achievements
+            ].filter(p => p.groupId === groupId);
+
+            // Sort by Date (Newest First)
+            allCompletedProjects.sort((a, b) => (b.completedDate || 0) - (a.completedDate || 0));
+
+            // Create Modal Logic
+            let modal = document.getElementById('achievementModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'achievementModal';
+                modal.className = 'modal-backdrop';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h2 id="achieveModalTitle">Group Achievements</h2>
+                            <button class="close-btn" onclick="document.getElementById('achievementModal').classList.remove('show')">Close</button>
+                        </div>
+                        <div id="achieveList" style="overflow-y: auto; max-height: 60vh; padding: 10px;"></div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            document.getElementById('achieveModalTitle').textContent = `${group.name} Achievements`;
+            modal.classList.add('show');
+            renderAchievementModalList(groupId);
+        }
+
+        function renderAchievementModalList(groupId) {
+            const listContainer = document.getElementById('achieveList');
+            if (!listContainer) return;
+
+            // Get Completed Projects (Active + Archived)
+            const activeCompleted = state.player.tags.filter(t => t.completed && t.groupId === groupId);
+            const archived = state.player.achievements.filter(p => p.groupId === groupId);
+
+            // Merge and Sort
+            const allCompletedProjects = [...activeCompleted, ...archived];
+            allCompletedProjects.sort((a, b) => (b.completedDate || 0) - (a.completedDate || 0));
+
+            if (allCompletedProjects.length === 0) {
+                listContainer.innerHTML = '<div style="text-align:center; opacity:0.6; padding: 20px;">No achievements in this group yet.</div>';
+            } else {
+                listContainer.innerHTML = allCompletedProjects.map(p => {
+                    const dateObj = new Date(p.completedDate || Date.now());
+                    const year = dateObj.getFullYear();
+                    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                    const dateStr = `${year}.${month}`;
+
+                    return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 8px; border-left: 4px solid ${p.color || '#ccc'};">
+                            <div style="flex-grow: 1;">
+                                <div style="font-weight: 500;">${p.name}</div>
+                                <div style="font-size: 0.85rem; opacity: 0.6;">${dateStr}</div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="editAchievement('${p.id}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; opacity: 0.7;" title="Edit">✏️</button>
+                                <button onclick="deleteAchievement('${p.id}', '${groupId}')" style="background: none; border: none; cursor: pointer; font-size: 1.1rem; opacity: 0.7;" title="Delete">🗑️</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function deleteAchievement(id, groupId) {
+            if (!confirm("Permanently delete this achievement record? This cannot be undone.")) return;
+
+            // 1. Check Active Tags
+            const activeIndex = state.player.tags.findIndex(t => t.id === id);
+            if (activeIndex !== -1) {
+                state.player.tags.splice(activeIndex, 1);
+            }
+
+            // 2. Check Archive
+            const archiveIndex = state.player.achievements.findIndex(p => p.id === id);
+            if (archiveIndex !== -1) {
+                state.player.achievements.splice(archiveIndex, 1);
+            }
+
+            saveState();
+            renderAchievementsPage(); // Update counts
+            renderAchievementModalList(groupId); // Refresh list
+            showToast("Record Deleted", "Achievements updated.");
+        }
+
+        // NEW Edit Logic with Modal
+        let currentEditId = null;
+
+        function editAchievement(id) {
+            currentEditId = id;
+            // Find project (Active or Archive)
+            let project = state.player.tags.find(t => t.id === id) || state.player.achievements.find(p => p.id === id);
+            if (!project) return;
+
+            // Populate Modal
+            document.getElementById('editAchieveName').value = project.name;
+
+            // Date
+            const dateVal = project.completedDate ? new Date(project.completedDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+            document.getElementById('editAchieveDate').value = dateVal;
+
+            // Open Modal
+            document.getElementById('editArchiveModal').classList.add('show');
+        }
+
+        function saveAchievementEdit() {
+            if (!currentEditId) return;
+
+            let project = state.player.tags.find(t => t.id === currentEditId) || state.player.achievements.find(p => p.id === currentEditId);
+            if (!project) return;
+
+            const newName = document.getElementById('editAchieveName').value.trim();
+            const newDateStr = document.getElementById('editAchieveDate').value;
+
+            if (!newName) {
+                alert("Name cannot be empty");
+                return;
+            }
+
+            // Update
+            project.name = newName;
+            if (newDateStr) {
+                // Set time to noon to avoid timezone shifts affecting date part
+                const dateObj = new Date(newDateStr);
+                dateObj.setHours(12, 0, 0, 0);
+                project.completedDate = dateObj.getTime();
+            }
+
+            saveState();
+
+            // Refresh
+            renderAchievementsPage();
+            renderAchievementModalList(project.groupId);
+
+            // Close
+            document.getElementById('editArchiveModal').classList.remove('show');
+            showToast("Achievement Updated", "Changes saved.");
         }
 
         // --- Activity Page ---
