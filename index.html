@@ -672,6 +672,7 @@
                 cursor: pointer;
                 width: 100%;
             }
+        }
     </style>
 </head>
 
@@ -848,24 +849,62 @@
                     <button class="close-btn" onclick="closeManagementModal()">Close</button>
                 </div>
                 <div style="overflow-y: auto; padding: 10px;">
-                    <!-- Groups Section -->
-                    <h3 style="margin-bottom: 10px;">Groups</h3>
-                    <ul id="manageGroupList" style="list-style: none; margin-bottom: 15px;"></ul>
-                    <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-                        <input type="text" id="manageNewGroupInput" placeholder="New Group Name" style="flex: 1;">
-                        <button class="btn btn-primary" onclick="addGroup()">Add</button>
+
+                    <!-- Management Sections -->
+                    <div id="manageListsSection">
+                        <!-- Groups Section -->
+                        <h3 style="margin-bottom: 10px;">Groups</h3>
+                        <ul id="manageGroupList" style="list-style: none; margin-bottom: 15px;"></ul>
+                        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+                            <input type="text" id="manageNewGroupInput" placeholder="New Group Name" style="flex: 1;">
+                            <button class="btn btn-primary" onclick="addGroup()">Add</button>
+                        </div>
+
+                        <!-- Tags Section -->
+                        <h3 style="margin-bottom: 10px;">Projects</h3>
+                        <div id="manageTagList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="manageNewTagInput" placeholder="New Project Name" style="flex: 1;">
+                            <input type="color" id="manageNewTagColor" value="#6B46C1"
+                                style="width: 40px; height: 40px; border: none; background: none; cursor: pointer;">
+                            <button class="btn btn-primary" onclick="addTag()">Add</button>
+                        </div>
                     </div>
 
-                    <!-- Tags Section -->
-                    <h3 style="margin-bottom: 10px;">Projects</h3>
-                    <div id="manageTagList" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                    <div id="manageStoreSection" style="display: none;">
+                        <!-- Store Items List -->
+                        <div id="manageStoreList" style="margin-bottom: 20px;"></div>
+
+                        <!-- Add New Item Form -->
+                        <div
+                            style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="margin-bottom: 15px;">Add New Item</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <input type="text" id="newShopTitle" placeholder="Item Name (e.g. Pizza)"
+                                    style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                <input type="number" id="newShopPrice" placeholder="Price (Gold)"
+                                    style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <select id="newShopCategory"
+                                    style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                    <option value="Food">Food 🍔</option>
+                                    <option value="Entertainment">Entertainment 🎮</option>
+                                    <option value="Health">Health 💊</option>
+                                    <option value="Badge">Badge 🏅</option>
+                                    <option value="Other">Other 📦</option>
+                                </select>
+                                <input type="text" id="newShopIcon" placeholder="Icon (Emoji)" value="🎁"
+                                    style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                            </div>
+                            <input type="text" id="newShopDesc" placeholder="Description"
+                                style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
+                            <button class="btn btn-primary" style="width: 100%;" onclick="addShopItem()">Add
+                                Item</button>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="manageNewTagInput" placeholder="New Project Name" style="flex: 1;">
-                        <input type="color" id="manageNewTagColor" value="#6B46C1"
-                            style="width: 40px; height: 40px; border: none; background: none; cursor: pointer;">
-                        <button class="btn btn-primary" onclick="addTag()">Add</button>
-                    </div>
+
                 </div>
             </div>
         </div>
@@ -1168,6 +1207,160 @@
                 const offset = circumference * (1 - percentage);
 
                 circle.style.strokeDashoffset = offset;
+            }
+
+            // --- Store & Inventory ---
+            let currentStoreTab = 'shop'; // 'shop' or 'inventory'
+            let currentCategoryFilter = 'All';
+
+            function renderStorePage() {
+                const title = document.createElement('h2');
+                title.className = 'page-title';
+                title.textContent = '商店 (Store)';
+
+                // Shop Header (Tabs + Gold + Manage)
+                const header = document.createElement('div');
+                header.className = 'shop-header';
+                header.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div class="shop-tabs">
+                            <div class="shop-tab ${currentStoreTab === 'shop' ? 'active' : ''}" onclick="switchStoreTab('shop')">Shop 🛍️</div>
+                            <div class="shop-tab ${currentStoreTab === 'inventory' ? 'active' : ''}" onclick="switchStoreTab('inventory')">Inventory 🎒</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="background: rgba(255, 215, 0, 0.2); padding: 8px 15px; border-radius: 20px; color: #D4AF37; font-weight: bold; border: 1px solid #D4AF37;">
+                            💰 ${state.player.gold}
+                        </div>
+                        <button class="btn btn-secondary" onclick="openManagementModal('store')">Manage ⚙️</button>
+                    </div>
+                `;
+
+                contentDiv.appendChild(title);
+                contentDiv.appendChild(header);
+
+                if (currentStoreTab === 'shop') {
+                    renderShopTab();
+                } else {
+                    renderInventoryTab();
+                }
+            }
+
+            function switchStoreTab(tab) {
+                currentStoreTab = tab;
+                renderStorePage();
+            }
+
+            function renderShopTab() {
+                // Category Filter
+                const categories = ['All', ...new Set(state.player.shopItems.map(item => item.category))];
+                const categoryScroll = document.createElement('div');
+                categoryScroll.className = 'category-scroll';
+                categoryScroll.innerHTML = categories.map(cat => `
+                    <div class="category-chip ${currentCategoryFilter === cat ? 'active' : ''}" onclick="filterShopCategory('${cat}')">
+                        ${getCategoryIcon(cat)} ${cat}
+                    </div>
+                `).join('');
+                contentDiv.appendChild(categoryScroll);
+
+                // Shop Grid
+                const grid = document.createElement('div');
+                grid.className = 'shop-grid';
+
+                const filteredItems = currentCategoryFilter === 'All'
+                    ? state.player.shopItems
+                    : state.player.shopItems.filter(item => item.category === currentCategoryFilter);
+
+                grid.innerHTML = filteredItems.map(item => `
+                    <div class="shop-card">
+                        <div class="item-icon">${item.icon}</div>
+                        <div class="item-title">${item.title}</div>
+                        <div class="item-desc">${item.description}</div>
+                        <div class="price-tag">💰 ${item.price}</div>
+                        <button class="btn-buy" onclick="buyItem('${item.id}')" ${state.player.gold < item.price ? 'disabled' : ''}>
+                            ${state.player.gold < item.price ? 'Not Enough' : 'Buy'}
+                        </button>
+                    </div>
+                `).join('');
+
+                contentDiv.appendChild(grid);
+            }
+
+            function filterShopCategory(cat) {
+                currentCategoryFilter = cat;
+                renderStorePage();
+            }
+
+            function getCategoryIcon(cat) {
+                const map = { 'Food': '🍔', 'Entertainment': '🎮', 'Health': '💊', 'Badge': '🏅', 'All': '🌟' };
+                return map[cat] || '📦';
+            }
+
+            function renderInventoryTab() {
+                const grid = document.createElement('div');
+                grid.className = 'shop-grid';
+
+                if (state.player.inventory.length === 0) {
+                    grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;">Target Empty... Go buy something!</div>`;
+                } else {
+                    // Group by item for display or show individual instances? 
+                    // Let's show individual instances for now to allow tracking usage of each.
+                    // Or verify user requirement: "Inventory (previously purchased but unused rewards)"
+
+                    grid.innerHTML = state.player.inventory.map((invItem, index) => {
+                        const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId) || { title: 'Unknown', icon: '❓', description: 'Item removed from shop' };
+                        return `
+                        <div class="shop-card">
+                            <div class="item-icon">${originalItem.icon}</div>
+                            <div class="item-title">${originalItem.title}</div>
+                            <div class="item-desc">${originalItem.description}</div>
+                            <div style="font-size: 0.8rem; margin-bottom: 10px; opacity: 0.7;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
+                            <button class="btn-use" onclick="useItem(${index})">Use</button>
+                        </div>
+                    `}).join('');
+                }
+
+                contentDiv.appendChild(grid);
+            }
+
+            function buyItem(itemId) {
+                const item = state.player.shopItems.find(i => i.id === itemId);
+                if (!item) return;
+
+                if (state.player.gold >= item.price) {
+                    state.player.gold -= item.price;
+                    state.player.inventory.push({
+                        itemId: item.id,
+                        purchaseDate: Date.now(),
+                        isUsed: false
+                    });
+                    saveState();
+                    showToast(`Purchased ${item.title}!`, 'success');
+                    renderStorePage(); // Refresh to update gold and buttons
+                } else {
+                    showToast('Not enough gold!', 'error');
+                }
+            }
+
+            function useItem(inventoryIndex) {
+                const invItem = state.player.inventory[inventoryIndex];
+                const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId);
+
+                if (confirm(`Use "${originalItem ? originalItem.title : 'Item'}"? This will remove it from inventory.`)) {
+                    // Remove from inventory
+                    state.player.inventory.splice(inventoryIndex, 1);
+
+                    // Log activity
+                    state.player.activities.unshift({
+                        date: new Date().toISOString(),
+                        text: `Used reward: ${originalItem ? originalItem.title : 'Unknown Item'}`,
+                        type: 'system' // or new type 'reward'
+                    });
+
+                    saveState();
+                    showToast(`Used ${originalItem ? originalItem.title : 'Item'}!`, 'success');
+                    renderStorePage();
+                }
             }
 
             // --- Statistics Page ---
@@ -2287,21 +2480,98 @@
                             legend: { display: false }
                         }
                     }
+                }
                 });
             }
 
             // --- Management Modal Logic ---
-            function openManagementModal() {
-                renderManagementModalContent();
-                document.getElementById('managementModal').classList.add('show');
+            function openManagementModal(mode = 'lists') {
+                const modal = document.getElementById('managementModal');
+                const modalTitle = document.querySelector('#managementModal h2');
+
+                // Toggle sections based on mode
+                const listSection = document.getElementById('manageListsSection');
+                const storeSection = document.getElementById('manageStoreSection');
+
+                if (!listSection) {
+                    // Lazy create sections if they don't exist in HTML structure yet, 
+                    // or better, inject them dynamically here.
+                    // For now, let's assume we modify the HTML structure in the modal to support both.
+                    // (See HTML modification step)
+                }
+
+                modal.classList.add('show');
+
+                if (mode === 'store') {
+                    modalTitle.textContent = 'Manage Store Items';
+                    document.getElementById('manageListsSection').style.display = 'none';
+                    document.getElementById('manageStoreSection').style.display = 'block';
+                    renderManageStoreItems();
+                } else {
+                    modalTitle.textContent = 'Manage Lists';
+                    document.getElementById('manageListsSection').style.display = 'block';
+                    document.getElementById('manageStoreSection').style.display = 'none';
+                    renderManageGroups();
+                    renderManageTags();
+                }
             }
 
             function closeManagementModal() {
                 document.getElementById('managementModal').classList.remove('show');
             }
 
-            function renderManagementModalContent() {
-                // Groups
+            // --- Store Management ---
+            function renderManageStoreItems() {
+                const list = document.getElementById('manageStoreList');
+                list.innerHTML = state.player.shopItems.map(item => `
+                    <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.5rem;">${item.icon}</span>
+                            <div>
+                                <div style="font-weight: bold;">${item.title}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.7;">${item.category} • 💰 ${item.price}</div>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="deleteShopItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
+                    </div>
+                `).join('');
+            }
+
+            function addShopItem() {
+                const title = document.getElementById('newShopTitle').value;
+                const price = parseInt(document.getElementById('newShopPrice').value);
+                const category = document.getElementById('newShopCategory').value || 'General';
+                const icon = document.getElementById('newShopIcon').value || '🎁';
+                const desc = document.getElementById('newShopDesc').value;
+
+                if (title && price > 0) {
+                    state.player.shopItems.push({
+                        id: Date.now().toString(),
+                        title,
+                        price,
+                        category,
+                        icon,
+                        description: desc
+                    });
+                    saveState();
+                    renderManageStoreItems();
+                    // Clear inputs
+                    document.getElementById('newShopTitle').value = '';
+                    document.getElementById('newShopPrice').value = '';
+                } else {
+                    alert('Please enter valid title and price.');
+                }
+            }
+
+            function deleteShopItem(id) {
+                if (confirm('Delete this item?')) {
+                    state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
+                    saveState();
+                    renderManageStoreItems();
+                }
+            }
+
+            function renderManageGroups() {
                 const groupList = document.getElementById('manageGroupList');
                 groupList.innerHTML = state.player.groups.map(g => {
                     const isDefault = g.id === 'default';
