@@ -19,9 +19,7 @@
     "url": "https://github.com/PeterWei078/tasks_habits_building_game_system/issues"
   },
   "homepage": "https://github.com/PeterWei078/tasks_habits_building_game_system#readme",
-  "engines": {
-    "node": ">=18.0.0"
-  },
+  "private": true,
   "devDependencies": {
     "vite": "^5.4.21"
   }
