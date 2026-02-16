@@ -1056,6 +1056,7 @@
             let selectedFocusTaskId = null;
 
             function renderFocusPage() {
+                contentDiv.innerHTML = ''; // Prevent duplication
                 const title = document.createElement('h2');
                 title.className = 'page-title';
                 title.textContent = '專注 (Focus)';
@@ -1214,6 +1215,7 @@
             let currentCategoryFilter = 'All';
 
             function renderStorePage() {
+                contentDiv.innerHTML = ''; // Prevent duplication
                 const title = document.createElement('h2');
                 title.className = 'page-title';
                 title.textContent = '商店 (Store)';
@@ -1365,6 +1367,7 @@
 
             // --- Statistics Page ---
             function renderStatisticsPage() {
+                contentDiv.innerHTML = ''; // Prevent duplication
                 const title = document.createElement('h2');
                 title.className = 'page-title';
                 title.textContent = '統計 (Statistics)';
@@ -1464,6 +1467,7 @@
 
             // --- Projects Page ---
             function renderProjectsPage() {
+                contentDiv.innerHTML = ''; // Prevent duplication
                 const title = document.createElement('h2');
                 title.className = 'page-title';
                 title.textContent = '專案 (Projects)';
@@ -1842,6 +1846,7 @@
             let editingTaskId = null;
 
             function renderTasksPage() {
+                contentDiv.innerHTML = ''; // Prevent duplication
                 const title = document.createElement('h2');
                 title.className = 'page-title';
                 title.textContent = '專案任務 (Project Quests)';
@@ -2290,6 +2295,7 @@
 
             // --- Status Page ---
             function renderStatusPage() {
+                contentDiv.innerHTML = ''; // Prevent duplication
                 const p = state.player;
                 const expNeeded = p.level * 100;
                 const expPercent = (p.exp / expNeeded) * 100;
@@ -2484,33 +2490,35 @@
 
             // --- Management Modal Logic ---
             function openManagementModal(mode = 'lists') {
-                const modal = document.getElementById('managementModal');
-                const modalTitle = document.querySelector('#managementModal h2');
+                try {
+                    const modal = document.getElementById('managementModal');
+                    const modalTitle = document.querySelector('#managementModal h2');
 
-                // Toggle sections based on mode
-                const listSection = document.getElementById('manageListsSection');
-                const storeSection = document.getElementById('manageStoreSection');
+                    if (!modal) {
+                        console.error("Management modal not found in DOM");
+                        return;
+                    }
 
-                if (!listSection) {
-                    // Lazy create sections if they don't exist in HTML structure yet, 
-                    // or better, inject them dynamically here.
-                    // For now, let's assume we modify the HTML structure in the modal to support both.
-                    // (See HTML modification step)
-                }
+                    // Toggle sections based on mode
+                    const listSection = document.getElementById('manageListsSection');
+                    const storeSection = document.getElementById('manageStoreSection');
 
-                modal.classList.add('show');
+                    modal.classList.add('show');
 
-                if (mode === 'store') {
-                    modalTitle.textContent = 'Manage Store Items';
-                    document.getElementById('manageListsSection').style.display = 'none';
-                    document.getElementById('manageStoreSection').style.display = 'block';
-                    renderManageStoreItems();
-                } else {
-                    modalTitle.textContent = 'Manage Lists';
-                    document.getElementById('manageListsSection').style.display = 'block';
-                    document.getElementById('manageStoreSection').style.display = 'none';
-                    renderManageGroups();
-                    renderManageTags();
+                    if (mode === 'store') {
+                        modalTitle.textContent = 'Manage Store Items';
+                        if (listSection) listSection.style.display = 'none';
+                        if (storeSection) storeSection.style.display = 'block';
+                        renderManageStoreItems();
+                    } else {
+                        modalTitle.textContent = 'Manage Lists';
+                        if (listSection) listSection.style.display = 'block';
+                        if (storeSection) storeSection.style.display = 'none';
+                        renderManageGroups();
+                    }
+                } catch (e) {
+                    console.error("Error opening management modal:", e);
+                    alert("Error opening options. Resetting data might help if this persists.");
                 }
             }
 
@@ -2520,19 +2528,30 @@
 
             // --- Store Management ---
             function renderManageStoreItems() {
-                const list = document.getElementById('manageStoreList');
-                list.innerHTML = state.player.shopItems.map(item => `
-                    <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 1.5rem;">${item.icon}</span>
-                            <div>
-                                <div style="font-weight: bold;">${item.title}</div>
-                                <div style="font-size: 0.8rem; opacity: 0.7;">${item.category} • 💰 ${item.price}</div>
+                try {
+                    const list = document.getElementById('manageStoreList');
+                    if (!list) return;
+
+                    if (!state.player.shopItems || !Array.isArray(state.player.shopItems)) {
+                        state.player.shopItems = []; // Auto-fix
+                    }
+
+                    list.innerHTML = state.player.shopItems.map(item => `
+                        <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.5rem;">${item.icon || '📦'}</span>
+                                <div>
+                                    <div style="font-weight: bold;">${item.title || 'Untitled'}</div>
+                                    <div style="font-size: 0.8rem; opacity: 0.7;">${item.category || 'General'} • 💰 ${item.price || 0}</div>
+                                </div>
                             </div>
+                            <button class="btn btn-secondary" onclick="deleteShopItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
                         </div>
-                        <button class="btn btn-secondary" onclick="deleteShopItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
-                    </div>
-                `).join('');
+                    `).join('');
+                } catch (e) {
+                    console.error("Error rendering store items:", e);
+                    document.getElementById('manageStoreList').innerHTML = '<div style="color:red">Error loading items</div>';
+                }
             }
 
             function addShopItem() {
@@ -2570,26 +2589,34 @@
             }
 
             function renderManageGroups() {
-                const groupList = document.getElementById('manageGroupList');
-                groupList.innerHTML = state.player.groups.map(g => {
-                    const isDefault = g.id === 'default';
-                    return `
-                    <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 6px;">
-                        <span>${g.name}</span>
-                        ${!isDefault ? `<button onclick="deleteGroup('${g.id}')" style="background: none; border: none; color: #E53E3E; cursor: pointer; font-weight: bold;">✕</button>` : ''}
-                    </li>
-                `;
-                }).join('');
+                try {
+                    const groupList = document.getElementById('manageGroupList');
+                    if (groupList && state.player.groups && Array.isArray(state.player.groups)) {
+                        groupList.innerHTML = state.player.groups.map(g => {
+                            const isDefault = g.id === 'default';
+                            return `
+                        <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 6px;">
+                            <span>${g.name}</span>
+                            ${!isDefault ? `<button onclick="deleteGroup('${g.id}')" style="background: none; border: none; color: #E53E3E; cursor: pointer; font-weight: bold;">✕</button>` : ''}
+                        </li>
+                    `;
+                        }).join('');
+                    }
 
-                // Tags
-                const tagList = document.getElementById('manageTagList');
-                tagList.innerHTML = state.player.tags.map(t => `
-                <div style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(0,0,0,0.05); border-radius: 15px; border: 1px solid rgba(0,0,0,0.1);">
-                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${t.color};"></span>
-                    <span style="font-size: 0.9rem;">${t.name}</span>
-                    <button onclick="deleteTag('${t.id}')" style="background: none; border: none; cursor: pointer; color: #E53E3E; font-weight: bold; margin-left: 5px;">✕</button>
-                </div>
-            `).join('');
+                    // Tags
+                    const tagList = document.getElementById('manageTagList');
+                    if (tagList && state.player.tags && Array.isArray(state.player.tags)) {
+                        tagList.innerHTML = state.player.tags.map(t => `
+                    <div style="display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(0,0,0,0.05); border-radius: 15px; border: 1px solid rgba(0,0,0,0.1);">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${t.color || '#ccc'};"></span>
+                        <span style="font-size: 0.9rem;">${t.name}</span>
+                        <button onclick="deleteTag('${t.id}')" style="background: none; border: none; cursor: pointer; color: #E53E3E; font-weight: bold; margin-left: 5px;">✕</button>
+                    </div>
+                `).join('');
+                    }
+                } catch (e) {
+                    console.error("Error rendering groups/tags:", e);
+                }
             }
 
             function addGroup() {
@@ -2652,6 +2679,7 @@
 
             // --- Activity Page ---
             function renderActivityPage() {
+                contentDiv.innerHTML = ''; // Prevent duplication
                 const title = document.createElement('h2');
                 title.className = 'page-title';
                 title.textContent = '活動紀錄 (Activity Log)';
