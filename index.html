@@ -1023,7 +1023,11 @@
                     { id: '2', title: '大餐 (Large Meal)', description: '享受一頓美食', price: 100, category: 'Food', icon: '🍔' },
                     { id: '3', title: '休息 1 小時 (1h Break)', description: '無罪惡感休息', price: 40, category: 'Health', icon: '☕' },
                     { id: '4', title: '遊戲手柄 (Game Controller)', description: '購買新裝備', price: 300, category: 'Entertainment', icon: '🎮' },
-                    { id: '5', title: '早睡徽章 (Early Sleep Badge)', description: '連續早睡獎勵', price: 50, category: 'Badge', icon: '🌙' },
+                    // Badges
+                    { id: 'b1', title: '早睡徽章 (Early Sleep)', description: '連續早睡獎勵', price: 50, category: 'Badge', badgeCategory: 'Habits', icon: '🌙' },
+                    { id: 'b2', title: '運動健將 (Athlete)', description: '堅持運動', price: 100, category: 'Badge', badgeCategory: 'Habits', icon: '🏃' },
+                    { id: 'b3', title: '學習大師 (Scholar)', description: '熱愛學習', price: 150, category: 'Badge', badgeCategory: 'Skills', icon: '🎓' },
+                    { id: 'b4', title: '財富自由 (Tycoon)', description: '累積財富', price: 500, category: 'Badge', badgeCategory: 'Achievements', icon: '💎' },
                 ],
                 inventory: [],
                 achievements: [] // Archived completed projects
@@ -1056,7 +1060,26 @@
         if (!state.player.attributes.willpower) state.player.attributes.willpower = 5;
 
         // Ensure Store Data exists
-        if (!state.player.shopItems) state.player.shopItems = defaultState.player.shopItems;
+        if (!state.player.shopItems) {
+            state.player.shopItems = defaultState.player.shopItems;
+        } else {
+            // Merge new items (like Badges) into existing shopItems
+            // This ensures players get new content without resetting their shop state
+            const existingIds = new Set(state.player.shopItems.map(i => i.id));
+            defaultState.player.shopItems.forEach(newItem => {
+                if (!existingIds.has(newItem.id)) {
+                    state.player.shopItems.push(newItem);
+                } else {
+                    // Optional: Update existing item details (e.g. description/icon updates)
+                    const existingItem = state.player.shopItems.find(i => i.id === newItem.id);
+                    if (existingItem) {
+                        existingItem.category = newItem.category;
+                        existingItem.badgeCategory = newItem.badgeCategory;
+                        existingItem.icon = newItem.icon;
+                    }
+                }
+            });
+        }
         if (!state.player.inventory) state.player.inventory = [];
         if (!state.player.achievements) state.player.achievements = [];
         if (typeof state.player.gold === 'undefined') state.player.gold = 0;
@@ -1355,8 +1378,8 @@
                         <div class="item-icon-wrapper">${item.icon}</div>
                         <h4>${item.title}</h4>
                         <p class="desc">${item.description}</p>
-                        <button class="btn-buy" onclick="buyItem('${item.id}')" ${state.player.gold < item.price ? 'disabled' : ''}>
-                            ${state.player.gold < item.price ? 'Need Gold' : 'Purchase'}
+                        <button class="btn-buy" onclick="buyItem('${item.id}')" ${state.player.gold < item.price || (item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id)) ? 'disabled' : ''}>
+                            ${item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id) ? 'Owned' : (state.player.gold < item.price ? 'Need Gold' : 'Purchase')}
                         </button>
                     </div>
                 `).join('');
@@ -1378,11 +1401,18 @@
             const grid = document.createElement('div');
             grid.className = 'shop-grid';
 
-            if (state.player.inventory.length === 0) {
+            if (state.player.inventory.filter(i => {
+                const item = state.player.shopItems.find(s => s.id === i.itemId);
+                return item && item.category !== 'Badge';
+            }).length === 0) {
                 grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;">Target Empty... Go buy something!</div>`;
             } else {
                 grid.innerHTML = state.player.inventory.map((invItem, index) => {
-                    const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId) || { title: 'Unknown', icon: '❓', description: 'Item removed from shop' };
+                    const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId) || { title: 'Unknown', icon: '❓', description: 'Item removed from shop', category: 'Unknown' };
+
+                    // Skip Badges in Inventory Tab
+                    if (originalItem.category === 'Badge') return '';
+
                     return `
                         <div class="store-item-card">
                             <div class="item-icon-wrapper">${originalItem.icon}</div>
@@ -1402,6 +1432,12 @@
             if (!item) return;
 
             if (state.player.gold >= item.price) {
+                // Check if Badge already owned
+                if (item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id)) {
+                    showToast('You already own this badge!', 'info');
+                    return;
+                }
+
                 state.player.gold -= item.price;
                 state.player.inventory.push({
                     itemId: item.id,
@@ -2975,6 +3011,75 @@
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(grid);
+
+            // Badge Collection Section
+            const badgeSection = document.createElement('div');
+            badgeSection.style.marginTop = '40px';
+            badgeSection.innerHTML = '<h3 style="margin-bottom: 20px; border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 10px;">🏅 徽章圖鑑 (Badge Collection)</h3>';
+            renderBadgeCollection(badgeSection);
+            contentDiv.appendChild(badgeSection);
+        }
+
+        function renderBadgeCollection(container) {
+            // Get all badges from shop
+            const allBadges = state.player.shopItems.filter(item => item.category === 'Badge');
+
+            // Group by badgeCategory
+            const categories = {};
+            allBadges.forEach(badge => {
+                const cat = badge.badgeCategory || 'Uncategorized';
+                if (!categories[cat]) categories[cat] = [];
+                categories[cat].push(badge);
+            });
+
+            if (Object.keys(categories).length === 0) {
+                container.innerHTML += '<div style="opacity: 0.6;">No badges available yet.</div>';
+                return;
+            }
+
+            Object.keys(categories).forEach(cat => {
+                const badges = categories[cat];
+                const ownedCount = badges.filter(b => state.player.inventory.some(i => i.itemId === b.id)).length;
+
+                const catContainer = document.createElement('div');
+                catContainer.style.marginBottom = '30px';
+                catContainer.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: var(--text-secondary);">${cat}</h4>
+                        <span style="font-size: 0.9rem; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 10px;">${ownedCount} / ${badges.length}</span>
+                    </div>
+                `;
+
+                const badgeGrid = document.createElement('div');
+                badgeGrid.style.display = 'grid';
+                badgeGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
+                badgeGrid.style.gap = '15px';
+
+                badges.forEach(badge => {
+                    const isOwned = state.player.inventory.some(i => i.itemId === badge.id);
+                    const badgeCard = document.createElement('div');
+                    badgeCard.className = 'glass';
+                    badgeCard.style.padding = '15px';
+                    badgeCard.style.textAlign = 'center';
+                    badgeCard.style.borderRadius = '12px';
+                    badgeCard.style.background = isOwned ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.05)';
+                    badgeCard.style.opacity = isOwned ? '1' : '0.6';
+                    badgeCard.style.filter = isOwned ? 'none' : 'grayscale(100%)';
+                    badgeCard.style.transition = 'all 0.3s';
+
+                    // Tooltip logic could be added here
+                    badgeCard.title = isOwned ? `${badge.title}\n${badge.description}` : 'Unknown Badge';
+
+                    badgeCard.innerHTML = `
+                        <div style="font-size: 2.5rem; marginBottom: 10px;">${isOwned ? badge.icon : '🔒'}</div>
+                        <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">${isOwned ? badge.title.split('(')[0] : '???'}</div>
+                    `;
+                    badgeGrid.appendChild(badgeCard);
+                });
+
+                catContainer.appendChild(badgeGrid);
+                container.appendChild(catContainer);
+            });
         }
 
         function openAchievementGroupModal(groupId) {
