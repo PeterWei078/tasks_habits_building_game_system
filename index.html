@@ -1443,7 +1443,7 @@
             const grid = document.createElement('div');
             grid.className = 'shop-grid';
 
-            const badges = state.player.shopItems.filter(item => item.category === 'Badge');
+            const badges = state.player.shopItems.filter(item => item.category === 'Badge').sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
 
             if (badges.length === 0) {
                 grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;">No badges available.</div>`;
