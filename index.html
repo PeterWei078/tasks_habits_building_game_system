@@ -1328,6 +1328,7 @@
                     <div class="shop-nav-bar">
                         <div class="shop-tabs">
                             <div class="shop-tab ${currentStoreTab === 'shop' ? 'active' : ''}" onclick="switchStoreTab('shop')">Shop</div>
+                            <div class="shop-tab ${currentStoreTab === 'badge' ? 'active' : ''}" onclick="switchStoreTab('badge')">Badges</div>
                             <div class="shop-tab ${currentStoreTab === 'inventory' ? 'active' : ''}" onclick="switchStoreTab('inventory')">Inventory</div>
                         </div>
                         <div class="gold-display">
@@ -1342,6 +1343,8 @@
 
             if (currentStoreTab === 'shop') {
                 renderShopTab();
+            } else if (currentStoreTab === 'badge') {
+                renderBadgeTab();
             } else {
                 renderInventoryTab();
             }
@@ -1353,8 +1356,8 @@
         }
 
         function renderShopTab() {
-            // Category Filter
-            const categories = ['All', ...new Set(state.player.shopItems.map(item => item.category))];
+            // Category Filter (Exclude Badges from Shop)
+            const categories = ['All', ...new Set(state.player.shopItems.filter(i => i.category !== 'Badge').map(item => item.category))];
             const categoryScroll = document.createElement('div');
             categoryScroll.className = 'category-scroll';
             categoryScroll.innerHTML = categories.map(cat => `
@@ -1369,16 +1372,18 @@
             grid.className = 'shop-grid';
 
             const filteredItems = currentCategoryFilter === 'All'
-                ? state.player.shopItems
-                : state.player.shopItems.filter(item => item.category === currentCategoryFilter);
+                ? state.player.shopItems.filter(item => item.category !== 'Badge')
+                : state.player.shopItems.filter(item => item.category === currentCategoryFilter && item.category !== 'Badge');
 
             grid.innerHTML = filteredItems.map(item => `
-                    <div class="store-item-card">
+                    <div class="store-item-card" onclick="openEditShopItemModal('${item.id}')" style="cursor: pointer; position: relative;">
+                        <button class="edit-icon" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">✏️</button>
+                        <style> .store-item-card:hover .edit-icon { opacity: 1; } </style>
                         <div class="price-badge">💰 ${item.price}</div>
                         <div class="item-icon-wrapper">${item.icon}</div>
                         <h4>${item.title}</h4>
                         <p class="desc">${item.description}</p>
-                        <button class="btn-buy" onclick="buyItem('${item.id}')" ${state.player.gold < item.price || (item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id)) ? 'disabled' : ''}>
+                        <button class="btn-buy" onclick="event.stopPropagation(); buyItem('${item.id}')" ${state.player.gold < item.price || (item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id)) ? 'disabled' : ''}>
                             ${item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id) ? 'Owned' : (state.player.gold < item.price ? 'Need Gold' : 'Purchase')}
                         </button>
                     </div>
@@ -1395,6 +1400,53 @@
         function getCategoryIcon(cat) {
             const map = { 'Food': '🍔', 'Entertainment': '🎮', 'Health': '💊', 'Badge': '🏅', 'All': '🌟' };
             return map[cat] || '📦';
+        }
+
+        function renderBadgeTab() {
+            const grid = document.createElement('div');
+            grid.className = 'shop-grid';
+
+            const badges = state.player.shopItems.filter(item => item.category === 'Badge');
+
+            if (badges.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;">No badges available.</div>`;
+            } else {
+                grid.innerHTML = badges.map(item => {
+                    const isOwned = state.player.inventory.some(i => i.itemId === item.id);
+                    return `
+                     <div class="store-item-card" onclick="openEditShopItemModal('${item.id}')" style="cursor: pointer; position: relative;">
+                         <button class="edit-icon" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">✏️</button>
+                         <style> .store-item-card:hover .edit-icon { opacity: 1; } </style>
+                         <div class="item-icon-wrapper" style="font-size: 3rem;">${item.icon}</div>
+                         <h4>${item.title}</h4>
+                         <p class="desc">${item.description}</p>
+                         <div style="font-size: 0.8rem; opacity: 0.7; margin: 5px 0;">${item.badgeCategory || 'General'}</div>
+                         <button class="btn-buy" onclick="event.stopPropagation(); claimBadge('${item.id}')" ${isOwned ? 'disabled' : ''} style="${isOwned ? 'opacity: 0.6; cursor: default;' : 'background: var(--accent-color);'}">
+                             ${isOwned ? 'Owned' : 'Claim Badge'}
+                         </button>
+                     </div>
+                 `}).join('');
+            }
+            contentDiv.appendChild(grid);
+        }
+
+        function claimBadge(itemId) {
+            const item = state.player.shopItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            if (state.player.inventory.some(i => i.itemId === item.id)) {
+                showToast('You already own this badge!', 'info');
+                return;
+            }
+
+            state.player.inventory.push({
+                itemId: item.id,
+                purchaseDate: Date.now(),
+                isUsed: false
+            });
+            saveState();
+            showToast(`Claimed ${item.title}!`, 'success');
+            renderStorePage();
         }
 
         function renderInventoryTab() {
@@ -1419,7 +1471,10 @@
                             <h4>${originalItem.title}</h4>
                             <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
                             <div style="font-size: 0.75rem; margin-bottom: 15px; opacity: 0.6;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
-                            <button class="btn-use" onclick="useItem(${index})">Use Item</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn-use" onclick="useItem(${index})" style="flex: 1;">Use Item</button>
+                                <button class="btn-use" onclick="deleteInventoryItem(${index})" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384; flex: 0 0 40px; display: flex; align-items: center; justify-content: center;">🗑️</button>
+                            </div>
                         </div>
                     `}).join('');
             }
@@ -1505,6 +1560,21 @@
 
                 saveState();
                 showToast(`Used ${originalItem ? originalItem.title : 'Item'}!`, 'success');
+                renderStorePage();
+            });
+        }
+
+        function deleteInventoryItem(inventoryIndex) {
+            const invItem = state.player.inventory[inventoryIndex];
+            const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId);
+
+            if (!invItem) return;
+
+            openConfirmModal(`Permanently delete "${originalItem ? originalItem.title : 'Item'}" from inventory?`, () => {
+                // Remove from inventory
+                state.player.inventory.splice(inventoryIndex, 1);
+                saveState();
+                showToast(`Deleted ${originalItem ? originalItem.title : 'Item'}`, 'info');
                 renderStorePage();
             });
         }
@@ -2834,11 +2904,118 @@
         }
 
         function deleteShopItem(id) {
-            if (confirm('Delete this item?')) {
+            if (openConfirmModal) {
+                openConfirmModal('Delete this shop item?', () => {
+                    state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
+                    saveState();
+                    renderManageStoreItems();
+                    renderStorePage(); // Refresh shop page if open
+                });
+            } else if (confirm('Delete this item?')) {
                 state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
                 saveState();
                 renderManageStoreItems();
+                renderStorePage();
             }
+        }
+
+        // --- Edit Shop Item Modal ---
+        let editingShopItemId = null;
+
+        function openEditShopItemModal(itemId) {
+            editingShopItemId = itemId;
+            const item = state.player.shopItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            let modal = document.getElementById('editShopItemModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'editShopItemModal';
+                modal.className = 'modal-backdrop';
+                modal.style.zIndex = '2500';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>Edit Item</h2>
+                            <button class="close-btn" onclick="document.getElementById('editShopItemModal').classList.remove('show')">&times;</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" id="editShopTitle">
+                        </div>
+                        <div class="form-group">
+                            <label>Price</label>
+                            <input type="number" id="editShopPrice">
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="editShopCategory">
+                                <option value="General">General</option>
+                                <option value="Food">Food</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Health">Health</option>
+                                <option value="Badge">Badge</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                             <label>Badge Category (if Badge)</label>
+                             <select id="editShopBadgeCategory">
+                                 <option value="">None</option>
+                                 <option value="Habits">Habits</option>
+                                 <option value="Skills">Skills</option>
+                                 <option value="Achievements">Achievements</option>
+                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Icon</label>
+                            <input type="text" id="editShopIcon">
+                        </div>
+                         <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="editShopDesc" rows="3"></textarea>
+                        </div>
+                        <div class="modal-footer" style="display: flex; justify-content: space-between; margin-top: 20px;">
+                            <button class="btn btn-secondary" onclick="deleteEditShopItem()" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete Item</button>
+                            <button class="btn btn-primary" onclick="saveEditShopItem()">Save Changes</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            document.getElementById('editShopTitle').value = item.title;
+            document.getElementById('editShopPrice').value = item.price;
+            document.getElementById('editShopCategory').value = item.category || 'General';
+            document.getElementById('editShopBadgeCategory').value = item.badgeCategory || '';
+            document.getElementById('editShopIcon').value = item.icon;
+            document.getElementById('editShopDesc').value = item.description || '';
+
+            modal.classList.add('show');
+        }
+
+        function saveEditShopItem() {
+            if (!editingShopItemId) return;
+            const item = state.player.shopItems.find(i => i.id === editingShopItemId);
+            if (item) {
+                item.title = document.getElementById('editShopTitle').value;
+                item.price = parseInt(document.getElementById('editShopPrice').value);
+                item.category = document.getElementById('editShopCategory').value;
+                item.badgeCategory = document.getElementById('editShopBadgeCategory').value;
+                item.icon = document.getElementById('editShopIcon').value;
+                item.description = document.getElementById('editShopDesc').value;
+
+                saveState();
+                renderStorePage();
+                document.getElementById('editShopItemModal').classList.remove('show');
+                showToast('Item updated!', 'success');
+            }
+        }
+
+        function deleteEditShopItem() {
+            if (!editingShopItemId) return;
+            // Use the centralized delete logic
+            document.getElementById('editShopItemModal').classList.remove('show');
+            deleteShopItem(editingShopItemId);
         }
 
         function renderManageGroups() {
@@ -3107,8 +3284,9 @@
                     badgeCard.title = isOwned ? `${badge.title}\n${badge.description}` : 'Unknown Badge';
 
                     badgeCard.innerHTML = `
-                        <div style="font-size: 2.5rem; marginBottom: 10px;">${isOwned ? badge.icon : '🔒'}</div>
+                        <div style="font-size: 2.5rem; margin-bottom: 10px;">${isOwned ? badge.icon : '🔒'}</div>
                         <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">${isOwned ? badge.title.split('(')[0] : '???'}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8; line-height: 1.2;">${isOwned ? badge.description : 'Unlock to see details'}</div>
                     `;
                     badgeGrid.appendChild(badgeCard);
                 });
