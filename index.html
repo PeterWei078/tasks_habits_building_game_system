@@ -993,6 +993,63 @@
         </div>
     </div>
 
+    <!-- Reflection Modal -->
+    <div id="reflectionModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Reflection</h2>
+                <button class="close-btn" onclick="closeReflectionModal()">Cancel</button>
+            </div>
+
+            <div class="form-section">
+                <h4>Mood</h4>
+                <div style="display: flex; justify-content: space-around; font-size: 2.5rem; margin-bottom: 20px;">
+                    <span class="mood-option" onclick="selectMood('very_happy')" data-value="very_happy"
+                        style="cursor: pointer; opacity: 0.5; transition: all 0.2s;">😁</span>
+                    <span class="mood-option" onclick="selectMood('happy')" data-value="happy"
+                        style="cursor: pointer; opacity: 0.5; transition: all 0.2s;">🙂</span>
+                    <span class="mood-option" onclick="selectMood('neutral')" data-value="neutral"
+                        style="cursor: pointer; opacity: 0.5; transition: all 0.2s;">😐</span>
+                    <span class="mood-option" onclick="selectMood('sad')" data-value="sad"
+                        style="cursor: pointer; opacity: 0.5; transition: all 0.2s;">☹️</span>
+                    <span class="mood-option" onclick="selectMood('crying')" data-value="crying"
+                        style="cursor: pointer; opacity: 0.5; transition: all 0.2s;">😭</span>
+                </div>
+                <input type="hidden" id="reflectMood">
+            </div>
+
+            <div class="form-section">
+                <h4>Content</h4>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <!-- Date Picker -->
+                    <input type="date" id="reflectDate" style="margin-bottom: 10px;">
+
+                    <input type="text" id="reflectTitle" placeholder="Title (Highlighted)"
+                        style="font-size: 1.2rem; font-weight: bold; padding: 15px; border-left: 5px solid var(--accent-color); background: rgba(107, 70, 193, 0.05);">
+                </div>
+                <div class="form-group">
+                    <textarea id="reflectDesc" placeholder="Write your thoughts..." rows="6"
+                        style="width: 100%; padding: 12px; border-radius: 12px; resize: vertical;"></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h4>Tags</h4>
+                <div id="reflectTagsList" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="reflectNewTag" placeholder="Add custom tag..." style="flex: 1;">
+                    <button class="btn" onclick="addReflectionTag()" style="padding: 8px 15px;">+ Add</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px;"
+                onclick="saveReflection()">Save Reflection</button>
+            <button id="btnDeleteReflection" type="button" class="btn"
+                style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E; display: none;"
+                onclick="deleteReflectionWithConfirm()">🗑️ Delete</button>
+        </div>
+    </div>
+
     <script>
         // --- State Management ---
         const defaultState = {
@@ -1039,7 +1096,9 @@
                     { id: 'b4', title: '財富自由 (Tycoon)', description: '累積財富', price: 500, category: 'Badge', badgeCategory: 'Achievements', icon: '💎' },
                 ],
                 inventory: [],
-                achievements: [] // Archived completed projects
+                inventory: [],
+                achievements: [], // Archived completed projects
+                reflections: [] // New Reflections Data
             },
             tasks: [
                 { id: 1, title: "晨跑 3 公里 (Morning Run)", attributeRewards: [{ attribute: "agility", exp: 20 }], completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
@@ -1118,7 +1177,9 @@
             });
         }
         if (!state.player.inventory) state.player.inventory = [];
+        if (!state.player.inventory) state.player.inventory = [];
         if (!state.player.achievements) state.player.achievements = [];
+        if (!state.player.reflections) state.player.reflections = []; // Initialize reflections
         if (typeof state.player.gold === 'undefined') state.player.gold = 0;
 
         saveState(); // Save the patched state immediately
@@ -1176,6 +1237,7 @@
             else if (currentTab === 'statistics') renderStatisticsPage();
             else if (currentTab === 'store') renderStorePage();
             else if (currentTab === 'achievements') renderAchievementsPage();
+            else if (currentTab === 'reflections') renderReflectionsPage(); // Add Reflections Page
             else if (currentTab === 'activity') {
                 console.log("Calling renderActivityPage..."); // DEBUG
                 renderActivityPage();
@@ -4102,6 +4164,205 @@
                 renderActivityPage();
                 document.getElementById('editActivityModal').classList.remove('show');
                 showToast('Activity updated', 'success');
+            }
+        }
+
+        // --- Reflections Feature ---
+        let editingReflectionId = null;
+        let currentReflectionTags = [];
+
+        function renderReflectionsPage() {
+            const container = document.getElementById('app-content');
+            container.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h2 class="page-title" style="margin: 0;">My Reflections</h2>
+                    <div style="display: flex; gap: 10px;">
+                         <button class="btn" style="background: rgba(255,255,255,0.3);" onclick="document.getElementById('nav-statistics').click()">📊 Stats</button>
+                         <button class="btn btn-primary" onclick="openReflectionModal()">+ New</button>
+                    </div>
+                </div>
+
+                <div class="glass glass-card">
+                    <input type="text" placeholder="Search content or related info..." id="reflectionSearch" oninput="filterReflections()" 
+                        style="width: 100%; padding: 12px; border: none; background: transparent; font-size: 1.1rem;">
+                </div>
+
+                <div id="reflectionsList" style="display: flex; flex-direction: column; gap: 20px;"></div>
+            `;
+            renderReflectionsList();
+        }
+
+        function renderReflectionsList(filterText = '') {
+            const list = document.getElementById('reflectionsList');
+            if (!list) return;
+
+            let reflections = state.player.reflections || [];
+            if (filterText) {
+                const lower = filterText.toLowerCase();
+                reflections = reflections.filter(r =>
+                    r.title.toLowerCase().includes(lower) ||
+                    r.description.toLowerCase().includes(lower) ||
+                    (r.tags && r.tags.some(t => t.toLowerCase().includes(lower)))
+                );
+            }
+
+            // Sort by date desc
+            reflections.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (reflections.length === 0) {
+                list.innerHTML = `<div style="text-align: center; opacity: 0.6; padding: 40px;">No reflections found. Start writing! ✍️</div>`;
+                return;
+            }
+
+            const moodMap = {
+                'very_happy': '😁', 'happy': '🙂', 'neutral': '😐', 'sad': '☹️', 'crying': '😭'
+            };
+
+            list.innerHTML = reflections.map(r => `
+                <div class="glass glass-card" style="position: relative; cursor: pointer; transition: transform 0.2s;" onclick="openReflectionModal('${r.id}')">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.8rem;">${moodMap[r.mood] || '😐'}</span>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.2rem;">${r.title}</h3>
+                                <div style="font-size: 0.8rem; opacity: 0.6;">${new Date(r.date).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                         <button class="btn" style="padding: 5px 10px; font-size: 0.8rem; background: rgba(0,0,0,0.05);" onclick="event.stopPropagation(); openReflectionModal('${r.id}')">Edit</button>
+                    </div>
+                    <div style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.5; margin-bottom: 15px; opacity: 0.9;">${r.description}</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        ${(r.tags || []).map(t => `<span class="badge" style="background: rgba(107, 70, 193, 0.1); color: var(--accent-color); margin-left: 0;">#${t}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterReflections() {
+            const text = document.getElementById('reflectionSearch').value;
+            renderReflectionsList(text);
+        }
+
+        function openReflectionModal(id = null) {
+            const modal = document.getElementById('reflectionModal');
+            editingReflectionId = id;
+            currentReflectionTags = []; // Reset tags
+
+            // Reset Form
+            document.querySelectorAll('.mood-option').forEach(el => {
+                el.style.opacity = '0.5';
+                el.style.transform = 'scale(1)';
+            });
+            document.getElementById('reflectMood').value = '';
+            document.getElementById('reflectTitle').value = '';
+            document.getElementById('reflectDesc').value = '';
+            document.getElementById('reflectDate').valueAsDate = new Date();
+            document.getElementById('reflectNewTag').value = '';
+
+            const deleteBtn = document.getElementById('btnDeleteReflection');
+
+            if (id) {
+                // Edit Mode
+                const r = state.player.reflections.find(x => x.id === id);
+                if (r) {
+                    selectMood(r.mood);
+                    document.getElementById('reflectTitle').value = r.title;
+                    document.getElementById('reflectDesc').value = r.description;
+                    if (r.date) document.getElementById('reflectDate').value = r.date.split('T')[0]; // Simple YYYY-MM-DD
+                    currentReflectionTags = [...(r.tags || [])];
+                    if (deleteBtn) deleteBtn.style.display = 'block';
+                }
+            } else {
+                // Create Mode
+                selectMood('neutral'); // Default
+                if (deleteBtn) deleteBtn.style.display = 'none';
+            }
+
+            renderReflectionTags();
+            modal.classList.add('show');
+        }
+
+        function closeReflectionModal() {
+            document.getElementById('reflectionModal').classList.remove('show');
+        }
+
+        function selectMood(mood) {
+            document.getElementById('reflectMood').value = mood;
+            document.querySelectorAll('.mood-option').forEach(el => {
+                if (el.dataset.value === mood) {
+                    el.style.opacity = '1';
+                    el.style.transform = 'scale(1.2)';
+                } else {
+                    el.style.opacity = '0.5';
+                    el.style.transform = 'scale(1)';
+                }
+            });
+        }
+
+        function addReflectionTag() {
+            const input = document.getElementById('reflectNewTag');
+            const val = input.value.trim();
+            if (val && !currentReflectionTags.includes(val)) {
+                currentReflectionTags.push(val);
+                renderReflectionTags();
+                input.value = '';
+            }
+        }
+
+        function renderReflectionTags() {
+            const container = document.getElementById('reflectTagsList');
+            container.innerHTML = currentReflectionTags.map(t => `
+                <span class="badge" style="background: rgba(107, 70, 193, 0.1); color: var(--accent-color); margin-left: 0; display: flex; align-items: center; gap: 5px;">
+                    #${t} <span onclick="removeReflectionTag('${t}')" style="cursor: pointer; font-weight: bold;">&times;</span>
+                </span>
+            `).join('');
+        }
+
+        function removeReflectionTag(tag) {
+            currentReflectionTags = currentReflectionTags.filter(t => t !== tag);
+            renderReflectionTags();
+        }
+
+        function saveReflection() {
+            const mood = document.getElementById('reflectMood').value;
+            const title = document.getElementById('reflectTitle').value.trim();
+            const desc = document.getElementById('reflectDesc').value;
+            const dateVal = document.getElementById('reflectDate').value;
+
+            if (!title) return alert("Please enter a title.");
+
+            const reflectionData = {
+                id: editingReflectionId || 'ref_' + Date.now(),
+                mood,
+                title,
+                description: desc,
+                date: dateVal || new Date().toISOString().split('T')[0],
+                tags: currentReflectionTags
+            };
+
+            if (editingReflectionId) {
+                const idx = state.player.reflections.findIndex(r => r.id === editingReflectionId);
+                if (idx !== -1) {
+                    state.player.reflections[idx] = reflectionData;
+                    showToast("Reflection Updated", "Your thoughts have been saved.");
+                }
+            } else {
+                state.player.reflections.unshift(reflectionData);
+                showToast("Reflection Added", "New entry created.");
+            }
+
+            saveState();
+            renderReflectionsPage();
+            closeReflectionModal();
+        }
+
+        function deleteReflectionWithConfirm() {
+            if (confirm("Delete this reflection? This cannot be undone.")) {
+                state.player.reflections = state.player.reflections.filter(r => r.id !== editingReflectionId);
+                saveState();
+                renderReflectionsPage();
+                closeReflectionModal();
+                showToast("Deleted", "Reflection removed.");
             }
         }
 
