@@ -1048,6 +1048,16 @@
         if (!state.player.tags) {
             state.player.tags = defaultState.player.tags;
         }
+        // Cleanup Invalid Activities
+        if (state.player.activities) {
+            state.player.activities = state.player.activities.filter(act => {
+                if (!act.timestamp) return false;
+                const date = new Date(act.timestamp);
+                return !isNaN(date.getTime());
+            });
+        } else {
+            state.player.activities = [];
+        }
         if (typeof state.player.totalFocusTime === 'undefined') {
             state.player.totalFocusTime = 0;
         }
