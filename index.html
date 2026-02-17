@@ -1574,7 +1574,6 @@
             }
         }
 
-        // --- Confirm Modal Logic ---
         let matchConfirmCallback = null;
 
         function openConfirmModal(message, callback) {
@@ -1589,8 +1588,8 @@
                         <h3 style="margin-bottom: 15px;">Confirm Action</h3>
                         <p id="confirmModalMessage" style="margin-bottom: 25px; color: var(--text-secondary);"></p>
                         <div style="display: flex; gap: 10px; justify-content: center;">
-                            <button class="btn" style="background: var(--bg-secondary); color: var(--text-primary);" onclick="document.getElementById('confirmModal').classList.remove('show')">Cancel</button>
-                            <button class="btn btn-primary" onclick="executeConfirmCallback()">Confirm</button>
+                            <button class="btn" style="background: var(--bg-secondary); color: var(--text-primary);" onclick="closeConfirmModal()">Cancel</button>
+                            <button class="btn btn-primary" id="confirmModalBtn">Confirm</button>
                         </div>
                     </div>
                 `;
@@ -1598,14 +1597,42 @@
             }
 
             document.getElementById('confirmModalMessage').textContent = message;
-            matchConfirmCallback = callback;
+
+            // Unbind previous events to avoid stacking
+            const btn = document.getElementById('confirmModalBtn');
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+
+            newBtn.onclick = () => {
+                if (callback) callback();
+                closeConfirmModal();
+            };
+
             modal.classList.add('show');
+            modal.style.display = 'flex';
         }
 
-        function executeConfirmCallback() {
-            if (matchConfirmCallback) matchConfirmCallback();
-            document.getElementById('confirmModal').classList.remove('show');
-            matchConfirmCallback = null;
+        function closeConfirmModal() {
+            const modal = document.getElementById('confirmModal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    if (!modal.classList.contains('show')) modal.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        function logActivity(type, title, details = {}) {
+            const log = {
+                id: 'act_' + Date.now(),
+                type: type,
+                title: title,
+                timestamp: Date.now(),
+                details: details
+            };
+            state.player.activities.unshift(log);
+            // Keep log size manageable
+            if (state.player.activities.length > 50) state.player.activities.pop();
         }
 
         function useItem(inventoryIndex) {
@@ -3472,6 +3499,7 @@
                     const isOwned = state.player.inventory.some(i => i.itemId === badge.id);
                     const badgeCard = document.createElement('div');
                     badgeCard.className = 'glass';
+                    badgeCard.style.position = 'relative'; // For absolute positioning of reset button
                     badgeCard.style.padding = '15px';
                     badgeCard.style.textAlign = 'center';
                     badgeCard.style.borderRadius = '12px';
@@ -3480,13 +3508,25 @@
                     badgeCard.style.filter = isOwned ? 'none' : 'grayscale(100%)';
                     badgeCard.style.transition = 'all 0.3s';
 
-                    // Tooltip logic could be added here
-                    badgeCard.title = isOwned ? `${badge.title}\n${badge.description}` : 'Unknown Badge';
+                    // Delete Button (Only if owned)
+                    let deleteButton = '';
+                    if (isOwned) {
+                        deleteButton = `
+                        <button onclick="event.stopPropagation(); deleteBadge('${badge.id}', '${(badge.title || badge.name).replace(/'/g, "\\'")}')" 
+                                style="position: absolute; top: 5px; right: 5px; background: rgba(255,0,0,0.1); border: none; 
+                                       border-radius: 50%; width: 24px; height: 24px; cursor: pointer; color: #e53e3e; 
+                                       display: flex; align-items: center; justify-content: center; font-size: 0.9rem;" 
+                                title="Delete Badge (Remove from Inventory)">
+                            🗑️
+                        </button>`;
+                    }
+                    deleteButton = deleteButton.replace('style="', 'style="z-index: 10; '); // Ensure z-index
 
                     badgeCard.innerHTML = `
-                        <div style="font-size: 2.5rem; margin-bottom: 10px;">${isOwned ? badge.icon : '🔒'}</div>
-                        <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 5px;">${isOwned ? badge.title.split('(')[0] : '???'}</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8; line-height: 1.2;">${isOwned ? badge.description : 'Unlock to see details'}</div>
+                        ${deleteButton}
+                        <div style="font-size: 2rem; margin-bottom: 5px;">${badge.icon}</div>
+                        <div style="font-weight: bold; font-size: 0.9rem;">${badge.title || badge.name}</div>
+                        ${badge.description ? `<div style="font-size: 0.75rem; opacity: 0.8; margin-top: 4px;">${badge.description}</div>` : ''}
                     `;
                     badgeGrid.appendChild(badgeCard);
                 });
@@ -3590,6 +3630,19 @@
             showToast("Record Deleted", "Achievements updated.");
         }
 
+        function deleteBadge(badgeId, badgeName) {
+            openConfirmModal(`Are you sure you want to delete the "${badgeName}" badge from your collection?`, () => {
+                // Remove from inventory
+                state.player.inventory = state.player.inventory.filter(i => i.itemId !== badgeId);
+
+                // Log activity
+                logActivity('BADGE_DELETED', `Deleted badge: ${badgeName}`);
+
+                showToast('Badge Deleted', `You have deleted "${badgeName}".`);
+                saveState();
+                render(); // Re-render to update UI
+            });
+        }
         // NEW Edit Logic with Modal
         let currentEditId = null;
 
