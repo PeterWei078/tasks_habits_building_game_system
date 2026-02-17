@@ -2371,8 +2371,8 @@
                 }
 
                 item.innerHTML = `
-                <div class="task-content" onclick="openTaskModal(${task.id})" style="cursor: pointer;">
-                    <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTask(${task.id})"></div>
+                <div class="task-content" onclick="openTaskModal('${task.id}')" style="cursor: pointer;">
+                    <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTask('${task.id}')"></div>
                     <div>
                         <div class="task-text ${task.completed ? 'completed' : ''}">${task.title} ${task.image ? `<a href="${task.image}" target="_blank" onclick="event.stopPropagation()" style="margin-left: 5px; opacity: 0.7; text-decoration: none;" title="Open Link">🔗</a>` : ''}</div>
                         ${task.description ? `<div style="font-size: 0.85rem; opacity: 0.8; margin-top: 2px; white-space: pre-wrap;">${linkify(task.description)}</div>` : ''}
@@ -2391,7 +2391,7 @@
                          `).join('')}
                     </div>
                 </div>
-                ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5;" onclick="deleteTask(${task.id})">🗑️</button>`}
+                ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5;" onclick="deleteTask('${task.id}')">🗑️</button>`}
             `;
                 listContainer.appendChild(item);
             });
@@ -2433,7 +2433,8 @@
             if (taskId) {
                 // Edit Mode
                 editingTaskId = taskId;
-                const task = state.tasks.find(t => t.id === taskId);
+                // Use loose equality to match string IDs from HTML with potential numeric IDs in state
+                const task = state.tasks.find(t => t.id == taskId);
                 if (!task) return;
 
                 titleEl.textContent = 'Edit Task';
@@ -2479,7 +2480,66 @@
                 document.getElementById('modalPhotoBase64').value = '';
             }
 
-            modal.classList.add('show');
+            // Create Delete Button if Editing
+            let deleteBtn = document.getElementById('btnDeleteTask');
+            if (taskId) {
+                if (!deleteBtn) {
+                    deleteBtn = document.createElement('button');
+                    deleteBtn.id = 'btnDeleteTask';
+                    deleteBtn.type = 'button'; // Prevent form submission
+                    deleteBtn.className = 'btn';
+                    deleteBtn.style.background = 'rgba(229, 62, 62, 0.2)';
+                    deleteBtn.style.color = '#E53E3E';
+                    deleteBtn.style.marginLeft = '10px';
+                    deleteBtn.textContent = '🗑️ Delete Quest';
+                    deleteBtn.onclick = (e) => {
+                        if (e) e.preventDefault();
+                        deleteTask(taskId);
+                    };
+                    saveBtn.parentNode.appendChild(deleteBtn);
+                } else {
+                    deleteBtn.onclick = (e) => {
+                        if (e) e.preventDefault();
+                        deleteTask(taskId);
+                    };
+                    deleteBtn.style.display = 'inline-block';
+                }
+            } else {
+                if (deleteBtn) deleteBtn.style.display = 'none';
+            }
+
+            // Create Duplicate Button if Editing
+            let duplicateBtn = document.getElementById('btnDuplicateTask');
+            if (taskId) {
+                if (!duplicateBtn) {
+                    duplicateBtn = document.createElement('button');
+                    duplicateBtn.id = 'btnDuplicateTask';
+                    duplicateBtn.type = 'button';
+                    duplicateBtn.className = 'btn';
+                    duplicateBtn.style.background = 'rgba(66, 153, 225, 0.2)'; // Blue tint
+                    duplicateBtn.style.color = '#4299E1'; // Blue
+                    duplicateBtn.style.marginLeft = '10px';
+                    duplicateBtn.textContent = '📑 Duplicate';
+                    duplicateBtn.onclick = (e) => {
+                        if (e) e.preventDefault();
+                        duplicateTask(taskId);
+                    };
+                    saveBtn.parentNode.insertBefore(duplicateBtn, deleteBtn); // Insert before delete
+                } else {
+                    duplicateBtn.onclick = (e) => {
+                        if (e) e.preventDefault();
+                        duplicateTask(taskId);
+                    };
+                    duplicateBtn.style.display = 'inline-block';
+                    // Ensure order if re-showing
+                    if (deleteBtn && duplicateBtn.nextSibling !== deleteBtn) {
+                        saveBtn.parentNode.insertBefore(duplicateBtn, deleteBtn);
+                    }
+                }
+            } else {
+                if (duplicateBtn) duplicateBtn.style.display = 'none';
+            }
+
             modal.classList.add('show');
         }
 
@@ -2821,11 +2881,62 @@
         }
 
         function deleteTask(id) {
-            if (confirm("Abandon this quest?")) {
-                state.tasks = state.tasks.filter(t => t.id !== id);
-                saveState();
-                render();
+            // Use loose equality to match string IDs from HTML with potential numeric IDs in state
+            const task = state.tasks.find(t => t.id == id);
+            if (!task) {
+                console.error("Task not found for deletion:", id);
+                return;
             }
+
+            if (typeof openConfirmModal === 'function') {
+                openConfirmModal(`Abandon quest "${task.title}"?`, () => {
+                    executeDelete(id);
+                });
+            } else if (confirm(`Abandon quest "${task.title}"?`)) {
+                executeDelete(id);
+            }
+        }
+
+        function executeDelete(id) {
+            // Use loose equality for filtering to match mixed types
+            state.tasks = state.tasks.filter(t => t.id != id);
+            saveState();
+            render();
+            showToast("Quest Abandoned", "The quest has been removed from your log.");
+
+            // Close modal if open
+            const modal = document.getElementById('taskModal');
+            if (modal && modal.classList.contains('show')) {
+                closeTaskModal();
+            }
+        }
+
+        function duplicateTask(id) {
+            console.log("Attempting to duplicate task:", id);
+            // Use loose equality to match string IDs from HTML with potential numeric IDs in state
+            const originalTask = state.tasks.find(t => t.id == id);
+            if (!originalTask) {
+                console.error("Task not found for duplication:", id);
+                alert("Error: Could not find original task to duplicate.");
+                return;
+            }
+
+            const newTask = JSON.parse(JSON.stringify(originalTask));
+            newTask.id = 't_' + Date.now();
+            newTask.title = originalTask.title + ' (Copy)';
+            newTask.completed = false;
+            newTask.timeSpent = 0;
+            delete newTask.completedDate;
+
+            if (newTask.subtasks) {
+                newTask.subtasks.forEach(st => st.completed = false);
+            }
+
+            state.tasks.push(newTask);
+            saveState();
+            render();
+            showToast("Quest Duplicated", "A copy of the quest has been created.");
+            closeTaskModal();
         }
 
         function editPlayerLevel() {
