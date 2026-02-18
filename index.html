@@ -1758,6 +1758,38 @@
                 </div>
             `;
 
+            // --- NEW: Focus Time History Chart ---
+            const chartCard = document.createElement('div');
+            chartCard.className = 'glass glass-card';
+            chartCard.style.padding = '20px';
+            chartCard.style.marginBottom = '20px';
+
+            const chartHeader = document.createElement('div');
+            chartHeader.style.display = 'flex';
+            chartHeader.style.justifyContent = 'space-between';
+            chartHeader.style.alignItems = 'center';
+            chartHeader.style.marginBottom = '15px';
+
+            chartHeader.innerHTML = `
+                <h3 style="margin:0;">Focus History</h3>
+                <div style="display: flex; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 2px;">
+                    <button onclick="renderFocusChart('daily')" id="btn-chart-daily" class="btn-chart active" style="padding: 4px 12px; border: none; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Day</button>
+                    <button onclick="renderFocusChart('weekly')" id="btn-chart-weekly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Week</button>
+                    <button onclick="renderFocusChart('monthly')" id="btn-chart-monthly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Month</button>
+                </div>
+            `;
+
+            const chartBody = document.createElement('div');
+            chartBody.id = 'focus-chart-container';
+            chartBody.style.height = '150px';
+            chartBody.style.display = 'flex';
+            chartBody.style.alignItems = 'flex-end';
+            chartBody.style.gap = '8px';
+            chartBody.style.paddingTop = '20px';
+
+            chartCard.appendChild(chartHeader);
+            chartCard.appendChild(chartBody);
+
             // Project Stats (By Tag)
             const projectStats = document.createElement('div');
             projectStats.className = 'glass glass-card';
@@ -1812,9 +1844,12 @@
             const tasksWithTime = state.tasks.filter(t => t.timeSpent > 0).sort((a, b) => b.timeSpent - a.timeSpent);
 
             let taskListHtml = tasksWithTime.map(t => `
-                <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <span>${t.title}</span>
-                    <span>${Math.round(t.timeSpent / 60)} min</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div style="flex-grow: 1;">${t.title}</div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span>${Math.round(t.timeSpent / 60)} min</span>
+                        <button onclick="resetTaskStats('${t.id}')" style="background: none; border: none; cursor: pointer; opacity: 0.6; font-size: 1rem; color: #ff6384;" title="Reset Stats for this Task">🗑️</button>
+                    </div>
                 </div>
             `).join('');
 
@@ -1827,8 +1862,119 @@
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(globalStats);
+            contentDiv.appendChild(chartCard);
             contentDiv.appendChild(projectStats);
             contentDiv.appendChild(taskStats);
+            // Removed Recent Focus Log as requested
+
+            // Initial Render of Chart (Daily)
+            setTimeout(() => renderFocusChart('daily'), 0);
+        }
+
+
+
+        // --- Focus Chart Logic ---
+        function renderFocusChart(mode) {
+            const container = document.getElementById('focus-chart-container');
+            if (!container) return;
+
+            // Update Buttons
+            document.querySelectorAll('.btn-chart').forEach(btn => {
+                const isActive = btn.id === `btn-chart-${mode}`;
+                btn.style.background = isActive ? 'white' : 'transparent';
+                btn.style.opacity = isActive ? '1' : '0.7';
+                btn.style.boxShadow = isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
+                btn.classList.toggle('active', isActive);
+            });
+
+            // Get Data
+            const data = getFocusData(mode);
+            const maxVal = Math.max(...data.map(d => d.value), 1); // Avoid div by zero
+
+            // Render Bars
+            container.innerHTML = data.map(d => {
+                const heightPercent = (d.value / maxVal) * 100;
+                const displayVal = d.value >= 60 ? (d.value / 60).toFixed(1) + 'h' : d.value + 'm';
+                const color = d.value > 0 ? 'var(--accent-color)' : 'rgba(0,0,0,0.05)';
+
+                return `
+                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; group">
+                        <div style="flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center;">
+                             <div class="chart-bar" style="width: 80%; background: ${color}; height: ${heightPercent}%; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; position: relative;" title="${displayVal}">
+                                <div class="tooltip" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #2D3748; color: white; padding: 4px 6px; border-radius: 4px; font-size: 0.7rem; pointer-events: none; opacity: 0; transition: opacity 0.2s; white-space: nowrap; z-index: 10; margin-bottom: 5px;">${displayVal}</div>
+                                <style> .chart-bar:hover .tooltip { opacity: 1; } </style>
+                             </div>
+                        </div>
+                        <div style="font-size: 0.7rem; margin-top: 6px; opacity: 0.6;">${d.label}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getFocusData(mode) {
+            // Aggregate from state.player.activities
+            // Filter only TASK_COMPLETE with timeSpent
+            const activities = (state.player.activities || []).filter(a => a.type === 'TASK_COMPLETE' && a.details && a.details.timeSpent);
+
+            const now = new Date();
+            const data = [];
+
+            if (mode === 'daily') {
+                // Last 7 Days
+                for (let i = 6; i >= 0; i--) {
+                    const d = new Date();
+                    d.setDate(now.getDate() - i);
+                    const dateStr = d.toLocaleDateString();
+                    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }); // Mon, Tue
+
+                    // Sum duration (seconds -> minutes)
+                    const totalSec = activities
+                        .filter(a => new Date(a.timestamp).toLocaleDateString() === dateStr)
+                        .reduce((sum, a) => sum + (a.details.timeSpent || 0), 0);
+
+                    data.push({ label: i === 0 ? 'Today' : dayName, value: Math.round(totalSec / 60) });
+                }
+            } else if (mode === 'weekly') {
+                // Last 8 Weeks
+                for (let i = 7; i >= 0; i--) {
+                    const startOfWeek = new Date(now);
+                    startOfWeek.setDate(now.getDate() - (i * 7) - now.getDay()); // Start of that week (Sun)
+                    startOfWeek.setHours(0, 0, 0, 0);
+
+                    const endOfWeek = new Date(startOfWeek);
+                    endOfWeek.setDate(startOfWeek.getDate() + 6);
+                    endOfWeek.setHours(23, 59, 59, 999);
+
+                    const totalSec = activities
+                        .filter(a => {
+                            const t = new Date(a.timestamp);
+                            return t >= startOfWeek && t <= endOfWeek;
+                        })
+                        .reduce((sum, a) => sum + (a.details.timeSpent || 0), 0);
+
+                    // Label: "W2" or date
+                    const label = i === 0 ? 'This Week' : `${startOfWeek.getMonth() + 1}/${startOfWeek.getDate()}`;
+                    data.push({ label, value: Math.round(totalSec / 60) });
+                }
+            } else if (mode === 'monthly') {
+                // Last 6 Months
+                for (let i = 5; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const month = d.getMonth();
+                    const year = d.getFullYear();
+
+                    const totalSec = activities
+                        .filter(a => {
+                            const t = new Date(a.timestamp);
+                            return t.getMonth() === month && t.getFullYear() === year;
+                        })
+                        .reduce((sum, a) => sum + (a.details.timeSpent || 0), 0);
+
+                    const label = d.toLocaleDateString('en-US', { month: 'short' }); // Jan, Feb
+                    data.push({ label, value: Math.round(totalSec / 60) });
+                }
+            }
+            return data;
         }
 
 
@@ -2882,7 +3028,8 @@
                         gold: task.rewardGold,
                         attributeRewards: task.attributeRewards,
                         groupName: group ? group.name : 'Unknown',
-                        projects: projectTags.map(p => ({ name: p.name, color: p.color }))
+                        projects: projectTags.map(p => ({ name: p.name, color: p.color })),
+                        timeSpent: task.timeSpent || 0 // Added for Focus Charts
                     }
                 });
 
@@ -4119,21 +4266,85 @@
             contentDiv.appendChild(timelineContainer);
         }
 
+        // --- Statistics Actions ---
+        function resetTaskStats(taskId) {
+            // Loose equality for ID matching
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+
+            const confirmMsg = `Reset focus stats for "${task.title}"?\nThis will remove ${Math.round(task.timeSpent / 60)} minutes from your Total Focus Time and clear related history.`;
+
+            const processReset = () => {
+                const timeToRemove = task.timeSpent || 0;
+
+                // 1. Reset Task Time
+                task.timeSpent = 0;
+
+                // 2. Update Global Time
+                state.player.totalFocusTime = Math.max(0, (state.player.totalFocusTime || 0) - timeToRemove);
+
+                // 3. Clear Related Activities (By Title match as fallback for older logs)
+                if (state.player.activities) {
+                    state.player.activities = state.player.activities.filter(a => {
+                        // Keep if NOT related to this task
+                        // Check exact ID if available (new logs), or Title (old logs)
+                        // Note: older logs might not have taskId, so title is best heuristic
+                        if (a.type === 'TASK_COMPLETE') {
+                            if (a.taskId && a.taskId == taskId) return false;
+                            if (a.title === task.title) return false;
+                        }
+                        return true;
+                    });
+                }
+
+                saveState();
+                renderStatisticsPage();
+                showToast('Stats Reset', 'Task focus time cleared.');
+            };
+
+            if (openConfirmModal) {
+                openConfirmModal(confirmMsg, processReset);
+            } else if (confirm(confirmMsg)) {
+                processReset();
+            }
+        }
+
         // --- Activity Management ---
         let editingActivityId = null;
 
         function deleteActivity(id) {
-            if (openConfirmModal) {
-                openConfirmModal('Delete this activity log entry? (Stats will NOT be reverted)', () => {
-                    state.player.activities = state.player.activities.filter(a => a.id !== id);
-                    saveState();
-                    renderActivityPage();
-                    showToast('Activity deleted', 'info');
-                });
-            } else if (confirm('Delete this activity log?')) {
+            // Helper to process deletion
+            const processDelete = () => {
+                const act = state.player.activities.find(a => a.id === id);
+                if (act && act.type === 'TASK_COMPLETE' && act.details && act.details.timeSpent) {
+                    // 1. Deduct from Global Focus Time
+                    state.player.totalFocusTime = Math.max(0, (state.player.totalFocusTime || 0) - act.details.timeSpent);
+
+                    // 2. Deduct from Task Focus Time (Best Effort Match by Title)
+                    // Since we didn't store taskId in logs historically, we match by title.
+                    // This is imperfect if tasks are renamed or have duplicate titles, but best possible fix.
+                    const task = state.tasks.find(t => t.title === act.title);
+                    if (task) {
+                        task.timeSpent = Math.max(0, (task.timeSpent || 0) - act.details.timeSpent);
+                    }
+                }
+
                 state.player.activities = state.player.activities.filter(a => a.id !== id);
                 saveState();
-                renderActivityPage();
+
+                // Intelligent Re-render
+                if (typeof renderStatisticsPage === 'function' && document.querySelector('h2.page-title')?.textContent.includes('Statistics')) {
+                    renderStatisticsPage();
+                } else if (typeof renderActivityPage === 'function') {
+                    renderActivityPage();
+                }
+                showToast('Activity deleted', 'info');
+            };
+
+            if (openConfirmModal) {
+                openConfirmModal('Delete this activity log? This will also remove the Focus Time stats for this entry.', processDelete);
+            } else if (confirm('Delete this activity log? This will also remove the Focus Time stats for this entry.')) {
+                processDelete();
             }
         }
 
