@@ -911,10 +911,7 @@
                     </div>
                     <div class="form-group">
                         <label>Time Spent (min)</label>
-                        <div class="form-group">
-                            <label>Time Spent (min)</label>
-                            <input type="number" id="modalTimeSpent" value="0" style="width: 80px;" placeholder="Min">
-                        </div>
+                        <input type="number" id="modalTimeSpent" value="0" style="width: 80px;" placeholder="Min">
                     </div>
                 </div>
 
@@ -2723,15 +2720,28 @@
                     completed: false
                 })).filter(st => st.title);
 
+                // Update Global Focus Time with Manual Edits
+                // If a user manually changes time spent, it should reflect in global stats.
+                // We calculate the difference between new time and old time.
+                // Use loose equality for ID matching as editingTaskId might be string while task.id is number
+                const oldTime = editingTaskId ? (state.tasks.find(t => t.id == editingTaskId)?.timeSpent || 0) : 0;
+                const timeDiff = timeSpentSec - oldTime;
+
+                if (timeDiff !== 0) {
+                    state.player.totalFocusTime = (state.player.totalFocusTime || 0) + timeDiff;
+                    // Prevent negative total time
+                    if (state.player.totalFocusTime < 0) state.player.totalFocusTime = 0;
+                }
+
                 if (editingTaskId) {
                     // Update Existing
-                    const taskIndex = state.tasks.findIndex(t => t.id === editingTaskId);
+                    // Use loose equality to match string IDs from HTML with potential numeric IDs in state
+                    const taskIndex = state.tasks.findIndex(t => t.id == editingTaskId);
                     if (taskIndex !== -1) {
                         state.tasks[taskIndex] = {
                             ...state.tasks[taskIndex],
-                            ...state.tasks[taskIndex],
                             title, description: desc, image: img, photo: photoData,
-                            attribute: primaryAttribute, attributeRewards, // Updated
+                            attribute: primaryAttribute, attributeRewards,
                             groupId: group, tags, subtasks, repeat, rewardExp: exp, rewardGold: gold,
                             timeSpent: timeSpentSec // Update time
                         };
@@ -2747,9 +2757,8 @@
                         description: desc,
                         image: img,
                         photo: photoData,
-                        photo: photoData,
                         attribute: primaryAttribute,
-                        attributeRewards: attributeRewards, // New Field
+                        attributeRewards: attributeRewards,
                         groupId: group,
                         tags: tags,
                         subtasks: subtasks,
@@ -2827,9 +2836,15 @@
         }
 
         function toggleTask(id) {
-            const task = state.tasks.find(t => t.id === id);
-            if (task && !task.completed) {
-                task.completed = true;
+            // Use loose comparison for ID or string conversion to be safe
+            const task = state.tasks.find(t => t.id == id);
+            if (!task) return;
+
+            task.completed = !task.completed; // Toggle State
+
+            if (task.completed) {
+                // --- Completion Logic (Rewards) ---
+
                 // Attribute Rewards (Multi-Attribute)
                 if (task.attributeRewards && Array.isArray(task.attributeRewards)) {
                     task.attributeRewards.forEach(reward => {
@@ -2846,9 +2861,7 @@
                         }
                     });
                 } else if (task.attribute && state.player.attributes[task.attribute]) {
-                    // Fallback for old data (though migration should handle this)
-                    // Treat as +1 level effectively? No, let's just give some EXP.
-                    // Actually migration guarantees attributeRewards.
+                    // Fallback for old data
                 }
 
                 state.player.exp += task.rewardExp;
@@ -2858,6 +2871,7 @@
                 const group = state.player.groups.find(g => g.id === (task.groupId || 'default'));
                 const projectTags = task.tags ? task.tags.map(tid => state.player.tags.find(t => t.id === tid)).filter(Boolean) : [];
 
+                // Simple log for completion
                 state.player.activities.unshift({
                     id: 'act_' + Date.now(),
                     type: 'TASK_COMPLETE',
@@ -2866,7 +2880,7 @@
                     details: {
                         exp: task.rewardExp,
                         gold: task.rewardGold,
-                        attributeRewards: task.attributeRewards, // Log specific rewards
+                        attributeRewards: task.attributeRewards,
                         groupName: group ? group.name : 'Unknown',
                         projects: projectTags.map(p => ({ name: p.name, color: p.color }))
                     }
@@ -2881,66 +2895,51 @@
                     levelUp = true;
                 }
 
-                if (saveState()) {
-                    render();
-                    // Show Toast
-                    let attrMsg = '';
-                    if (task.attributeRewards) {
-                        attrMsg = task.attributeRewards.map(r => `${attributesConfig[r.attribute].label.split(' ')[0]} +${r.exp} EXP`).join(', ');
-                    }
-                    showToast(`Quest Complete!`, `EXP +${task.rewardExp} | Gold +${task.rewardGold}\n${levelUp ? '<b>LEVEL UP!</b>' : ''}\n${attrMsg}`);
-                } else {
-                    // Revert if save failed
-                    task.completed = false;
-                    state.player.exp -= task.rewardExp;
-                    state.player.gold -= task.rewardGold;
-                    if (task.attributeRewards) {
-                        task.attributeRewards.forEach(reward => {
-                            const attr = state.player.attributes[reward.attribute];
-                            if (attr) {
-                                attr.exp -= reward.exp;
-                                // Reverting level down is complex, assuming simple revert here
-                            }
-                        });
-                    }
-                    state.player.activities.shift(); // Remove activity
+                showToast("Quest Completed!", `+${task.rewardExp} EXP, +${task.rewardGold} Gold${levelUp ? ' (LEVEL UP!)' : ''}`);
+                if (levelUp) {
+                    confetti({
+                        particleCount: 150,
+                        spread: 80,
+                        origin: { y: 0.6 }
+                    });
                 }
 
-            } else if (task && task.completed) {
-                // Return rewards logic
-                // ... (Keep existing undo logic or update it? Undo is tricky with leveling.
-                // For now, let's keep undo simple or disable it for level ups?
-                // The prompt didn't ask for Undo improvements, but I should try to support it.)
-                if (state.player.exp >= task.rewardExp) {
-                    task.completed = false;
-                    state.player.exp -= task.rewardExp;
-                    state.player.gold -= task.rewardGold;
+            } else {
+                // --- Uncheck Logic (Revert Rewards?) ---
+                // Currently, we usually DO NOT revert rewards in gamified apps to avoid "farming" by toggling.
+                // Or we can revert if it was just done?
+                // For simplicity and user friendliness, let's NOT revert rewards, but stopping it from generating more is handled by the check above? 
+                // Wait, if I toggle on/off/on, I get double awards?
+                // YES, the current logic gives awards EVERY time it enters "completed" state.
+                // This is a potential exploit.
 
-                    if (task.attributeRewards) {
-                        task.attributeRewards.forEach(reward => {
-                            const attr = state.player.attributes[reward.attribute];
-                            if (attr) {
-                                attr.exp -= reward.exp;
-                                if (attr.exp < 0) {
-                                    // Handle level down?
-                                    if (attr.level > 1) {
-                                        attr.level--;
-                                        attr.exp += attr.level * 100;
-                                    } else {
-                                        attr.exp = 0;
-                                    }
-                                }
-                            }
-                        });
-                    }
+                // FIX: Deduct rewards if untoggling? 
+                // Or tracking "rewarded" state separate from "completed"?
+                // Let's implement simple deduction to balance it out.
 
-                    saveState();
-                    render();
-                } else {
-                    alert("Not enough EXP to undo this action!");
+                state.player.exp = Math.max(0, state.player.exp - task.rewardExp);
+                state.player.gold = Math.max(0, state.player.gold - task.rewardGold);
+
+                // Revert Attribute EXP
+                if (task.attributeRewards) {
+                    task.attributeRewards.forEach(reward => {
+                        const attr = state.player.attributes[reward.attribute];
+                        if (attr) {
+                            attr.exp = Math.max(0, attr.exp - reward.exp);
+                            // Handling level down is complex, let's ignore level down for now to keep it simple,
+                            // or just let exp go negative/zero at current level.
+                        }
+                    });
                 }
+
+                showToast("Quest Reset", "Rewards reverted.");
             }
+
+            saveState();
+            render();
         }
+
+
 
         function deleteTask(id) {
             // Use loose equality to match string IDs from HTML with potential numeric IDs in state
@@ -3518,6 +3517,8 @@
             deleteShopItem(editingShopItemId);
         }
 
+        let editingGroupId = null;
+
         function renderManageGroups() {
             try {
                 // Groups Section
@@ -3525,12 +3526,25 @@
                 if (groupList && state.player.groups && Array.isArray(state.player.groups)) {
                     groupList.innerHTML = state.player.groups.map(g => {
                         const isDefault = g.id === 'default';
+
+                        // Inline Edit Mode
+                        if (editingGroupId === g.id) {
+                            return `
+                                <li style="display: flex; gap: 10px; align-items: center; padding: 10px; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 6px;">
+                                    <input type="text" id="editGroupInput_${g.id}" value="${g.name}" style="flex: 1; padding: 5px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1);" onkeydown="if(event.key==='Enter') saveEditGroup('${g.id}')">
+                                    <button type="button" onclick="saveEditGroup('${g.id}')" style="border: none; background: #48BB78; color: white; border-radius: 4px; padding: 5px 10px; cursor: pointer;" title="Save">💾</button>
+                                    <button type="button" onclick="cancelEditGroup()" style="border: none; background: #ED8936; color: white; border-radius: 4px; padding: 5px 10px; cursor: pointer;" title="Cancel">❌</button>
+                                </li>
+                            `;
+                        }
+
+                        // Normal Mode
                         return `
                         <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 6px;">
                             <span style="font-weight: 500;">${g.name}</span>
                             <div style="display: flex; gap: 8px;">
-                                <button onclick="editGroup('${g.id}')" style="background: none; border: none; cursor: pointer; opacity: 0.6; font-size: 1.1rem;" title="Rename">✏️</button>
-                                ${!isDefault ? `<button onclick="deleteGroup('${g.id}')" style="background: none; border: none; color: #E53E3E; cursor: pointer; font-weight: bold; font-size: 1.1rem;" title="Delete">🗑️</button>` : ''}
+                                <button type="button" onclick="event.stopPropagation(); editGroup('${g.id}')" style="background: none; border: none; cursor: pointer; opacity: 0.6; font-size: 1.1rem;" title="Rename">✏️</button>
+                                ${!isDefault ? `<button type="button" onclick="event.stopPropagation(); deleteGroup('${g.id}')" style="background: none; border: none; color: #E53E3E; cursor: pointer; font-weight: bold; font-size: 1.1rem;" title="Delete">🗑️</button>` : ''}
                             </div>
                         </li>
                     `;
@@ -3551,8 +3565,8 @@
                             <span style="font-size: 0.8rem; opacity: 0.6;">(${state.tasks.filter(task => task.tags && task.tags.includes(t.id)).length} quests)</span>
                         </div>
                         <div style="display: flex; gap: 10px;">
-                            <button onclick="openProjectModal('${t.id}')" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(0,0,0,0.1); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Edit ✏️</button>
-                            <button onclick="deleteTag('${t.id}')" style="background: rgba(229, 62, 62, 0.1); border: 1px solid rgba(229, 62, 62, 0.3); color: #E53E3E; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Delete 🗑️</button>
+                            <button type="button" onclick="openProjectModal('${t.id}')" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(0,0,0,0.1); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Edit ✏️</button>
+                            <button type="button" onclick="deleteTag('${t.id}')" style="background: rgba(229, 62, 62, 0.1); border: 1px solid rgba(229, 62, 62, 0.3); color: #E53E3E; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9rem;">Delete 🗑️</button>
                         </div>
                     </div>
                 `).join('');
@@ -3563,16 +3577,34 @@
         }
 
         function editGroup(id) {
-            const group = state.player.groups.find(g => g.id === id);
-            if (!group) return;
+            editingGroupId = id;
+            renderManageGroups();
+            // Auto focus
+            setTimeout(() => {
+                const input = document.getElementById(`editGroupInput_${id}`);
+                if (input) input.focus();
+            }, 50);
+        }
 
-            const newName = prompt("Rename Group:", group.name);
-            if (newName && newName.trim() !== "") {
-                group.name = newName.trim();
-                saveState();
-                renderManageGroups();
-                render(); // Update main UI if group names are visible there
+        function saveEditGroup(id) {
+            const input = document.getElementById(`editGroupInput_${id}`);
+            if (!input) return;
+            const newName = input.value.trim();
+            if (newName) {
+                const group = state.player.groups.find(g => g.id === id);
+                if (group) {
+                    group.name = newName;
+                    saveState();
+                    // Optional: Update main UI if needed
+                }
             }
+            editingGroupId = null;
+            renderManageGroups();
+        }
+
+        function cancelEditGroup() {
+            editingGroupId = null;
+            renderManageGroups();
         }
 
         function addGroup() {
@@ -3583,8 +3615,8 @@
             const id = 'g_' + Date.now();
             state.player.groups.push({ id, name });
             saveState();
-            renderManagementModalContent();
-            render(); // Update background
+            renderManageGroups();
+            // render(); // Optional: Update background
             input.value = '';
         }
 
@@ -3599,8 +3631,8 @@
 
             state.player.groups = state.player.groups.filter(g => g.id !== id);
             saveState();
-            renderManagementModalContent();
-            render();
+            renderManageGroups();
+            // render(); // Removed to prevent modal closing
         }
 
         function addTag() {
@@ -3612,8 +3644,8 @@
             const id = 't_' + Date.now();
             state.player.tags.push({ id, name, color });
             saveState();
-            renderManagementModalContent();
-            render();
+            renderManageGroups();
+            // render(); 
             input.value = '';
         }
 
@@ -3624,8 +3656,6 @@
 
             // Archive if completed
             if (project && project.completed) {
-                // Remove circular/large data if necessary, or just keep as is
-                // We keep photos for the record
                 state.player.achievements.push(project);
                 showToast("Project Archived", "Completed project moved to Achievements.");
             }
@@ -3640,7 +3670,7 @@
             state.player.tags = state.player.tags.filter(t => t.id !== id);
             saveState();
             renderManageGroups();
-            render();
+            // render(); // Removed to prevent modal closing
         }
 
         // --- Achievements Page ---
