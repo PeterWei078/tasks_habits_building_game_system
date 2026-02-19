@@ -2553,6 +2553,9 @@
                 return groupMatch && tagMatch;
             });
 
+            // Sort Alphabetically
+            filteredTasks.sort((a, b) => a.title.localeCompare(b.title));
+
             if (filteredTasks.length === 0) {
                 listContainer.innerHTML = `<div style="text-align:center; opacity:0.6; padding: 20px;">此分組或標籤下暫無任務。</div>`;
                 return;
