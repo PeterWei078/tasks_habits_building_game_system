@@ -230,8 +230,42 @@
 
         .checkbox.checked::after {
             content: '✓';
-            color: white;
+            gap: 8px;
             font-weight: bold;
+            color: #ECC94B;
+            font-size: 1.1rem;
+        }
+
+        /* --- Badge Tier Styles --- */
+        .store-item-card.badge-gold {
+            background: linear-gradient(135deg, #F6E05E 0%, #B7791F 100%);
+            border: 2px solid #F6AD55;
+            color: white;
+            box-shadow: 0 4px 15px rgba(246, 224, 94, 0.4);
+        }
+
+        .store-item-card.badge-silver {
+            background: linear-gradient(135deg, #E2E8F0 0%, #A0AEC0 100%);
+            border: 2px solid #CBD5E0;
+            color: #2D3748;
+            box-shadow: 0 4px 15px rgba(160, 174, 192, 0.4);
+        }
+
+        .store-item-card.badge-bronze {
+            /* Lighter/Paler Bronze/Orange Gradient */
+            background: linear-gradient(135deg, #FBD38D 0%, #ED8936 100%);
+            border: 2px solid #DD6B20;
+            color: white;
+            box-shadow: 0 4px 15px rgba(237, 137, 54, 0.3);
+        }
+
+        .badge-corner-icon {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 1.8rem;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            z-index: 2;
         }
 
         .task-text {
@@ -1509,9 +1543,25 @@
             } else {
                 grid.innerHTML = badges.map(item => {
                     const isOwned = state.player.inventory.some(i => i.itemId === item.id);
+
+                    // Determine Class and Icon
+                    let tierClass = '';
+                    let cornerIcon = '';
+                    if (item.badgeTier === 'gold') {
+                        tierClass = 'badge-gold';
+                        cornerIcon = '<div class="badge-corner-icon">☀️</div>'; // Sun (Level 1)
+                    } else if (item.badgeTier === 'silver') {
+                        tierClass = 'badge-silver';
+                        cornerIcon = '<div class="badge-corner-icon">🌙</div>'; // Moon (Level 2)
+                    } else if (item.badgeTier === 'bronze') {
+                        tierClass = 'badge-bronze';
+                        cornerIcon = '<div class="badge-corner-icon">⭐</div>'; // Star (Level 3)
+                    }
+
                     return `
-                     <div class="store-item-card" onclick="openEditShopItemModal('${item.id}')" style="cursor: pointer; position: relative;">
-                         <button class="edit-icon" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">✏️</button>
+                     <div class="store-item-card ${tierClass}" onclick="openEditShopItemModal('${item.id}')" style="cursor: pointer; position: relative;">
+                         ${cornerIcon}
+                         <button class="edit-icon" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; z-index: 5;">✏️</button>
                          <style> .store-item-card:hover .edit-icon { opacity: 1; } </style>
                          <div class="item-icon-wrapper" style="font-size: 3rem;">${item.icon}</div>
                          <h4>${item.title}</h4>
@@ -3617,6 +3667,15 @@
                                  <option value="Achievements">Achievements</option>
                              </select>
                         </div>
+                        <div class="form-group" id="editBadgeTierGroup" style="display:none;">
+                             <label>Badge Tier (Style)</label>
+                             <select id="editShopBadgeTier">
+                                 <option value="">Normal</option>
+                                 <option value="gold">Gold (Level 1)</option>
+                                 <option value="silver">Silver (Level 2)</option>
+                                 <option value="bronze">Bronze (Level 3)</option>
+                             </select>
+                        </div>
                         <div class="form-group">
                             <label>Icon</label>
                             <input type="text" id="editShopIcon">
@@ -3632,14 +3691,25 @@
                     </div>
                 `;
                 document.body.appendChild(modal);
+
+                // Add listener to toggle tier visibility
+                document.getElementById('editShopCategory').addEventListener('change', function () {
+                    const tierGroup = document.getElementById('editBadgeTierGroup');
+                    tierGroup.style.display = this.value === 'Badge' ? 'block' : 'none';
+                });
             }
 
             document.getElementById('editShopTitle').value = item.title;
             document.getElementById('editShopPrice').value = item.price;
             document.getElementById('editShopCategory').value = item.category || 'General';
             document.getElementById('editShopBadgeCategory').value = item.badgeCategory || '';
+            document.getElementById('editShopBadgeTier').value = item.badgeTier || ''; // Populate Tier
             document.getElementById('editShopIcon').value = item.icon;
             document.getElementById('editShopDesc').value = item.description || '';
+
+            // Set initial visibility
+            const tierGroup = document.getElementById('editBadgeTierGroup');
+            if (tierGroup) tierGroup.style.display = (item.category === 'Badge') ? 'block' : 'none';
 
             modal.classList.add('show');
         }
@@ -3652,6 +3722,7 @@
                 item.price = parseInt(document.getElementById('editShopPrice').value);
                 item.category = document.getElementById('editShopCategory').value;
                 item.badgeCategory = document.getElementById('editShopBadgeCategory').value;
+                item.badgeTier = document.getElementById('editShopBadgeTier').value; // Save Tier
                 item.icon = document.getElementById('editShopIcon').value;
                 item.description = document.getElementById('editShopDesc').value;
 
@@ -3947,41 +4018,72 @@
 
                 const badgeGrid = document.createElement('div');
                 badgeGrid.style.display = 'grid';
-                badgeGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
-                badgeGrid.style.gap = '15px';
+                badgeGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(160px, 1fr))'; // Wider cards
+                badgeGrid.style.gap = '20px'; // Increased gap
 
                 badges.forEach(badge => {
                     const isOwned = state.player.inventory.some(i => i.itemId === badge.id);
+
+                    // Determine Class and Icon
+                    let tierClass = '';
+                    let cornerIcon = '';
+                    if (isOwned) { // Only show full styling if owned
+                        if (badge.badgeTier === 'gold') {
+                            tierClass = 'badge-gold';
+                            cornerIcon = '<div class="badge-corner-icon" style="top: 8px; right: 8px; font-size: 1.2rem;">☀️</div>';
+                        } else if (badge.badgeTier === 'silver') {
+                            tierClass = 'badge-silver';
+                            cornerIcon = '<div class="badge-corner-icon" style="top: 8px; right: 8px; font-size: 1.2rem;">🌙</div>';
+                        } else if (badge.badgeTier === 'bronze') {
+                            tierClass = 'badge-bronze';
+                            cornerIcon = '<div class="badge-corner-icon" style="top: 8px; right: 8px; font-size: 1.2rem;">⭐</div>';
+                        }
+                    }
+
                     const badgeCard = document.createElement('div');
-                    badgeCard.className = 'glass';
-                    badgeCard.style.position = 'relative'; // For absolute positioning of reset button
-                    badgeCard.style.padding = '15px';
+                    // Use store-item-card class for base styles (rounded, etc) IF owned, or fallback
+                    badgeCard.className = isOwned ? `store-item-card ${tierClass}` : 'glass';
+                    badgeCard.style.position = 'relative';
                     badgeCard.style.textAlign = 'center';
-                    badgeCard.style.borderRadius = '12px';
-                    badgeCard.style.background = isOwned ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.05)';
-                    badgeCard.style.opacity = isOwned ? '1' : '0.6';
-                    badgeCard.style.filter = isOwned ? 'none' : 'grayscale(100%)';
-                    badgeCard.style.transition = 'all 0.3s';
+                    // Override some store card styles for collection view
+                    badgeCard.style.padding = '15px';
+                    badgeCard.style.minHeight = '180px'; // Taller cards
+                    badgeCard.style.display = 'flex';
+                    badgeCard.style.flexDirection = 'column';
+                    badgeCard.style.alignItems = 'center';
+                    badgeCard.style.justifyContent = 'center';
+
+                    if (!isOwned) {
+                        badgeCard.style.background = 'rgba(0, 0, 0, 0.05)';
+                        badgeCard.style.opacity = '0.4';
+                        badgeCard.style.filter = 'grayscale(100%)';
+                        badgeCard.style.border = '1px solid rgba(255,255,255,0.1)';
+                        badgeCard.style.borderRadius = '16px'; // Match store card radius
+                    } else {
+                        // Reset transforms from store card hover if needed, or keep them for interactivity
+                        badgeCard.style.transform = 'none'; // Simplify for collection
+                        badgeCard.style.boxShadow = 'none'; // Simplify
+                    }
 
                     // Delete Button (Only if owned)
                     let deleteButton = '';
                     if (isOwned) {
                         deleteButton = `
                         <button onclick="event.stopPropagation(); deleteBadge('${badge.id}', '${(badge.title || badge.name).replace(/'/g, "\\'")}')" 
-                                style="position: absolute; top: 5px; right: 5px; background: rgba(255,0,0,0.1); border: none; 
-                                       border-radius: 50%; width: 24px; height: 24px; cursor: pointer; color: #e53e3e; 
-                                       display: flex; align-items: center; justify-content: center; font-size: 0.9rem;" 
-                                title="Delete Badge (Remove from Inventory)">
+                                style="position: absolute; top: 5px; left: 5px; background: rgba(255,0,0,0.1); border: none; 
+                                       border-radius: 50%; width: 20px; height: 20px; cursor: pointer; color: #e53e3e; 
+                                       display: flex; align-items: center; justify-content: center; font-size: 0.8rem; z-index: 10;" 
+                                title="Delete Badge">
                             🗑️
                         </button>`;
                     }
-                    deleteButton = deleteButton.replace('style="', 'style="z-index: 10; '); // Ensure z-index
 
                     badgeCard.innerHTML = `
                         ${deleteButton}
-                        <div style="font-size: 2rem; margin-bottom: 5px;">${badge.icon}</div>
-                        <div style="font-weight: bold; font-size: 0.9rem;">${badge.title || badge.name}</div>
-                        ${badge.description ? `<div style="font-size: 0.75rem; opacity: 0.8; margin-top: 4px;">${badge.description}</div>` : ''}
+                        ${cornerIcon}
+                        <div class="item-icon-wrapper" style="width: 60px; height: 60px; font-size: 2.5rem; margin-bottom: 10px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">${badge.icon}</div>
+                        <div style="font-weight: bold; font-size: 1rem; margin-bottom: 5px; line-height: 1.2;">${badge.title || badge.name}</div>
+                        ${badge.description ? `<div style="font-size: 0.85rem; opacity: 0.9; margin-top: auto; line-height: 1.3;">${badge.description}</div>` : ''}
                     `;
                     badgeGrid.appendChild(badgeCard);
                 });
