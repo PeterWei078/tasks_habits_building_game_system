@@ -2030,22 +2030,55 @@
 
         // --- Projects Page ---
         function renderProjectsPage() {
-            contentDiv.innerHTML = ''; // Prevent duplication
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = '';
+
+            // Ensure settings exist (Fix for blank page crash)
+            if (!state.settings) state.settings = {};
+
+            // Header & Controls
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '專案 (Projects)';
+            title.style.display = 'flex';
+            title.style.justifyContent = 'space-between';
+            title.style.alignItems = 'center';
 
-            const actionCard = document.createElement('div');
-            actionCard.className = 'glass glass-card';
-            actionCard.innerHTML = `
-                <button class="btn btn-primary" onclick="openProjectModal()">+ New Project</button>
+            title.innerHTML = `
+                專案 (Projects)
+                <label style="font-size: 0.9rem; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 8px;">
+                    <input type="checkbox" id="hideCompletedProjects" ${state.settings.hideCompletedProjects ? 'checked' : ''} onchange="toggleHideCompletedProjects(this.checked)">
+                    Hide Completed
+                </label>
             `;
 
+            // Action Card
+            const actionCard = document.createElement('div');
+            actionCard.className = 'glass action-card';
+            actionCard.innerHTML = `<h3 style="margin:0;">+ New Project</h3>`;
+            actionCard.onclick = () => openProjectModal();
+
+            // Projects Container
             const projectsContainer = document.createElement('div');
 
-            // Group projects by Group ID
+            // Filter Logic
+            let displayProjects = state.player.tags;
+            if (state.settings.hideCompletedProjects) {
+                displayProjects = displayProjects.filter(p => {
+                    // Check explicit completion
+                    if (p.completed) return false;
+
+                    // Check progress completion
+                    const pTasks = state.tasks.filter(t => t.tags && t.tags.includes(p.id));
+                    const pTotal = pTasks.length;
+                    if (pTotal === 0) return true; // No tasks = not complete by progress default
+                    const pCompleted = pTasks.filter(t => t.completed).length;
+                    return pCompleted < pTotal;
+                });
+            }
+
             // Default Group
-            const defaultGroupProjects = state.player.tags.filter(t => !t.groupId || t.groupId === 'default');
+            const defaultGroupProjects = displayProjects.filter(t => !t.groupId || t.groupId === 'default');
+
             if (defaultGroupProjects.length > 0) {
                 projectsContainer.innerHTML += `<h3>Uncategorized / Default</h3>`;
                 projectsContainer.appendChild(createProjectGrid(defaultGroupProjects));
@@ -2054,22 +2087,30 @@
             // Other Groups
             state.player.groups.forEach(group => {
                 if (group.id === 'default') return;
-                const groupProjects = state.player.tags.filter(t => t.groupId === group.id);
+                const groupProjects = displayProjects.filter(t => t.groupId === group.id);
                 if (groupProjects.length > 0) {
                     projectsContainer.innerHTML += `<h3 style="margin-top: 20px;">${group.name}</h3>`;
                     projectsContainer.appendChild(createProjectGrid(groupProjects));
                 }
             });
 
-            // If no projects at all (except maybe default empty ones)
-            if (state.player.tags.length === 0) {
-                projectsContainer.innerHTML = '<div style="text-align:center; opacity:0.6; margin-top: 20px;">No projects created yet.</div>';
+            // If no projects at all
+            if (displayProjects.length === 0) {
+                projectsContainer.innerHTML = '<div style="text-align:center; opacity:0.6; margin-top: 20px;">No projects found.</div>';
             }
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(actionCard);
             contentDiv.appendChild(projectsContainer);
         }
+
+        // Function to handle toggle
+        window.toggleHideCompletedProjects = function (checked) {
+            if (!state.settings) state.settings = {};
+            state.settings.hideCompletedProjects = checked;
+            saveState();
+            renderProjectsPage();
+        };
 
         function createProjectGrid(projects) {
             const grid = document.createElement('div');
@@ -2090,6 +2131,8 @@
                 const completed = projectTasks.filter(t => t.completed).length;
                 const total = projectTasks.length;
                 const progress = total > 0 ? (completed / total) * 100 : 0;
+                const isProgressComplete = total > 0 && completed === total;
+                const showCompletedBadge = project.completed || isProgressComplete;
 
                 // Cover Image (First photo or default pattern)
                 const coverStyle = project.photos && project.photos.length > 0
@@ -2097,7 +2140,9 @@
                     : `background: linear-gradient(135deg, ${project.color}aa, ${project.color}55);`;
 
                 card.innerHTML = `
-                    <div style="height: 120px; border-radius: 12px; margin-bottom: 10px; ${coverStyle}"></div>
+                    <div style="height: 120px; border-radius: 12px; margin-bottom: 10px; ${coverStyle}; position: relative;">
+                         ${showCompletedBadge ? '<div style="position: absolute; top: 10px; right: 10px; background: #48BB78; color: white; font-size: 0.8rem; padding: 4px 8px; border-radius: 6px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Completed 🏆</div>' : ''}
+                    </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                         <h3 style="margin: 0;">${project.name}</h3>
                         <span style="font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">${projectTasks.length} Tasks</span>
@@ -2105,7 +2150,7 @@
                     ${project.description ? `<div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${project.description}</div>` : ''}
                     ${(project.rewardExp > 0 || project.rewardGold > 0) ? `
                         <div style="margin-bottom: 8px; font-size: 0.85rem; font-weight: bold; color: var(--accent-color); background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 8px; border-radius: 4px;">
-                            ${project.rewardExp > 0 ? `✨ +${project.rewardExp} EXP` : ''} 
+                            ${project.rewardExp > 0 ? `✨ +${project.rewardExp} EXP` : ''}
                             ${project.rewardGold > 0 ? `💰 +${project.rewardGold} Gold` : ''}
                         </div>
                     ` : ''}
