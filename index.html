@@ -2103,6 +2103,12 @@
                         <span style="font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">${projectTasks.length} Tasks</span>
                     </div>
                     ${project.description ? `<div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${project.description}</div>` : ''}
+                    ${(project.rewardExp > 0 || project.rewardGold > 0) ? `
+                        <div style="margin-bottom: 8px; font-size: 0.85rem; font-weight: bold; color: var(--accent-color); background: rgba(255,255,255,0.2); display: inline-block; padding: 2px 8px; border-radius: 4px;">
+                            ${project.rewardExp > 0 ? `✨ +${project.rewardExp} EXP` : ''} 
+                            ${project.rewardGold > 0 ? `💰 +${project.rewardGold} Gold` : ''}
+                        </div>
+                    ` : ''}
                     ${project.startDate ? `<div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px;">📅 ${project.startDate} ~ ${project.endDate || '...'}</div>` : ''}
                     <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 10px;">
                         <div style="width: ${progress}%; height: 100%; background: ${project.color};"></div>
@@ -2163,6 +2169,17 @@
                                     <div class="form-group">
                                         <label>End Date</label>
                                         <input type="date" id="projEnd">
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Reward EXP</label>
+                                        <input type="number" id="projRewardExp" placeholder="0" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Reward Gold</label>
+                                        <input type="number" id="projRewardGold" placeholder="0" min="0">
                                     </div>
                                 </div>
 
@@ -2239,6 +2256,8 @@
                     document.getElementById('projColor').value = project.color || '#6B46C1';
                     document.getElementById('projStart').value = project.startDate || '';
                     document.getElementById('projEnd').value = project.endDate || '';
+                    document.getElementById('projRewardExp').value = project.rewardExp || 0;
+                    document.getElementById('projRewardGold').value = project.rewardGold || 0;
                     document.getElementById('projDesc').value = project.description || '';
                     btnDelete.style.display = 'block';
 
@@ -2253,6 +2272,8 @@
                     document.getElementById('projColor').value = '#6B46C1';
                     document.getElementById('projStart').value = '';
                     document.getElementById('projEnd').value = '';
+                    document.getElementById('projRewardExp').value = 0;
+                    document.getElementById('projRewardGold').value = 0;
                     document.getElementById('projDesc').value = '';
                     btnDelete.style.display = 'none';
 
@@ -2389,6 +2410,8 @@
                 const color = document.getElementById('projColor').value;
                 const startDate = document.getElementById('projStart').value;
                 const endDate = document.getElementById('projEnd').value;
+                const rewardExp = parseInt(document.getElementById('projRewardExp').value) || 0;
+                const rewardGold = parseInt(document.getElementById('projRewardGold').value) || 0;
                 const description = document.getElementById('projDesc').value;
                 const photos = JSON.parse(document.getElementById('projPhotosContainer').dataset.photos || '[]');
 
@@ -2404,6 +2427,8 @@
                         project.color = color;
                         project.startDate = startDate;
                         project.endDate = endDate;
+                        project.rewardExp = rewardExp;
+                        project.rewardGold = rewardGold;
                         project.description = description;
                         project.photos = photos;
                     } else {
@@ -2418,6 +2443,8 @@
                         color,
                         startDate,
                         endDate,
+                        rewardExp,
+                        rewardGold,
                         description,
                         photos
                     };
@@ -2445,10 +2472,38 @@
 
             project.completed = !project.completed;
 
-            // Track Date
+            // Track Date & Rewards
             if (project.completed) {
                 project.completedDate = Date.now();
-                showToast("🏆 Project Completed!", `Congratulations! "${project.name}" is finished.`);
+
+                // Award Logic
+                const rewardExp = project.rewardExp || 0;
+                const rewardGold = project.rewardGold || 0;
+
+                if (rewardExp > 0 || rewardGold > 0) {
+                    state.player.exp += rewardExp;
+                    state.player.gold += rewardGold;
+
+                    // Level Up Check
+                    const expNeeded = state.player.level * 100; // Simplified formula
+                    if (state.player.exp >= expNeeded) {
+                        state.player.level++;
+                        state.player.exp -= expNeeded;
+                        showToast("LEVEL UP!", `You are now Level ${state.player.level}!`);
+                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                    }
+
+                    // Log Activity
+                    state.player.activities.unshift({
+                        id: 'act_' + Date.now(),
+                        type: 'PROJECT_COMPLETE',
+                        title: `Completed Project: ${project.name}`,
+                        timestamp: Date.now(),
+                        details: { exp: rewardExp, gold: rewardGold, groupName: 'Project' }
+                    });
+                }
+
+                showToast("🏆 Project Completed!", `Congratulations! "${project.name}" is finished.${(rewardExp || rewardGold) ? ` (+${rewardExp} EXP, +${rewardGold} Gold)` : ''}`);
                 confetti({
                     particleCount: 100,
                     spread: 70,
@@ -2456,6 +2511,16 @@
                 });
             } else {
                 delete project.completedDate; // Remove date if unchecked
+
+                // Deduct Logic (Revert Rewards)
+                const rewardExp = project.rewardExp || 0;
+                const rewardGold = project.rewardGold || 0;
+
+                if (rewardExp > 0 || rewardGold > 0) {
+                    state.player.exp = Math.max(0, state.player.exp - rewardExp);
+                    state.player.gold = Math.max(0, state.player.gold - rewardGold);
+                }
+
                 showToast("Project Restored", `"${project.name}" is active again.`);
             }
 
