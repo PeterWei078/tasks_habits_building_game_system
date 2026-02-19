@@ -2627,7 +2627,18 @@
                 if (task.subtasks && task.subtasks.length > 0) {
                     const completed = task.subtasks.filter(st => st.completed).length;
                     const total = task.subtasks.length;
-                    subtaskHtml = `<div style="font-size: 0.75rem; opacity: 0.7; margin-top: 2px;">Subtasks: ${completed}/${total}</div>`;
+                    const percentage = Math.round((completed / total) * 100);
+
+                    subtaskHtml = `
+                        <div style="margin-top: 5px; width: 100%; max-width: 200px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; opacity: 0.8; margin-bottom: 2px;">
+                                <span>Subtasks</span>
+                                <span>${completed}/${total} (${percentage}%)</span>
+                            </div>
+                            <div style="width: 100%; height: 6px; background: rgba(0,0,0,0.1); border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${percentage}%; height: 100%; background: var(--success-color); transition: width 0.3s ease;"></div>
+                            </div>
+                        </div>`;
                 }
 
                 item.innerHTML = `
