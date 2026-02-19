@@ -2102,6 +2102,7 @@
                         <h3 style="margin: 0;">${project.name}</h3>
                         <span style="font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">${projectTasks.length} Tasks</span>
                     </div>
+                    ${project.description ? `<div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${project.description}</div>` : ''}
                     ${project.startDate ? `<div style="font-size: 0.8rem; opacity: 0.7; margin-bottom: 8px;">📅 ${project.startDate} ~ ${project.endDate || '...'}</div>` : ''}
                     <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 10px;">
                         <div style="width: ${progress}%; height: 100%; background: ${project.color};"></div>
