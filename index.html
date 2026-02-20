@@ -1004,11 +1004,7 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <select id="newShopCategory"
                                 style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                                <option value="Food">Food 🍔</option>
-                                <option value="Entertainment">Entertainment 🎮</option>
-                                <option value="Health">Health 💊</option>
-                                <option value="Badge">Badge 🏅</option>
-                                <option value="Other">Other 📦</option>
+                                <!-- Options will be populated dynamically -->
                             </select>
                             <input type="text" id="newShopIcon" placeholder="Icon (Emoji)" value="🎁"
                                 style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
@@ -1017,6 +1013,18 @@
                             style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
                         <button class="btn btn-primary" style="width: 100%;" onclick="addShopItem()">Add
                             Item</button>
+                    </div>
+                </div>
+
+                <div id="manageStoreCategoriesSection" style="display: none;">
+                    <h3 style="margin-bottom: 10px;">Store Categories</h3>
+                    <ul id="manageStoreCategoryList" style="list-style: none; margin-bottom: 15px; padding: 0;"></ul>
+                    <div style="display: flex; gap: 10px; margin-bottom: 25px; align-items: center;">
+                        <input type="text" id="manageNewStoreCategoryName" placeholder="New Category Name (e.g. Books)"
+                            style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        <input type="text" id="manageNewStoreCategoryIcon" placeholder="Icon (e.g. 📚)"
+                            style="width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        <button class="btn btn-primary" onclick="addStoreCategory()">Add</button>
                     </div>
                 </div>
 
@@ -1115,6 +1123,11 @@
                 activities: [], // Activity Log
                 // Store & Inventory
                 gold: 0,
+                shopCategories: [
+                    { id: 'cat_food', name: 'Food', icon: '🍔' },
+                    { id: 'cat_entertainment', name: 'Entertainment', icon: '🎮' },
+                    { id: 'cat_health', name: 'Health', icon: '💊' }
+                ],
                 shopItems: [
                     { id: '1', title: '電影票 (Movie Ticket)', description: '兌換一張電影票', price: 80, category: 'Entertainment', icon: '🎟️' },
                     { id: '2', title: '大餐 (Large Meal)', description: '享受一頓美食', price: 100, category: 'Food', icon: '🍔' },
@@ -1126,7 +1139,6 @@
                     { id: 'b3', title: '學習大師 (Scholar)', description: '熱愛學習', price: 150, category: 'Badge', badgeCategory: 'Skills', icon: '🎓' },
                     { id: 'b4', title: '財富自由 (Tycoon)', description: '累積財富', price: 500, category: 'Badge', badgeCategory: 'Achievements', icon: '💎' },
                 ],
-                inventory: [],
                 inventory: [],
                 achievements: [], // Archived completed projects
                 reflections: [] // New Reflections Data
@@ -1146,6 +1158,9 @@
         }
         if (!state.player.tags) {
             state.player.tags = defaultState.player.tags;
+        }
+        if (!state.player.shopCategories) {
+            state.player.shopCategories = defaultState.player.shopCategories;
         }
         // Cleanup Invalid Activities
         if (state.player.activities) {
@@ -1464,7 +1479,10 @@
                         <div class="gold-display">
                             <span>💰</span> <span id="gold-count-anim">${state.player.gold}</span>
                         </div>
-                        <button onclick="openManagementModal('store')" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">⚙️</button>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="openManagementModal('storeCategories')" title="Manage Categories" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">🏷️</button>
+                            <button onclick="openManagementModal('store')" title="Manage Store Items" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">⚙️</button>
+                        </div>
                     </div>
                 `;
 
@@ -1487,7 +1505,12 @@
 
         function renderShopTab() {
             // Category Filter (Exclude Badges from Shop)
-            const categories = ['All', ...new Set(state.player.shopItems.filter(i => i.category !== 'Badge').map(item => item.category))];
+            // Get all used categories plus the default ones
+            const usedCategoryNames = new Set(state.player.shopItems.filter(i => i.category !== 'Badge').map(item => item.category));
+            state.player.shopCategories.forEach(c => usedCategoryNames.add(c.name));
+
+            const categories = ['All', ...Array.from(usedCategoryNames)];
+
             const categoryScroll = document.createElement('div');
             categoryScroll.className = 'category-scroll';
             categoryScroll.innerHTML = categories.map(cat => `
@@ -1527,9 +1550,11 @@
             renderStorePage();
         }
 
-        function getCategoryIcon(cat) {
-            const map = { 'Food': '🍔', 'Entertainment': '🎮', 'Health': '💊', 'Badge': '🏅', 'All': '🌟' };
-            return map[cat] || '📦';
+        function getCategoryIcon(catName) {
+            if (catName === 'All') return '🌟';
+            if (catName === 'Badge') return '🏅';
+            const category = state.player.shopCategories.find(c => c.name === catName);
+            return category ? category.icon : '📦';
         }
 
         function renderBadgeTab() {
@@ -3672,6 +3697,7 @@
                 // Toggle sections based on mode
                 const listSection = document.getElementById('manageListsSection');
                 const storeSection = document.getElementById('manageStoreSection');
+                const storeCategoriesSection = document.getElementById('manageStoreCategoriesSection');
 
                 modal.classList.add('show');
 
@@ -3679,11 +3705,19 @@
                     modalTitle.textContent = 'Manage Store Items';
                     if (listSection) listSection.style.display = 'none';
                     if (storeSection) storeSection.style.display = 'block';
+                    if (storeCategoriesSection) storeCategoriesSection.style.display = 'none';
                     renderManageStoreItems();
+                } else if (mode === 'storeCategories') {
+                    modalTitle.textContent = 'Manage Store Categories';
+                    if (listSection) listSection.style.display = 'none';
+                    if (storeSection) storeSection.style.display = 'none';
+                    if (storeCategoriesSection) storeCategoriesSection.style.display = 'block';
+                    renderManageStoreCategories();
                 } else {
                     modalTitle.textContent = 'Manage Lists';
                     if (listSection) listSection.style.display = 'block';
                     if (storeSection) storeSection.style.display = 'none';
+                    if (storeCategoriesSection) storeCategoriesSection.style.display = 'none';
                     renderManageGroups();
                 }
             } catch (e) {
@@ -3694,6 +3728,73 @@
 
         function closeManagementModal() {
             document.getElementById('managementModal').classList.remove('show');
+        }
+
+        // --- Store Categories Management ---
+        function renderManageStoreCategories() {
+            try {
+                const list = document.getElementById('manageStoreCategoryList');
+                if (!list) return;
+
+                if (!state.player.shopCategories) {
+                    state.player.shopCategories = [];
+                }
+
+                list.innerHTML = state.player.shopCategories.map(cat => `
+                        <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.5rem;">${cat.icon || '📦'}</span>
+                                <div style="font-weight: bold;">${cat.name || 'Untitled'}</div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="deleteStoreCategory('${cat.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
+                        </div>
+                    `).join('');
+            } catch (e) {
+                console.error("Error rendering store categories:", e);
+                document.getElementById('manageStoreCategoryList').innerHTML = '<div style="color:red">Error loading categories</div>';
+            }
+        }
+
+        function addStoreCategory() {
+            const name = document.getElementById('manageNewStoreCategoryName').value.trim();
+            const icon = document.getElementById('manageNewStoreCategoryIcon').value.trim() || '📦';
+
+            if (!name) return alert("Category name cannot be empty");
+            if (state.player.shopCategories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+                return alert("A category with this name already exists");
+            }
+
+            const id = 'cat_' + Date.now();
+            state.player.shopCategories.push({ id, name, icon });
+
+            saveState();
+            renderManageStoreCategories();
+            renderStorePage(); // Update UI in background
+
+            document.getElementById('manageNewStoreCategoryName').value = '';
+            document.getElementById('manageNewStoreCategoryIcon').value = '';
+        }
+
+        function deleteStoreCategory(id) {
+            const category = state.player.shopCategories.find(c => c.id === id);
+
+            // Check if items are using this category
+            const itemsUsingCategory = state.player.shopItems.filter(i => i.category === category.name);
+            if (itemsUsingCategory.length > 0) {
+                if (!confirm(`Warning: ${itemsUsingCategory.length} item(s) are currently under "${category.name}". Deleting this category will move them to "Other". Continue?`)) {
+                    return;
+                }
+
+                // Reassign items to 'Other'
+                itemsUsingCategory.forEach(i => i.category = 'Other');
+            } else {
+                if (!confirm(`Delete "${category.name}" category?`)) return;
+            }
+
+            state.player.shopCategories = state.player.shopCategories.filter(c => c.id !== id);
+            saveState();
+            renderManageStoreCategories();
+            renderStorePage(); // Refresh shop page if open
         }
 
         // --- Store Management ---
@@ -3718,6 +3819,16 @@
                             <button class="btn btn-secondary" onclick="deleteShopItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
                         </div>
                     `).join('');
+
+                // Update Add Item Category Dropdown
+                const newShopCategory = document.getElementById('newShopCategory');
+                if (newShopCategory) {
+                    let catOptions = state.player.shopCategories.map(c => `<option value="${c.name}">${c.name} ${c.icon}</option>`).join('');
+                    catOptions += `<option value="Badge">Badge 🏅</option>`;
+                    catOptions += `<option value="Other">Other 📦</option>`;
+                    newShopCategory.innerHTML = catOptions;
+                }
+
             } catch (e) {
                 console.error("Error rendering store items:", e);
                 document.getElementById('manageStoreList').innerHTML = '<div style="color:red">Error loading items</div>';
@@ -3727,10 +3838,11 @@
         function addShopItem() {
             const title = document.getElementById('newShopTitle').value;
             const price = parseInt(document.getElementById('newShopPrice').value);
-            const category = document.getElementById('newShopCategory').value || 'General';
+            const category = document.getElementById('newShopCategory').value || 'Other';
             const icon = document.getElementById('newShopIcon').value || '🎁';
             const desc = document.getElementById('newShopDesc').value;
 
+            // ... (rest of addShopItem remains the same, assuming it's unedited below)
             if (title && price > 0) {
                 state.player.shopItems.push({
                     id: Date.now().toString(),
@@ -3797,11 +3909,7 @@
                         <div class="form-group">
                             <label>Category</label>
                             <select id="editShopCategory">
-                                <option value="General">General</option>
-                                <option value="Food">Food</option>
-                                <option value="Entertainment">Entertainment</option>
-                                <option value="Health">Health</option>
-                                <option value="Badge">Badge</option>
+                                <!-- Populated dynamically below -->
                             </select>
                         </div>
                         <div class="form-group">
@@ -3845,9 +3953,18 @@
                 });
             }
 
+            // Populate category dropdown dynamically before setting value
+            const editCategorySelect = document.getElementById('editShopCategory');
+            if (editCategorySelect) {
+                let catOptions = state.player.shopCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+                catOptions += `<option value="Badge">Badge</option>`;
+                catOptions += `<option value="Other">Other</option>`;
+                editCategorySelect.innerHTML = catOptions;
+            }
+
             document.getElementById('editShopTitle').value = item.title;
             document.getElementById('editShopPrice').value = item.price;
-            document.getElementById('editShopCategory').value = item.category || 'General';
+            document.getElementById('editShopCategory').value = item.category || 'Other';
             document.getElementById('editShopBadgeCategory').value = item.badgeCategory || '';
             document.getElementById('editShopBadgeTier').value = item.badgeTier || ''; // Populate Tier
             document.getElementById('editShopIcon').value = item.icon;
