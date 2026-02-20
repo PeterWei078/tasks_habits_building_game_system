@@ -3926,7 +3926,10 @@
                     state.player.shopItems = []; // Auto-fix
                 }
 
-                list.innerHTML = state.player.shopItems.map(item => `
+                const regularItems = state.player.shopItems.filter(i => i.category !== 'Badge');
+                const badgeItems = state.player.shopItems.filter(i => i.category === 'Badge');
+
+                const renderCard = (item) => `
                         <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <span style="font-size: 1.5rem;">${item.icon || '📦'}</span>
@@ -3937,7 +3940,25 @@
                             </div>
                             <button class="btn btn-secondary" onclick="deleteShopItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
                         </div>
-                    `).join('');
+                    `;
+
+                let htmlContent = '';
+
+                if (regularItems.length > 0) {
+                    htmlContent += `<h4 style="margin-bottom: 10px; opacity: 0.8;">Store Items</h4>`;
+                    htmlContent += regularItems.map(renderCard).join('');
+                }
+
+                if (badgeItems.length > 0) {
+                    htmlContent += `<h4 style="margin-top: 20px; margin-bottom: 10px; opacity: 0.8;">Badges</h4>`;
+                    htmlContent += badgeItems.map(renderCard).join('');
+                }
+
+                if (htmlContent === '') {
+                    htmlContent = `<div style="text-align: center; opacity: 0.5; padding: 20px;">No items in the store yet.</div>`;
+                }
+
+                list.innerHTML = htmlContent;
 
                 // Update Add Item Category Dropdown
                 const newShopCategory = document.getElementById('newShopCategory');
