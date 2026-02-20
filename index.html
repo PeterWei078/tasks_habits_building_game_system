@@ -2053,8 +2053,31 @@
 
             // Action Card
             const actionCard = document.createElement('div');
-            actionCard.className = 'glass action-card';
-            actionCard.innerHTML = `<h3 style="margin:0;">+ New Project</h3>`;
+            actionCard.className = 'glass glass-card';
+            actionCard.style.display = 'flex';
+            actionCard.style.justifyContent = 'space-between';
+            actionCard.style.alignItems = 'center';
+            actionCard.style.cursor = 'pointer';
+            actionCard.style.marginBottom = '20px';
+            actionCard.style.padding = '15px 25px';
+            actionCard.style.transition = 'transform 0.2s, box-shadow 0.2s';
+
+            actionCard.innerHTML = `
+                <div>
+                    <h3 style="margin: 0; font-size: 1.2rem;">Create New Project</h3>
+                    <p style="opacity: 0.7; font-size: 0.9rem; margin: 3px 0 0 0;">Group your quests and track your progress</p>
+                </div>
+                <button class="btn btn-primary" style="padding: 10px 20px; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); pointer-events: none;">+ New Project</button>
+            `;
+
+            actionCard.onmouseover = () => {
+                actionCard.style.transform = 'translateY(-2px)';
+                actionCard.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+            };
+            actionCard.onmouseout = () => {
+                actionCard.style.transform = 'translateY(0)';
+                actionCard.style.boxShadow = 'none';
+            };
             actionCard.onclick = () => openProjectModal();
 
             // Projects Container
@@ -2600,6 +2623,7 @@
                 if (state.player.tags.length < initialLength) {
                     const modal = document.getElementById('projectModal');
                     if (modal) modal.classList.remove('show');
+                    render();
                 }
             }
         }
