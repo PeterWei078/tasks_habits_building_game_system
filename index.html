@@ -236,22 +236,25 @@
             font-size: 1.1rem;
         }
 
-        /* --- Badge Tier Styles --- */
-        .store-item-card.badge-gold {
+        /* --- Badge & Item Tier Styles --- */
+        .store-item-card.badge-gold,
+        .store-item-card.tier-gold {
             background: linear-gradient(135deg, #F6E05E 0%, #B7791F 100%);
             border: 2px solid #F6AD55;
             color: white;
             box-shadow: 0 4px 15px rgba(246, 224, 94, 0.4);
         }
 
-        .store-item-card.badge-silver {
+        .store-item-card.badge-silver,
+        .store-item-card.tier-silver {
             background: linear-gradient(135deg, #E2E8F0 0%, #A0AEC0 100%);
             border: 2px solid #CBD5E0;
             color: #2D3748;
             box-shadow: 0 4px 15px rgba(160, 174, 192, 0.4);
         }
 
-        .store-item-card.badge-bronze {
+        .store-item-card.badge-bronze,
+        .store-item-card.tier-bronze {
             /* Lighter/Paler Bronze/Orange Gradient */
             background: linear-gradient(135deg, #FBD38D 0%, #ED8936 100%);
             border: 2px solid #DD6B20;
@@ -263,6 +266,15 @@
             position: absolute;
             top: 5px;
             right: 5px;
+            font-size: 1.8rem;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+            z-index: 2;
+        }
+
+        .item-corner-icon {
+            position: absolute;
+            top: 5px;
+            left: 5px;
             font-size: 1.8rem;
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
             z-index: 2;
@@ -1006,8 +1018,14 @@
                                 style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
                                 <!-- Options will be populated dynamically -->
                             </select>
+                            <select id="newShopTier" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                <option value="">No Tier</option>
+                                <option value="bronze">Bronze (黃銅級, 50+ Gold)</option>
+                                <option value="silver">Silver (白銀級, 300+ Gold)</option>
+                                <option value="gold">Legendary (傳說級, 2000+ Gold)</option>
+                            </select>
                             <input type="text" id="newShopIcon" placeholder="Icon (Emoji)" value="🎁"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                style="grid-column: span 2; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
                         </div>
                         <input type="text" id="newShopDesc" placeholder="Description"
                             style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
@@ -1555,8 +1573,23 @@
                 ? state.player.shopItems.filter(item => item.category !== 'Badge')
                 : state.player.shopItems.filter(item => item.category === currentCategoryFilter && item.category !== 'Badge');
 
-            grid.innerHTML = filteredItems.map(item => `
-                    <div class="store-item-card" onclick="openEditShopItemModal('${item.id}')" style="cursor: pointer; position: relative;">
+            grid.innerHTML = filteredItems.map(item => {
+                let tierClass = '';
+                let cornerIcon = '';
+                if (item.itemTier === 'gold') {
+                    tierClass = 'tier-gold';
+                    cornerIcon = '<div class="item-corner-icon">☀️</div>';
+                } else if (item.itemTier === 'silver') {
+                    tierClass = 'tier-silver';
+                    cornerIcon = '<div class="item-corner-icon">🌙</div>';
+                } else if (item.itemTier === 'bronze') {
+                    tierClass = 'tier-bronze';
+                    cornerIcon = '<div class="item-corner-icon">⭐</div>';
+                }
+
+                return `
+                    <div class="store-item-card ${tierClass}" onclick="openEditShopItemModal('${item.id}')" style="cursor: pointer; position: relative;">
+                        ${cornerIcon}
                         <button class="edit-icon" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.1); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">✏️</button>
                         <style> .store-item-card:hover .edit-icon { opacity: 1; } </style>
                         <div class="price-badge">💰 ${item.price}</div>
@@ -1567,7 +1600,7 @@
                             ${item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id) ? 'Owned' : (state.player.gold < item.price ? 'Need Gold' : 'Purchase')}
                         </button>
                     </div>
-                `).join('');
+                `}).join('');
 
             contentDiv.appendChild(grid);
         }
@@ -3925,6 +3958,7 @@
             const title = document.getElementById('newShopTitle').value;
             const price = parseInt(document.getElementById('newShopPrice').value);
             const category = document.getElementById('newShopCategory').value || 'Other';
+            const tier = document.getElementById('newShopTier').value || '';
             const icon = document.getElementById('newShopIcon').value || '🎁';
             const desc = document.getElementById('newShopDesc').value;
 
@@ -3935,6 +3969,7 @@
                     title,
                     price,
                     category,
+                    itemTier: tier, // Use itemTier to match badge logic later
                     icon,
                     description: desc
                 });
@@ -3943,6 +3978,7 @@
                 // Clear inputs
                 document.getElementById('newShopTitle').value = '';
                 document.getElementById('newShopPrice').value = '';
+                document.getElementById('newShopTier').value = '';
             } else {
                 alert('Please enter valid title and price.');
             }
@@ -3998,6 +4034,15 @@
                                 <!-- Populated dynamically below -->
                             </select>
                         </div>
+                        <div class="form-group" id="editItemTierGroup" style="display:none;">
+                            <label>Item Tier (Visual Style)</label>
+                            <select id="editShopTier">
+                                <option value="">No Tier</option>
+                                <option value="bronze">Bronze (黃銅級, 50+ Gold)</option>
+                                <option value="silver">Silver (白銀級, 300+ Gold)</option>
+                                <option value="gold">Legendary (傳說級, 2000+ Gold)</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                              <label>Badge Category (if Badge)</label>
                              <select id="editShopBadgeCategory">
@@ -4034,8 +4079,19 @@
 
                 // Add listener to toggle tier visibility
                 document.getElementById('editShopCategory').addEventListener('change', function () {
-                    const tierGroup = document.getElementById('editBadgeTierGroup');
-                    tierGroup.style.display = this.value === 'Badge' ? 'block' : 'none';
+                    const badgeTierGroup = document.getElementById('editBadgeTierGroup');
+                    const badgeCatGroup = document.getElementById('editShopBadgeCategory').parentElement;
+                    const itemTierGroup = document.getElementById('editItemTierGroup');
+
+                    if (this.value === 'Badge') {
+                        badgeTierGroup.style.display = 'block';
+                        badgeCatGroup.style.display = 'block';
+                        if (itemTierGroup) itemTierGroup.style.display = 'none';
+                    } else {
+                        badgeTierGroup.style.display = 'none';
+                        badgeCatGroup.style.display = 'none';
+                        if (itemTierGroup) itemTierGroup.style.display = 'block';
+                    }
                 });
             }
 
@@ -4051,14 +4107,26 @@
             document.getElementById('editShopTitle').value = item.title;
             document.getElementById('editShopPrice').value = item.price;
             document.getElementById('editShopCategory').value = item.category || 'Other';
+            if (document.getElementById('editShopTier')) document.getElementById('editShopTier').value = item.itemTier || '';
             document.getElementById('editShopBadgeCategory').value = item.badgeCategory || '';
             document.getElementById('editShopBadgeTier').value = item.badgeTier || ''; // Populate Tier
             document.getElementById('editShopIcon').value = item.icon;
             document.getElementById('editShopDesc').value = item.description || '';
 
             // Set initial visibility
-            const tierGroup = document.getElementById('editBadgeTierGroup');
-            if (tierGroup) tierGroup.style.display = (item.category === 'Badge') ? 'block' : 'none';
+            const badgeTierGroup = document.getElementById('editBadgeTierGroup');
+            const badgeCatGroup = document.getElementById('editShopBadgeCategory').parentElement;
+            const itemTierGroup = document.getElementById('editItemTierGroup');
+
+            if (item.category === 'Badge') {
+                if (badgeTierGroup) badgeTierGroup.style.display = 'block';
+                if (badgeCatGroup) badgeCatGroup.style.display = 'block';
+                if (itemTierGroup) itemTierGroup.style.display = 'none';
+            } else {
+                if (badgeTierGroup) badgeTierGroup.style.display = 'none';
+                if (badgeCatGroup) badgeCatGroup.style.display = 'none';
+                if (itemTierGroup) itemTierGroup.style.display = 'block';
+            }
 
             modal.classList.add('show');
         }
@@ -4070,12 +4138,24 @@
                 item.title = document.getElementById('editShopTitle').value;
                 item.price = parseInt(document.getElementById('editShopPrice').value);
                 item.category = document.getElementById('editShopCategory').value;
-                item.badgeCategory = document.getElementById('editShopBadgeCategory').value;
-                item.badgeTier = document.getElementById('editShopBadgeTier').value; // Save Tier
+
+                if (item.category === 'Badge') {
+                    item.badgeCategory = document.getElementById('editShopBadgeCategory').value;
+                    item.badgeTier = document.getElementById('editShopBadgeTier').value; // Save Tier
+                    delete item.itemTier;
+                } else {
+                    if (document.getElementById('editShopTier')) {
+                        item.itemTier = document.getElementById('editShopTier').value;
+                    }
+                    delete item.badgeCategory;
+                    delete item.badgeTier;
+                }
+
                 item.icon = document.getElementById('editShopIcon').value;
                 item.description = document.getElementById('editShopDesc').value;
 
                 saveState();
+                renderManageStoreItems(); // Ensure management list updates too
                 renderStorePage();
                 document.getElementById('editShopItemModal').classList.remove('show');
                 showToast('Item updated!', 'success');
