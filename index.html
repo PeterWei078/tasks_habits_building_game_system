@@ -956,6 +956,13 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label>Due Date</label>
+                        <input type="date" id="modalDueDate"
+                            style="padding: 8px; border-radius: 6px; border: 1px solid #ccc; width: 100%;">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label>Reward (EXP/Gold)</label>
                         <div style="display: flex; gap: 10px;">
                             <input type="number" id="modalExp" value="25" style="width: 80px;" placeholder="EXP">
@@ -2642,12 +2649,28 @@
                 return;
             }
 
-            container.innerHTML = tasks.map(t => `
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            container.innerHTML = tasks.map(t => {
+                let dueDateText = '';
+                if (t.dueDate) {
+                    const isOverdue = t.dueDate < todayStr;
+                    const color = isOverdue ? '#E53E3E' : '#3182CE';
+                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : 'rgba(49,130,206,0.1)';
+                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : 'rgba(49,130,206,0.3)';
+                    dueDateText = `<span style="margin-left: 8px; font-size: 0.75rem; color: ${color}; background: ${bg}; padding: 2px 6px; border-radius: 4px; border: 1px solid ${border};">📅 ${t.dueDate}</span>`;
+                }
+
+                return `
                 <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 5px;">
-                    <span style="${t.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
+                    <div>
+                        <span style="${t.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
+                        ${dueDateText}
+                    </div>
                     <span style="font-size: 0.8rem; opacity: 0.7;">${t.completed ? '✅ Done' : '⚔️ Active'}</span>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function openTaskModalForProject() {
@@ -2943,6 +2966,15 @@
                     const tagInfo = state.player.tags.find(t => t.id === tagId);
                     return tagInfo ? `<span style="font-size: 0.75rem; color: ${tagInfo.color}; background: rgba(255,255,255,0.5); padding: 2px 6px; border-radius: 4px; margin-right: 5px;">#${tagInfo.name.split(' ')[0]}</span>` : '';
                 }).join('') : '';
+                const todayStr = new Date().toISOString().split('T')[0];
+                let dueDateHtml = '';
+                if (task.dueDate) {
+                    const isOverdue = task.dueDate < todayStr;
+                    const color = isOverdue ? '#E53E3E' : '#3182CE';
+                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : 'rgba(49,130,206,0.1)';
+                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : 'rgba(49,130,206,0.3)';
+                    dueDateHtml = `<span style="font-size: 0.75rem; color: ${color}; background: ${bg}; padding: 2px 6px; border-radius: 4px; margin-right: 5px; border: 1px solid ${border};">📅 到期: ${task.dueDate}</span>`;
+                }
 
                 // Subtasks Progress
                 let subtaskHtml = '';
@@ -2972,6 +3004,7 @@
                         ${task.photo ? `<img src="${task.photo}" style="max-width: 100px; max-height: 100px; border-radius: 8px; margin-top: 8px; border: 2px solid rgba(255,255,255,0.5);" onclick="event.stopPropagation(); window.open(this.src)">` : ''}
                          ${subtaskHtml}
                         <div style="margin-top: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
+                            ${dueDateHtml}
                             ${tagsHtml}
                             <div style="font-size: 0.8rem; opacity: 0.7;">
                                 Rewards: EXP +${task.rewardExp}, Gold +${task.rewardGold}
@@ -3044,6 +3077,7 @@
                 const rewards = task.attributeRewards || (task.attribute ? [{ attribute: task.attribute, exp: task.rewardExp || 10 }] : []);
                 rewards.forEach(r => addAttributeRewardToUI(r.attribute, r.exp));
                 document.getElementById('modalRepeat').value = task.repeat || 'none';
+                document.getElementById('modalDueDate').value = task.dueDate || '';
                 document.getElementById('modalExp').value = task.rewardExp || 25;
                 document.getElementById('modalGold').value = task.rewardGold || 10;
                 document.getElementById('modalTimeSpent').value = Math.round((task.timeSpent || 0) / 60);
@@ -3064,6 +3098,7 @@
 
 
                 document.getElementById('modalRepeat').value = 'none';
+                document.getElementById('modalDueDate').value = '';
                 document.getElementById('modalExp').value = 25;
                 document.getElementById('modalGold').value = 10;
                 document.getElementById('modalTimeSpent').value = 0;
@@ -3208,6 +3243,7 @@
                 const img = document.getElementById('modalImage').value;
                 const group = document.getElementById('modalGroup').value;
                 const repeat = document.getElementById('modalRepeat').value;
+                const dueDate = document.getElementById('modalDueDate').value;
 
                 // Gather Attribute Rewards
                 const rewardDivs = document.getElementById('modalAttributeRewardsList').children;
@@ -3276,7 +3312,7 @@
                             ...state.tasks[taskIndex],
                             title, description: desc, image: img, photo: photoData,
                             attribute: primaryAttribute, attributeRewards,
-                            groupId: group, tags, subtasks, repeat, rewardExp: exp, rewardGold: gold,
+                            groupId: group, tags, subtasks, repeat, dueDate, rewardExp: exp, rewardGold: gold,
                             timeSpent: timeSpentSec // Update time
                         };
                         showToast('Quest Updated', `Changes saved: ${title}`);
@@ -3297,6 +3333,7 @@
                         tags: tags,
                         subtasks: subtasks,
                         repeat: repeat,
+                        dueDate: dueDate,
                         rewardExp: exp,
                         rewardGold: gold,
                         timeSpent: timeSpentSec, // Set time
