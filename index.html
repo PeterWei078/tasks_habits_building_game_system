@@ -1366,11 +1366,18 @@
         if (!state.player.shopItems) {
             state.player.shopItems = defaultState.player.shopItems;
         } else {
+            // Setup deleted items tracking if it doesn't exist
+            if (!state.player.deletedShopItemIds) {
+                state.player.deletedShopItemIds = [];
+            }
+
             // Merge new items (like Badges) into existing shopItems
             // This ensures players get new content without resetting their shop state
             const existingIds = new Set(state.player.shopItems.map(i => i.id));
+            const deletedIds = new Set(state.player.deletedShopItemIds);
+
             defaultState.player.shopItems.forEach(newItem => {
-                if (!existingIds.has(newItem.id)) {
+                if (!existingIds.has(newItem.id) && !deletedIds.has(newItem.id)) {
                     state.player.shopItems.push(newItem);
                 }
             });
@@ -4187,12 +4194,16 @@
         function deleteShopItem(id) {
             if (openConfirmModal) {
                 openConfirmModal('Delete this shop item?', () => {
+                    if (!state.player.deletedShopItemIds) state.player.deletedShopItemIds = [];
+                    state.player.deletedShopItemIds.push(id);
                     state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
                     saveState();
                     renderManageStoreItems();
                     renderStorePage(); // Refresh shop page if open
                 });
             } else if (confirm('Delete this item?')) {
+                if (!state.player.deletedShopItemIds) state.player.deletedShopItemIds = [];
+                state.player.deletedShopItemIds.push(id);
                 state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
                 saveState();
                 renderManageStoreItems();
