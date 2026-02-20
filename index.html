@@ -1255,14 +1255,6 @@
             defaultState.player.shopItems.forEach(newItem => {
                 if (!existingIds.has(newItem.id)) {
                     state.player.shopItems.push(newItem);
-                } else {
-                    // Optional: Update existing item details (e.g. description/icon updates)
-                    const existingItem = state.player.shopItems.find(i => i.id === newItem.id);
-                    if (existingItem) {
-                        existingItem.category = newItem.category;
-                        existingItem.badgeCategory = newItem.badgeCategory;
-                        existingItem.icon = newItem.icon;
-                    }
                 }
             });
         }
