@@ -846,6 +846,13 @@
                     <span class="nav-icon">💭</span>
                     <span class="nav-text">感想 (Reflections)</span>
                 </li>
+
+                <!-- System -->
+                <li class="nav-category">系統 (System)</li>
+                <li class="nav-item" onclick="openDataManagementModal()">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">設定與備份 (Settings & Data)</span>
+                </li>
             </ul>
         </aside>
 
@@ -1126,6 +1133,109 @@
                         onclick="saveStoreInfo()">Save Changes</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Data Management Modal -->
+    <div id="dataManagementModal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>設定與備份 (Settings & Data)</h2>
+                <button class="close-btn" onclick="closeDataManagementModal()">Close</button>
+            </div>
+
+            <style>
+                .data-tabs {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    background: rgba(240, 244, 248, 0.8);
+                    border-radius: 8px 8px 0 0;
+                    overflow: hidden;
+                    margin-bottom: 20px;
+                }
+
+                .data-tab-btn {
+                    padding: 15px;
+                    text-align: center;
+                    cursor: pointer;
+                    font-weight: bold;
+                    color: #4A5568;
+                    transition: all 0.2s;
+                    border-bottom: 3px solid transparent;
+                }
+
+                .data-tab-btn.active {
+                    color: #2B6CB0;
+                    border-bottom-color: #2B6CB0;
+                    background: rgba(255, 255, 255, 0.9);
+                }
+
+                .data-tab-content {
+                    display: none;
+                }
+
+                .data-tab-content.active {
+                    display: block;
+                }
+
+                .warning-box {
+                    background: #FFF5F5;
+                    border: 1px solid #FED7D7;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    color: #C53030;
+                }
+
+                .info-box {
+                    background: #EBF8FF;
+                    border: 1px solid #BEE3F8;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    color: #2B6CB0;
+                }
+            </style>
+
+            <div class="data-tabs">
+                <div class="data-tab-btn active" id="tabBtnExport" onclick="switchDataTab('export')">匯出資料 (EXPORT)</div>
+                <div class="data-tab-btn" id="tabBtnImport" onclick="switchDataTab('import')">匯入資料 (IMPORT)</div>
+            </div>
+
+            <!-- Export Section -->
+            <div id="dataTabExport" class="data-tab-content active">
+                <div class="info-box">
+                    <h4 style="margin-bottom: 10px;">💡 傳送方式選擇</h4>
+                    <ul style="margin-left: 20px; line-height: 1.6;">
+                        <li><strong>推薦：</strong> 下載備份檔 (.json)</li>
+                        <li>複製文字並傳送至其他裝置</li>
+                    </ul>
+                </div>
+                <button class="btn btn-primary"
+                    style="width: 100%; padding: 15px; font-size: 1.2rem; background: #38A169; border-color: #38A169; font-weight: bold;"
+                    onclick="exportData()">
+                    📥 下載備份檔案 (.json)
+                </button>
+            </div>
+
+            <!-- Import Section -->
+            <div id="dataTabImport" class="data-tab-content">
+                <div class="warning-box">
+                    <h4 style="margin-bottom: 10px;">⚠️ 注意事項</h4>
+                    <p style="line-height: 1.6;">匯入將會 <strong>完全覆蓋</strong> 您目前裝置上的現有資料。請確認您已備份重要內容。</p>
+                </div>
+
+                <div style="border: 2px dashed #68D391; background: #F0FFF4; border-radius: 8px; padding: 25px; text-align: center; cursor: pointer; transition: background 0.2s;"
+                    onclick="document.getElementById('importFileInput').click()"
+                    onmouseover="this.style.background='#C6F6D5'" onmouseout="this.style.background='#F0FFF4'">
+                    <span style="font-size: 1.3rem; color: #276749; font-weight: bold;">
+                        📤 選擇備份檔案 (.json)
+                    </span>
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;"
+                        onchange="importData(event)">
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -4180,6 +4290,86 @@
             // Use the centralized delete logic
             document.getElementById('editShopItemModal').classList.remove('show');
             deleteShopItem(editingShopItemId);
+        }
+
+        // --- Data Management (Export & Import) ---
+        function openDataManagementModal() {
+            document.getElementById('dataManagementModal').classList.add('show');
+        }
+
+        function closeDataManagementModal() {
+            document.getElementById('dataManagementModal').classList.remove('show');
+            document.getElementById('importFileInput').value = ''; // Reset input
+        }
+
+        function switchDataTab(tabId) {
+            // Reset active states
+            document.getElementById('tabBtnExport').classList.remove('active');
+            document.getElementById('tabBtnImport').classList.remove('active');
+            document.getElementById('dataTabExport').classList.remove('active');
+            document.getElementById('dataTabImport').classList.remove('active');
+
+            // Set new active state
+            if (tabId === 'export') {
+                document.getElementById('tabBtnExport').classList.add('active');
+                document.getElementById('dataTabExport').classList.add('active');
+            } else if (tabId === 'import') {
+                document.getElementById('tabBtnImport').classList.add('active');
+                document.getElementById('dataTabImport').classList.add('active');
+            }
+        }
+
+        function exportData() {
+            const dataStr = localStorage.getItem('sl_data');
+            if (!dataStr) {
+                alert("No data found to export.");
+                return;
+            }
+
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+
+            const a = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            a.download = `solo_leveling_backup_${dateStr}.json`;
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const contents = e.target.result;
+                    // Validate JSON
+                    const parsedData = JSON.parse(contents);
+
+                    // Basic sanity check to see if it resembles our game state
+                    if (!parsedData || !parsedData.player || !parsedData.tasks) {
+                        throw new Error("Invalid save file structure.");
+                    }
+
+                    if (confirm("Are you sure you want to overwrite all your current data with this backup? This action cannot be undone.")) {
+                        localStorage.setItem('sl_data', JSON.stringify(parsedData));
+                        alert("Data imported successfully! The game will now reload.");
+                        location.reload();
+                    }
+                } catch (error) {
+                    console.error("Error parsing import file:", error);
+                    alert("Error: Invalid backup file format.");
+                }
+
+                // Reset the input so the same file could be selected again if needed
+                event.target.value = '';
+            };
+            reader.readAsText(file);
         }
 
         let editingGroupId = null;
