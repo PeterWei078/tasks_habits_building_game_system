@@ -1397,6 +1397,17 @@
                     }
                 }
             });
+
+            // Cleanup orphaned Items: if an item belongs to a category you deleted, move it to 'Other'
+            const validCategoryNames = new Set(state.player.shopCategories.map(c => c.name));
+            validCategoryNames.add('Badge'); // Default persistent category
+            validCategoryNames.add('Other'); // Default fallback
+
+            state.player.shopItems.forEach(item => {
+                if (!validCategoryNames.has(item.category)) {
+                    item.category = 'Other';
+                }
+            });
         }
 
         if (!state.player.inventory) state.player.inventory = [];
