@@ -1382,6 +1382,23 @@
                 }
             });
         }
+
+        // Cleanup orphaned default Shop Categories
+        if (state.player.shopCategories && state.player.shopItems) {
+            const defaultCategoriesToCheck = ['Food', 'Entertainment', 'Health'];
+            defaultCategoriesToCheck.forEach(catName => {
+                // If the user's categories list has this default category
+                if (state.player.shopCategories.some(c => c.name === catName)) {
+                    // Check how many items actually use it
+                    const itemsUsingCat = state.player.shopItems.filter(i => i.category === catName);
+                    // If none use it, they were deleted, so this category should be permanently removed
+                    if (itemsUsingCat.length === 0) {
+                        state.player.shopCategories = state.player.shopCategories.filter(c => c.name !== catName);
+                    }
+                }
+            });
+        }
+
         if (!state.player.inventory) state.player.inventory = [];
         if (!state.player.inventory) state.player.inventory = [];
         if (!state.player.achievements) state.player.achievements = [];
