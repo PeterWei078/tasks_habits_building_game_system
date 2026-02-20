@@ -1089,6 +1089,28 @@
         </div>
     </div>
 
+    <!-- Store Info Modal -->
+    <div id="storeInfoModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Store Info & Categories</h2>
+                <button class="close-btn" onclick="closeStoreInfoModal()">Close</button>
+            </div>
+            <div class="modal-body" style="padding: 10px;">
+                <div id="storeInfoDisplay" style="white-space: pre-wrap; line-height: 1.5; margin-bottom: 20px;"></div>
+                <textarea id="storeInfoEditor"
+                    style="display: none; width: 100%; height: 250px; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; resize: vertical; margin-bottom: 20px; font-family: inherit; line-height: 1.5;"></textarea>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="btnEditStoreInfo" class="btn btn-secondary" onclick="toggleEditStoreInfo()">✏️ Edit
+                        Info</button>
+                    <button id="btnSaveStoreInfo" class="btn btn-primary" style="display: none;"
+                        onclick="saveStoreInfo()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- State Management ---
         const defaultState = {
@@ -1123,6 +1145,7 @@
                 activities: [], // Activity Log
                 // Store & Inventory
                 gold: 0,
+                storeDescription: "Welcome to the Store! Here you can spend your hard-earned gold on rewards.\n\n### Categories\n- **Food 🍔**: Treats to satisfy your cravings.\n- **Entertainment 🎮**: Games, movies, and fun activities.\n- **Health 💊**: Items that promote your well-being.\n- **Badge 🏅**: Special achievements to show off.\n\n*Click 'Edit' below to customize this description!*",
                 shopCategories: [
                     { id: 'cat_food', name: 'Food', icon: '🍔' },
                     { id: 'cat_entertainment', name: 'Entertainment', icon: '🎮' },
@@ -1161,6 +1184,9 @@
         }
         if (!state.player.shopCategories) {
             state.player.shopCategories = defaultState.player.shopCategories;
+        }
+        if (!state.player.storeDescription) {
+            state.player.storeDescription = defaultState.player.storeDescription;
         }
         // Cleanup Invalid Activities
         if (state.player.activities) {
@@ -1480,6 +1506,7 @@
                             <span>💰</span> <span id="gold-count-anim">${state.player.gold}</span>
                         </div>
                         <div style="display: flex; gap: 5px;">
+                            <button onclick="openStoreInfoModal()" title="Store Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
                             <button onclick="openManagementModal('storeCategories')" title="Manage Categories" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">🏷️</button>
                             <button onclick="openManagementModal('store')" title="Manage Store Items" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">⚙️</button>
                         </div>
@@ -3795,6 +3822,65 @@
             saveState();
             renderManageStoreCategories();
             renderStorePage(); // Refresh shop page if open
+        }
+
+        // --- Store Info Modal ---
+        function openStoreInfoModal() {
+            const modal = document.getElementById('storeInfoModal');
+            const display = document.getElementById('storeInfoDisplay');
+            const editor = document.getElementById('storeInfoEditor');
+            const btnEdit = document.getElementById('btnEditStoreInfo');
+            const btnSave = document.getElementById('btnSaveStoreInfo');
+
+            // Reset to read mode
+            display.style.display = 'block';
+            editor.style.display = 'none';
+            btnEdit.style.display = 'inline-block';
+            btnSave.style.display = 'none';
+
+            // Populate content
+            let desc = state.player.storeDescription || "No description provided.";
+
+            // Simple markdown-to-html conversion for display
+            let htmlDesc = desc
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^\- (.*$)/gim, '<li>$1</li>');
+
+            // Wrap list items in <ul>
+            htmlDesc = htmlDesc.replace(/(<li>.*<\/li>(\n<li>.*<\/li>)*)/gi, '<ul>$1</ul>');
+
+            display.innerHTML = htmlDesc;
+            editor.value = desc;
+
+            modal.classList.add('show');
+        }
+
+        function closeStoreInfoModal() {
+            document.getElementById('storeInfoModal').classList.remove('show');
+        }
+
+        function toggleEditStoreInfo() {
+            const display = document.getElementById('storeInfoDisplay');
+            const editor = document.getElementById('storeInfoEditor');
+            const btnEdit = document.getElementById('btnEditStoreInfo');
+            const btnSave = document.getElementById('btnSaveStoreInfo');
+
+            display.style.display = 'none';
+            editor.style.display = 'block';
+            btnEdit.style.display = 'none';
+            btnSave.style.display = 'inline-block';
+        }
+
+        function saveStoreInfo() {
+            const editor = document.getElementById('storeInfoEditor');
+            state.player.storeDescription = editor.value;
+            saveState();
+
+            // Switch back to read mode
+            openStoreInfoModal();
         }
 
         // --- Store Management ---
