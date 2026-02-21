@@ -2734,7 +2734,35 @@
 
             const todayStr = new Date().toISOString().split('T')[0];
 
-            container.innerHTML = tasks.map(t => {
+            // Add global CSS class for dragging if not exists
+            if (!document.getElementById('dragStyles')) {
+                const style = document.createElement('style');
+                style.id = 'dragStyles';
+                style.textContent = `
+                    .project-task-item { transition: transform 0.2s, background 0.2s; cursor: grab; }
+                    .project-task-item:active { cursor: grabbing; }
+                    .project-task-item.drag-over { border-top: 2px solid var(--accent-color); padding-top: 10px; }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // We need a way to track custom project order, or simple array manipulation.
+            // Let's use the actual order in state.tasks by changing their positions.
+            const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(projectId));
+
+            // If project has a saved custom order, we should sort by it here.
+            const project = state.player.tags.find(tag => tag.id === projectId);
+            if (project && project.taskOrder) {
+                projectTasks.sort((a, b) => {
+                    let indexA = project.taskOrder.indexOf(a.id);
+                    let indexB = project.taskOrder.indexOf(b.id);
+                    if (indexA === -1) indexA = 99999; // Put new tasks at the end
+                    if (indexB === -1) indexB = 99999;
+                    return indexA - indexB;
+                });
+            }
+
+            container.innerHTML = projectTasks.map((t, index) => {
                 let dueDateText = '';
                 if (t.dueDate) {
                     const isOverdue = t.dueDate < todayStr;
@@ -2745,15 +2773,91 @@
                 }
 
                 return `
-                <div style="display: flex; justify-content: space-between; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 5px;">
-                    <div>
-                        <span style="${t.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
-                        ${dueDateText}
+                <div class="project-task-item" style="display: flex; justify-content: space-between; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 5px;"
+                     draggable="true" 
+                     data-id="${t.id}"
+                     ondragstart="handleProjectTaskDragStart(event)"
+                     ondragover="handleProjectTaskDragOver(event)"
+                     ondragenter="handleProjectTaskDragEnter(event)"
+                     ondragleave="handleProjectTaskDragLeave(event)"
+                     ondrop="handleProjectTaskDrop(event, '${projectId}')">
+                    <div style="flex: 1; display: flex; align-items: center;">
+                        <span style="margin-right: 10px; cursor: grab; opacity: 0.5;">☰</span>
+                        <div onclick="openTaskModal('${t.id}')" style="cursor: pointer; flex: 1;">
+                            <span style="${t.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
+                            ${dueDateText}
+                        </div>
                     </div>
                     <span style="font-size: 0.8rem; opacity: 0.7;">${t.completed ? '✅ Done' : '⚔️ Active'}</span>
                 </div>
                 `;
             }).join('');
+        }
+
+        let draggedProjectTaskId = null;
+
+        function handleProjectTaskDragStart(e) {
+            draggedProjectTaskId = e.target.closest('.project-task-item').dataset.id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.target.style.opacity = '0.5';
+        }
+
+        function handleProjectTaskDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleProjectTaskDragEnter(e) {
+            e.preventDefault();
+            const target = e.target.closest('.project-task-item');
+            if (target && target.dataset.id !== draggedProjectTaskId) {
+                target.classList.add('drag-over');
+            }
+        }
+
+        function handleProjectTaskDragLeave(e) {
+            const target = e.target.closest('.project-task-item');
+            if (target) {
+                target.classList.remove('drag-over');
+            }
+        }
+
+        function handleProjectTaskDrop(e, projectId) {
+            e.preventDefault();
+            const items = document.querySelectorAll('.project-task-item');
+            items.forEach(item => {
+                item.style.opacity = '1';
+                item.classList.remove('drag-over');
+            });
+
+            const targetItem = e.target.closest('.project-task-item');
+            if (!targetItem) return;
+
+            const droppedOnId = targetItem.dataset.id;
+            if (draggedProjectTaskId === droppedOnId || !draggedProjectTaskId) return;
+
+            const project = state.player.tags.find(tag => tag.id === projectId);
+            if (!project) return;
+
+            // Get current order or initialize it
+            let taskOrder = project.taskOrder || state.tasks.filter(t => t.tags && t.tags.includes(projectId)).map(t => t.id);
+
+            // Numeric cast safety check if IDs might be numbers vs strings
+            const dragId = isNaN(draggedProjectTaskId) ? draggedProjectTaskId : Number(draggedProjectTaskId);
+            const dropId = isNaN(droppedOnId) ? droppedOnId : Number(droppedOnId);
+
+            const dragIndex = taskOrder.indexOf(dragId);
+            const dropIndex = taskOrder.indexOf(dropId);
+
+            // Reorder the tracking array
+            if (dragIndex > -1 && dropIndex > -1) {
+                taskOrder.splice(dragIndex, 1);
+                taskOrder.splice(dropIndex, 0, dragId);
+                project.taskOrder = taskOrder;
+                saveState();
+                renderProjectTasks(projectId);
+            }
+            draggedProjectTaskId = null;
         }
 
         function openTaskModalForProject() {
