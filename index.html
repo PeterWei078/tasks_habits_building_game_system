@@ -2908,6 +2908,17 @@
             // Group Filters (Tabs style)
             const groupFilterContainer = document.createElement('div');
             groupFilterContainer.className = 'filter-bar';
+
+            // "All" Group Option
+            const allGroupChip = document.createElement('div');
+            allGroupChip.className = `filter-chip ${currentGroupId === 'all' ? 'active' : ''}`;
+            allGroupChip.textContent = '全部 (All)';
+            allGroupChip.onclick = () => {
+                currentGroupId = 'all';
+                render();
+            };
+            groupFilterContainer.appendChild(allGroupChip);
+
             state.player.groups.forEach(group => {
                 const chip = document.createElement('div');
                 chip.className = `filter-chip ${currentGroupId === group.id ? 'active' : ''}`;
@@ -2978,7 +2989,7 @@
 
             // Filter Logic
             const filteredTasks = state.tasks.filter(t => {
-                const groupMatch = t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'; // Backward compat
+                const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
                 const tagMatch = currentTagFilter ? (t.tags && t.tags.includes(currentTagFilter)) : true;
                 return groupMatch && tagMatch;
             });
