@@ -1042,6 +1042,8 @@
                             <input type="number" id="newShopPrice" placeholder="Price (Gold)"
                                 style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
                         </div>
+                        <input type="url" id="newShopUrl" placeholder="URL Link (Optional)"
+                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <select id="newShopCategory"
                                 style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
@@ -1788,6 +1790,7 @@
                         <div class="item-icon-wrapper">${item.icon}</div>
                         <h4>${item.title}</h4>
                         <p class="desc">${item.description}</p>
+                        ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-bottom: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
                         <button class="btn-buy" onclick="event.stopPropagation(); buyItem('${item.id}')" ${state.player.gold < item.price || (item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id)) ? 'disabled' : ''}>
                             ${item.category === 'Badge' && state.player.inventory.some(i => i.itemId === item.id) ? 'Owned' : (state.player.gold < item.price ? 'Need Gold' : 'Purchase')}
                         </button>
@@ -1843,6 +1846,7 @@
                          <div class="item-icon-wrapper" style="font-size: 3rem;">${item.icon}</div>
                          <h4>${item.title}</h4>
                          <p class="desc">${item.description}</p>
+                         ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-bottom: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
                          <div style="font-size: 0.8rem; opacity: 0.7; margin: 5px 0;">${item.badgeCategory || 'General'}</div>
                          <button class="btn-buy" onclick="event.stopPropagation(); claimBadge('${item.id}')" ${isOwned ? 'disabled' : ''} style="${isOwned ? 'opacity: 0.6; cursor: default;' : 'background: var(--accent-color);'}">
                              ${isOwned ? 'Owned' : 'Claim Badge'}
@@ -1908,6 +1912,7 @@
                             <div class="item-icon-wrapper">${originalItem.icon}</div>
                             <h4>${originalItem.title}</h4>
                             <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
+                            ${originalItem.url ? `<a href="${originalItem.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-bottom: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
                             <div style="font-size: 0.75rem; margin-bottom: 15px; opacity: 0.6;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
                             <div style="display: flex; gap: 10px;">
                                 <button class="btn-use" onclick="useItem(${index})" style="flex: 1;">Use Item</button>
@@ -4320,6 +4325,7 @@
                                 <div>
                                     <div style="font-weight: bold;">${item.title || 'Untitled'}</div>
                                     <div style="font-size: 0.8rem; opacity: 0.7;">${item.category || 'General'} • 💰 ${item.price || 0}</div>
+                                    ${item.url ? `<div style="font-size: 0.75rem; color: var(--accent-color); margin-top: 2px;">🔗 ${item.url.substring(0, 30)}${item.url.length > 30 ? '...' : ''}</div>` : ''}
                                 </div>
                             </div>
                             <button class="btn btn-secondary" onclick="deleteShopItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
@@ -4351,6 +4357,18 @@
                     catOptions += `<option value="Badge">Badge 🏅</option>`;
                     catOptions += `<option value="Other">Other 📦</option>`;
                     newShopCategory.innerHTML = catOptions;
+
+                    newShopCategory.onchange = function () {
+                        const priceInput = document.getElementById('newShopPrice');
+                        if (this.value === 'Badge') {
+                            priceInput.style.display = 'none';
+                            priceInput.value = 0;
+                        } else {
+                            priceInput.style.display = 'block';
+                        }
+                    };
+                    // trigger once natively
+                    newShopCategory.onchange();
                 }
 
             } catch (e) {
@@ -4361,14 +4379,18 @@
 
         function addShopItem() {
             const title = document.getElementById('newShopTitle').value;
-            const price = parseInt(document.getElementById('newShopPrice').value);
+            let price = parseInt(document.getElementById('newShopPrice').value) || 0;
             const category = document.getElementById('newShopCategory').value || 'Other';
+
+            if (category === 'Badge') price = 0;
+
             const tier = document.getElementById('newShopTier').value || '';
             const icon = document.getElementById('newShopIcon').value || '🎁';
             const desc = document.getElementById('newShopDesc').value;
+            const url = document.getElementById('newShopUrl').value;
 
             // ... (rest of addShopItem remains the same, assuming it's unedited below)
-            if (title && price > 0) {
+            if (title && (price > 0 || category === 'Badge')) {
                 state.player.shopItems.push({
                     id: Date.now().toString(),
                     title,
@@ -4376,7 +4398,8 @@
                     category,
                     itemTier: tier, // Use itemTier to match badge logic later
                     icon,
-                    description: desc
+                    description: desc,
+                    url: url
                 });
                 saveState();
                 renderManageStoreItems();
@@ -4438,6 +4461,10 @@
                             <input type="number" id="editShopPrice">
                         </div>
                         <div class="form-group">
+                            <label>URL Link</label>
+                            <input type="url" id="editShopUrl" placeholder="Optional URL">
+                        </div>
+                        <div class="form-group">
                             <label>Category</label>
                             <select id="editShopCategory">
                                 <!-- Populated dynamically below -->
@@ -4491,14 +4518,17 @@
                     const badgeTierGroup = document.getElementById('editBadgeTierGroup');
                     const badgeCatGroup = document.getElementById('editShopBadgeCategory').parentElement;
                     const itemTierGroup = document.getElementById('editItemTierGroup');
+                    const priceGroup = document.getElementById('editShopPrice').parentElement;
 
                     if (this.value === 'Badge') {
                         badgeTierGroup.style.display = 'block';
                         badgeCatGroup.style.display = 'block';
+                        priceGroup.style.display = 'none';
                         if (itemTierGroup) itemTierGroup.style.display = 'none';
                     } else {
                         badgeTierGroup.style.display = 'none';
                         badgeCatGroup.style.display = 'none';
+                        priceGroup.style.display = 'block';
                         if (itemTierGroup) itemTierGroup.style.display = 'block';
                     }
                 });
@@ -4521,19 +4551,23 @@
             document.getElementById('editShopBadgeTier').value = item.badgeTier || ''; // Populate Tier
             document.getElementById('editShopIcon').value = item.icon;
             document.getElementById('editShopDesc').value = item.description || '';
+            if (document.getElementById('editShopUrl')) document.getElementById('editShopUrl').value = item.url || '';
 
             // Set initial visibility
             const badgeTierGroup = document.getElementById('editBadgeTierGroup');
             const badgeCatGroup = document.getElementById('editShopBadgeCategory').parentElement;
             const itemTierGroup = document.getElementById('editItemTierGroup');
+            const priceGroup = document.getElementById('editShopPrice').parentElement;
 
             if (item.category === 'Badge') {
                 if (badgeTierGroup) badgeTierGroup.style.display = 'block';
                 if (badgeCatGroup) badgeCatGroup.style.display = 'block';
+                if (priceGroup) priceGroup.style.display = 'none';
                 if (itemTierGroup) itemTierGroup.style.display = 'none';
             } else {
                 if (badgeTierGroup) badgeTierGroup.style.display = 'none';
                 if (badgeCatGroup) badgeCatGroup.style.display = 'none';
+                if (priceGroup) priceGroup.style.display = 'block';
                 if (itemTierGroup) itemTierGroup.style.display = 'block';
             }
 
@@ -4545,8 +4579,13 @@
             const item = state.player.shopItems.find(i => i.id === editingShopItemId);
             if (item) {
                 item.title = document.getElementById('editShopTitle').value;
-                item.price = parseInt(document.getElementById('editShopPrice').value);
                 item.category = document.getElementById('editShopCategory').value;
+
+                if (item.category === 'Badge') {
+                    item.price = 0;
+                } else {
+                    item.price = parseInt(document.getElementById('editShopPrice').value) || 0;
+                }
 
                 if (item.category === 'Badge') {
                     item.badgeCategory = document.getElementById('editShopBadgeCategory').value;
@@ -4562,6 +4601,7 @@
 
                 item.icon = document.getElementById('editShopIcon').value;
                 item.description = document.getElementById('editShopDesc').value;
+                item.url = document.getElementById('editShopUrl').value;
 
                 saveState();
                 renderManageStoreItems(); // Ensure management list updates too
@@ -5007,6 +5047,7 @@
                         <div class="item-icon-wrapper" style="width: 60px; height: 60px; font-size: 2.5rem; margin-bottom: 10px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">${badge.icon}</div>
                         <div style="font-weight: bold; font-size: 1rem; margin-bottom: 5px; line-height: 1.2;">${badge.title || badge.name}</div>
                         ${badge.description ? `<div style="font-size: 0.85rem; opacity: 0.9; margin-top: auto; line-height: 1.3;">${badge.description}</div>` : ''}
+                        ${badge.url ? `<a href="${badge.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-top: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
                     `;
                     badgeGrid.appendChild(badgeCard);
                 });
