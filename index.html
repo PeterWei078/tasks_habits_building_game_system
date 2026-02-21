@@ -3105,7 +3105,7 @@
                 document.getElementById('modalDesc').value = task.description || '';
                 // Populate Subtasks
                 if (task.subtasks) {
-                    task.subtasks.forEach(st => addSubtaskInput(st.title));
+                    task.subtasks.forEach(st => addSubtaskInput(st.title, st.completed));
                 }
 
                 // Attribute Rewards
@@ -3253,12 +3253,12 @@
             }
         }
 
-        function addSubtaskInput(value = '') {
+        function addSubtaskInput(value = '', completed = false) {
             const container = document.getElementById('modalSubtasks');
             const div = document.createElement('div');
             div.className = 'subtask-item';
             div.innerHTML = `
-                <input type="checkbox" disabled style="width: 20px; height: 20px;">
+                <input type="checkbox" ${completed ? 'checked' : ''} style="width: 20px; height: 20px;">
                 <input type="text" placeholder="Subtask..." value="${value}" style="flex: 1; padding: 8px;">
                 <button onclick="this.parentElement.remove()" style="border:none; background:none; cursor:pointer;">✕</button>
             `;
@@ -3318,12 +3318,19 @@
                 const tags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
 
                 // Subtasks
-                const subtaskInputs = document.querySelectorAll('#modalSubtasks .subtask-item input[type="text"]');
-                const subtasks = Array.from(subtaskInputs).map(input => ({
-                    id: Date.now() + Math.random(),
-                    title: input.value.trim(),
-                    completed: false
-                })).filter(st => st.title);
+                const subtaskDivs = document.querySelectorAll('#modalSubtasks .subtask-item');
+                const subtasks = Array.from(subtaskDivs).map(div => {
+                    const textInput = div.querySelector('input[type="text"]');
+                    const checkbox = div.querySelector('input[type="checkbox"]');
+                    return {
+                        id: Date.now() + Math.random(),
+                        title: textInput.value.trim(),
+                        completed: checkbox.checked
+                    };
+                }).filter(st => st.title);
+
+                // Sort Subtasks alphabetically
+                subtasks.sort((a, b) => a.title.localeCompare(b.title));
 
                 // Update Global Focus Time with Manual Edits
                 // If a user manually changes time spent, it should reflect in global stats.
