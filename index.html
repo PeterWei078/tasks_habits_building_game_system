@@ -24,6 +24,21 @@
             --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
+        body[data-theme="pink"] {
+            --bg-gradient: linear-gradient(135deg, #FFE5F1 0%, #FFB8D2 100%);
+            --accent-color: #D53F8C;
+        }
+
+        body[data-theme="green"] {
+            --bg-gradient: linear-gradient(135deg, #E6FFFA 0%, #B2F5EA 100%);
+            --accent-color: #319795;
+        }
+
+        body[data-theme="orange"] {
+            --bg-gradient: linear-gradient(135deg, #FFFAF0 0%, #FEEBC8 100%);
+            --accent-color: #DD6B20;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -1154,7 +1169,7 @@
             <style>
                 .data-tabs {
                     display: grid;
-                    grid-template-columns: 1fr 1fr;
+                    grid-template-columns: 1fr 1fr 1fr;
                     background: rgba(240, 244, 248, 0.8);
                     border-radius: 8px 8px 0 0;
                     overflow: hidden;
@@ -1205,8 +1220,28 @@
             </style>
 
             <div class="data-tabs">
-                <div class="data-tab-btn active" id="tabBtnExport" onclick="switchDataTab('export')">匯出資料 (EXPORT)</div>
-                <div class="data-tab-btn" id="tabBtnImport" onclick="switchDataTab('import')">匯入資料 (IMPORT)</div>
+                <div class="data-tab-btn active" id="tabBtnExport" onclick="switchDataTab('export')">匯出 (EXPORT)</div>
+                <div class="data-tab-btn" id="tabBtnImport" onclick="switchDataTab('import')">匯入 (IMPORT)</div>
+                <div class="data-tab-btn" id="tabBtnTheme" onclick="switchDataTab('theme')">外觀 (DISPLAY)</div>
+            </div>
+
+            <!-- Theme Section -->
+            <div id="dataTabTheme" class="data-tab-content">
+                <div class="info-box">
+                    <h4 style="margin-bottom: 10px;">🎨 選擇主色調 (Color Theme)</h4>
+                    <p style="margin-bottom: 15px;">選擇您喜歡的操作介面顏色：</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn" onclick="setTheme('default')"
+                            style="background: linear-gradient(135deg, #E0C3FC 0%, #8EC5FC 100%); color: #2D3748; flex: 1; min-width: 100px;">預設
+                            (藍紫色)</button>
+                        <button class="btn" onclick="setTheme('pink')"
+                            style="background: linear-gradient(135deg, #FFE5F1 0%, #FFB8D2 100%); color: #2D3748; flex: 1; min-width: 100px;">粉紅色</button>
+                        <button class="btn" onclick="setTheme('green')"
+                            style="background: linear-gradient(135deg, #E6FFFA 0%, #B2F5EA 100%); color: #2D3748; flex: 1; min-width: 100px;">淺綠色</button>
+                        <button class="btn" onclick="setTheme('orange')"
+                            style="background: linear-gradient(135deg, #FFFAF0 0%, #FEEBC8 100%); color: #2D3748; flex: 1; min-width: 100px;">淺橘色</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Export Section -->
@@ -1299,7 +1334,8 @@
                 ],
                 inventory: [],
                 achievements: [], // Archived completed projects
-                reflections: [] // New Reflections Data
+                reflections: [], // New Reflections Data
+                theme: 'default' // UI Background Color Theme
             },
             tasks: [
                 { id: 1, title: "晨跑 3 公里 (Morning Run)", attributeRewards: [{ attribute: "agility", exp: 20 }], completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
@@ -1415,6 +1451,18 @@
         if (!state.player.achievements) state.player.achievements = [];
         if (!state.player.reflections) state.player.reflections = []; // Initialize reflections
         if (typeof state.player.gold === 'undefined') state.player.gold = 0;
+        if (!state.player.theme) {
+            state.player.theme = defaultState.player.theme;
+        }
+
+        // Apply theme immediately on load
+        document.body.dataset.theme = state.player.theme;
+
+        function setTheme(themeName) {
+            state.player.theme = themeName;
+            document.body.dataset.theme = themeName;
+            saveState();
+        }
 
         saveState(); // Save the patched state immediately
 
@@ -4440,8 +4488,10 @@
             // Reset active states
             document.getElementById('tabBtnExport').classList.remove('active');
             document.getElementById('tabBtnImport').classList.remove('active');
+            document.getElementById('tabBtnTheme').classList.remove('active');
             document.getElementById('dataTabExport').classList.remove('active');
             document.getElementById('dataTabImport').classList.remove('active');
+            document.getElementById('dataTabTheme').classList.remove('active');
 
             // Set new active state
             if (tabId === 'export') {
@@ -4450,6 +4500,9 @@
             } else if (tabId === 'import') {
                 document.getElementById('tabBtnImport').classList.add('active');
                 document.getElementById('dataTabImport').classList.add('active');
+            } else if (tabId === 'theme') {
+                document.getElementById('tabBtnTheme').classList.add('active');
+                document.getElementById('dataTabTheme').classList.add('active');
             }
         }
 
