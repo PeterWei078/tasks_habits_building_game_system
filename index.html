@@ -510,6 +510,188 @@
             margin-bottom: 10px;
         }
 
+        /* Activity Heatmap */
+        .heatmap-container {
+            width: 100%;
+            overflow-x: auto;
+            padding: 10px 0;
+            position: relative;
+        }
+
+        .heatmap-grid {
+            display: grid;
+            gap: 4px;
+            /* Default to Monthly 5 weeks x 7 days */
+            grid-template-columns: repeat(7, 1fr);
+            grid-auto-rows: minmax(40px, auto);
+        }
+
+        .heatmap-grid.view-quarter {
+            /* 13 weeks x 7 days */
+            grid-template-rows: repeat(7, 1fr);
+            grid-auto-flow: column;
+            grid-template-columns: repeat(21, minmax(18px, 1fr));
+        }
+
+        .heatmap-cell {
+            background-color: rgba(255, 255, 255, 0.05);
+            /* Default Empty Color */
+            border-radius: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding-top: 5px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            aspect-ratio: 1 / 1;
+            /* Make it perfectly square */
+        }
+
+        .heatmap-grid.view-quarter .heatmap-cell {
+            padding-top: 0;
+            font-size: 0;
+            /* Hide text in quarter view */
+        }
+
+        .heatmap-cell:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Activity Heatmap 10-Tier Scale */
+        /* Base / 0-9 EXP (Gray) handled by default background-color */
+
+        /* Yellow (10 - 39 EXP) */
+        .heatmap-cell.heat-yellow-1 {
+            background-color: #ffeda1;
+            color: #594d00;
+        }
+
+        .heatmap-cell.heat-yellow-2 {
+            background-color: #f7d239;
+            color: #594d00;
+        }
+
+        .heatmap-cell.heat-yellow-3 {
+            background-color: #eab400;
+            color: #fff;
+        }
+
+        /* Green (40 - 69 EXP) */
+        .heatmap-cell.heat-green-1 {
+            background-color: #bbf7d0;
+            color: #064e3b;
+        }
+
+        .heatmap-cell.heat-green-2 {
+            background-color: #4ade80;
+            color: #fff;
+        }
+
+        .heatmap-cell.heat-green-3 {
+            background-color: #16a34a;
+            color: #fff;
+        }
+
+        /* Blue (70 - 99 EXP) */
+        .heatmap-cell.heat-blue-1 {
+            background-color: #bfdbfe;
+            color: #1e3a8a;
+        }
+
+        .heatmap-cell.heat-blue-2 {
+            background-color: #60a5fa;
+            color: #fff;
+        }
+
+        .heatmap-cell.heat-blue-3 {
+            background-color: #2563eb;
+            color: #fff;
+        }
+
+        /* Red (100 - 129 EXP) */
+        .heatmap-cell.heat-red-1 {
+            background-color: #fecaca;
+            color: #7f1d1d;
+        }
+
+        .heatmap-cell.heat-red-2 {
+            background-color: #f87171;
+            color: #fff;
+        }
+
+        .heatmap-cell.heat-red-3 {
+            background-color: #dc2626;
+            color: #fff;
+        }
+
+        /* Purple (130+ EXP) */
+        .heatmap-cell.heat-purple-1 {
+            background-color: #e9d5ff;
+            color: #581c87;
+        }
+
+        .heatmap-cell.heat-purple-2 {
+            background-color: #c084fc;
+            color: #fff;
+        }
+
+        .heatmap-cell.heat-purple-3 {
+            background-color: #9333ea;
+            color: #fff;
+        }
+
+        .dots-container {
+            position: absolute;
+            bottom: 3px;
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+            width: 100%;
+            flex-wrap: wrap;
+            padding: 0 2px;
+        }
+
+        .activity-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+        }
+
+        .heatmap-grid.view-quarter .activity-dot {
+            width: 3px;
+            height: 3px;
+            bottom: 1px;
+        }
+
+        .heatmap-tooltip {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            z-index: 1000;
+            transition: opacity 0.2s;
+            max-width: 250px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(4px);
+            white-space: pre-wrap;
+            /* allow newlines */
+            display: none;
+        }
+
+        .heatmap-tooltip.show {
+            display: block;
+        }
+
         /* Stats Page */
         .stats-grid {
             display: grid;
@@ -3881,6 +4063,7 @@
                 // Simple log for completion
                 state.player.activities.unshift({
                     id: 'act_' + Date.now(),
+                    taskId: task.id,
                     type: 'TASK_COMPLETE',
                     title: task.title,
                     timestamp: Date.now(),
@@ -3968,6 +4151,21 @@
 
                 state.player.exp = Math.max(0, state.player.exp - task.rewardExp);
                 state.player.gold = Math.max(0, state.player.gold - task.rewardGold);
+
+                // Remove from Activity Log to fix heatmap sync
+                if (state.player.activities) {
+                    // Try to find the exact completion log via taskId
+                    const actIndex = state.player.activities.findIndex(a => a.type === 'TASK_COMPLETE' && a.taskId == task.id);
+                    if (actIndex !== -1) {
+                        state.player.activities.splice(actIndex, 1);
+                    } else {
+                        // Fallback matching by title for older logs
+                        const fallbackIndex = state.player.activities.findIndex(a => a.type === 'TASK_COMPLETE' && a.title === task.title);
+                        if (fallbackIndex !== -1) {
+                            state.player.activities.splice(fallbackIndex, 1);
+                        }
+                    }
+                }
 
                 // Revert Attribute EXP
                 if (task.attributeRewards) {
@@ -5634,122 +5832,217 @@
         }
 
         // --- Activity Page ---
-        function renderActivityPage() {
-            contentDiv.innerHTML = ''; // Prevent duplication
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = '活動紀錄 (Activity Log)';
-
-            const timelineContainer = document.createElement('div');
-            timelineContainer.className = 'glass glass-card';
-            timelineContainer.style.padding = '20px';
-
-            if (!state.player.activities || state.player.activities.length === 0) {
-                timelineContainer.innerHTML = '<div style="text-align:center; opacity:0.6;">No activity recorded yet. Complete tasks to see them here!</div>';
-            } else {
-                // Group by Date
-                const grouped = {};
-                state.player.activities.forEach(act => {
-                    const date = new Date(act.timestamp).toLocaleDateString();
-                    if (!grouped[date]) grouped[date] = [];
-                    grouped[date].push(act);
-                });
-
-                let html = '';
-                const sortedDates = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
-
-                sortedDates.forEach(date => {
-                    html += `<h3 style="margin: 20px 0 10px 0; font-size: 1rem; opacity: 0.7; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px;">${date}</h3>`;
-
-                    grouped[date].forEach(act => {
-                        const time = new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        // Extract details FIRST
-                        const details = act.details || {};
-                        const attrConfig = attributesConfig[details.attribute] || { label: 'Unknown', color: '#ccc' };
-
-                        // Icon & Title Logic
-                        let icon = '📝';
-                        let title = act.title;
-                        let subtext = '';
-                        let amountColor = '#ECC94B';
-                        let amountPrefix = '+';
-
-                        if (act.type === 'SHOP_PURCHASE') {
-                            icon = details.icon || '🛒';
-                            amountColor = '#F56565'; // Red for cost
-                            amountPrefix = ''; // Already negative in details.gold
-                            subtext = `<span style="font-size: 0.8rem; opacity: 0.7;">Category: ${details.itemCategory || 'Item'}</span>`;
-                        } else if (act.type === 'BADGE_CLAIM') {
-                            icon = details.icon || '🏅';
-                            subtext = `<span style="font-size: 0.8rem; opacity: 0.7;">Category: ${details.badgeCategory || 'Badge'}</span>`;
-                        } else if (act.type === 'TASK_COMPLETE') {
-                            icon = '✅';
-                            const projectBadges = details.projects ? details.projects.map(p =>
-                                `<span style="font-size: 0.75rem; background: ${p.color}44; color: ${p.color}; border: 1px solid ${p.color}; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">#${p.name}</span>`
-                            ).join('') : '';
-
-                            let timeBadge = '';
-                            if (details.timeSpent && details.timeSpent > 0) {
-                                const mins = Math.round(details.timeSpent / 60);
-                                timeBadge = `<span style="background: rgba(255, 99, 71, 0.2); color: tomato; padding: 2px 6px; border-radius: 4px; margin-right: 5px;">🍅 ${mins}m</span>`;
-                            }
-                            subtext = `
-                                    <div style="font-size: 0.85rem; opacity: 0.8; display: flex; flex-wrap: wrap; gap: 5px; align-items: center; margin-top: 5px;">
-                                        ${projectBadges}
-                                        ${timeBadge}
-                                        <span style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px;">📂 ${details.groupName}</span>
-                                    </div>
-                                `;
-                        } else if (act.type === 'system') {
-                            icon = '⚙️';
-                            subtext = `<span style="font-size: 0.8rem; opacity: 0.7;">System Log</span>`;
-                        }
-
-                        // Stat Badges
-                        let statsHtml = '';
-                        if (details.gold) {
-                            statsHtml += `<span style="color: ${amountColor}; margin-left: 10px;">💰 ${details.gold > 0 ? '+' : ''}${details.gold}</span>`;
-                        }
-                        if (details.exp) {
-                            statsHtml += `<span style="color: #6B46C1; margin-left: 10px;">✨ +${details.exp} EXP</span>`;
-                        }
-                        if (details.attribute) {
-                            const attrConfig = attributesConfig[details.attribute];
-                            if (attrConfig) {
-                                statsHtml += `<span class="badge" style="background: ${attrConfig.color}; color: white; font-size: 0.7rem; margin-left: 10px;">${attrConfig.label.split(' ')[0]} +1</span>`;
-                            }
-                        }
-
-                        html += `
-                                <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-start;">
-                                    <div style="min-width: 60px; font-size: 0.9rem; opacity: 0.6; padding-top: 4px;">${time}</div>
-                                    <div style="flex: 1; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; position: relative; group">
-                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                            <div>
-                                                <div style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                                                    <span style="font-size: 1.2rem;">${icon}</span>
-                                                    ${act.title}
-                                                </div>
-                                                ${subtext}
-                                            </div>
-                                            <div style="text-align: right;">
-                                                ${statsHtml}
-                                            </div>
-                                        </div>
-                                         <div style="display: flex; gap: 5px; margin-top: 8px; justify-content: flex-end; opacity: 0.6;">
-                                            <button onclick="openEditActivityModal('${act.id}')" style="background: none; border: none; cursor: pointer; font-size: 0.9rem;" title="Edit">✏️</button>
-                                            <button onclick="deleteActivity('${act.id}')" style="background: none; border: none; cursor: pointer; font-size: 0.9rem; color: #ff6384;" title="Delete">🗑️</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                    });
-                });
-                timelineContainer.innerHTML = html;
+        // Helper to aggregate data for the new Heatmap View
+        function generateHeatmapData(startDate, endDate) {
+            const data = {};
+            // Initialize empty days
+            let curr = new Date(startDate);
+            while (curr <= endDate) {
+                data[curr.toLocaleDateString()] = { exp: 0, categories: new Set(), events: [] };
+                curr.setDate(curr.getDate() + 1);
             }
 
-            contentDiv.appendChild(title);
-            contentDiv.appendChild(timelineContainer);
+            // Populate from state.player.activities
+            if (state.player.activities) {
+                state.player.activities.forEach(act => {
+                    const d = new Date(act.timestamp);
+                    if (d >= startDate && d <= endDate) {
+                        const dateStr = d.toLocaleDateString();
+                        const dayData = data[dateStr];
+                        if (dayData) {
+                            const details = act.details || {};
+                            if (details.exp) dayData.exp += details.exp;
+
+                            // Format Event String for Tooltip
+                            let eventStr = `• ${act.title}`;
+                            if (details.exp) eventStr += ` (+${details.exp} EXP)`;
+                            if (details.gold && details.gold > 0) eventStr += ` (+${details.gold} 💰)`;
+
+                            // Track Categories for dots
+                            if (act.type === 'TASK_COMPLETE' && details.projects) {
+                                details.projects.forEach(p => {
+                                    dayData.categories.add(p.color);
+                                });
+                            }
+                            dayData.events.push(eventStr);
+                        }
+                    }
+                });
+            }
+            return data;
+        }
+
+        let activityHeatmapView = 'month';
+
+        function renderActivityPage() {
+            contentDiv.innerHTML = '';
+
+            const headerRow = document.createElement('div');
+            headerRow.style.display = 'flex';
+            headerRow.style.justifyContent = 'space-between';
+            headerRow.style.alignItems = 'center';
+            headerRow.style.marginBottom = '20px';
+
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '活動矩陣 (Activity Matrix)';
+            title.style.margin = '0';
+
+            const toggleGroup = document.createElement('div');
+            toggleGroup.style.display = 'flex';
+            toggleGroup.style.gap = '10px';
+
+            const btnMonth = document.createElement('button');
+            btnMonth.className = `filter-chip ${activityHeatmapView === 'month' ? 'active' : ''}`;
+            btnMonth.textContent = 'Month';
+            btnMonth.onclick = () => { activityHeatmapView = 'month'; renderActivityPage(); };
+
+            const btnQuarter = document.createElement('button');
+            btnQuarter.className = `filter-chip ${activityHeatmapView === 'quarter' ? 'active' : ''}`;
+            btnQuarter.textContent = 'Quarter';
+            btnQuarter.onclick = () => { activityHeatmapView = 'quarter'; renderActivityPage(); };
+
+            toggleGroup.appendChild(btnMonth);
+            toggleGroup.appendChild(btnQuarter);
+
+            headerRow.appendChild(title);
+            headerRow.appendChild(toggleGroup);
+
+            const heatmapContainer = document.createElement('div');
+            heatmapContainer.className = 'glass glass-card heatmap-container';
+
+            const grid = document.createElement('div');
+            grid.className = `heatmap-grid ${activityHeatmapView === 'quarter' ? 'view-quarter' : ''}`;
+
+            // Calculate Date Range
+            const endDate = new Date(); // Today
+            endDate.setHours(23, 59, 59, 999);
+            const startDate = new Date();
+
+            let totalDays = 0;
+            if (activityHeatmapView === 'month') {
+                // Last 35 days (5 weeks)
+                startDate.setDate(endDate.getDate() - 34);
+                totalDays = 35;
+            } else {
+                // Last 147 days (21 weeks x 7 days)
+                startDate.setDate(endDate.getDate() - 146);
+                totalDays = 147;
+            }
+            startDate.setHours(0, 0, 0, 0);
+
+            const aggregatedData = generateHeatmapData(startDate, endDate);
+
+            // Tooltip Setup
+            let tooltip = document.getElementById('heatmapTooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.id = 'heatmapTooltip';
+                tooltip.className = 'heatmap-tooltip';
+                document.body.appendChild(tooltip);
+            }
+
+            // Build Grid Cells
+            let currDate = new Date(startDate);
+            for (let i = 0; i < totalDays; i++) {
+                const dateStr = currDate.toLocaleDateString();
+                const dayData = aggregatedData[dateStr];
+
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell';
+
+                // Color Scale Logic
+                // 0-9 EXP: Gray (Default base)
+                // 10-39 EXP: Yellow (levels 1-3)
+                // 40-69 EXP: Green (levels 1-3)
+                // 70-99 EXP: Blue (levels 1-3)
+                // 100-129 EXP: Red (levels 1-3)
+                // 130+ EXP: Purple (levels 1-3)
+                if (dayData && dayData.exp >= 10) {
+                    const expTier = Math.floor(dayData.exp / 10);
+
+                    if (expTier >= 15) cell.classList.add('heat-purple-3');
+                    else if (expTier === 14) cell.classList.add('heat-purple-2');
+                    else if (expTier === 13) cell.classList.add('heat-purple-1');
+
+                    else if (expTier === 12) cell.classList.add('heat-red-3');
+                    else if (expTier === 11) cell.classList.add('heat-red-2');
+                    else if (expTier === 10) cell.classList.add('heat-red-1');
+
+                    else if (expTier === 9) cell.classList.add('heat-blue-3');
+                    else if (expTier === 8) cell.classList.add('heat-blue-2');
+                    else if (expTier === 7) cell.classList.add('heat-blue-1');
+
+                    else if (expTier === 6) cell.classList.add('heat-green-3');
+                    else if (expTier === 5) cell.classList.add('heat-green-2');
+                    else if (expTier === 4) cell.classList.add('heat-green-1');
+
+                    else if (expTier === 3) cell.classList.add('heat-yellow-3');
+                    else if (expTier === 2) cell.classList.add('heat-yellow-2');
+                    else if (expTier === 1) cell.classList.add('heat-yellow-1');
+                }
+
+                // Date Number (Hidden in quarter view via CSS)
+                const numSpan = document.createElement('span');
+                numSpan.textContent = currDate.getDate();
+                cell.appendChild(numSpan);
+
+                // Category Dots
+                if (dayData && dayData.categories.size > 0) {
+                    const dotsContainer = document.createElement('div');
+                    dotsContainer.className = 'dots-container';
+                    Array.from(dayData.categories).slice(0, 4).forEach(color => {
+                        const dot = document.createElement('div');
+                        dot.className = 'activity-dot';
+                        dot.style.backgroundColor = color;
+                        dotsContainer.appendChild(dot);
+                    });
+                    cell.appendChild(dotsContainer);
+                }
+
+                // Interaction
+                if (dayData && dayData.events.length > 0) {
+                    const tooltipText = `**${currDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}**\nTotal EXP: ${dayData.exp}\n\n${dayData.events.join('\n')}`;
+
+                    cell.onmouseenter = (e) => {
+                        tooltip.innerHTML = tooltipText.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        tooltip.classList.add('show');
+
+                        // Positioning
+                        const rect = cell.getBoundingClientRect();
+                        let top = rect.top - tooltip.offsetHeight - 10;
+                        let left = rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2);
+
+                        // Bounds check
+                        if (top < 10) top = rect.bottom + 10; // show below if not enough room above
+                        if (left < 10) left = 10;
+                        if (left + tooltip.offsetWidth > window.innerWidth - 10) left = window.innerWidth - tooltip.offsetWidth - 10;
+
+                        tooltip.style.top = top + 'px';
+                        tooltip.style.left = left + 'px';
+                    };
+                    cell.onmouseleave = () => {
+                        tooltip.classList.remove('show');
+                    };
+                }
+
+                grid.appendChild(cell);
+                currDate.setDate(currDate.getDate() + 1);
+            }
+
+            heatmapContainer.appendChild(grid);
+            contentDiv.appendChild(headerRow);
+            contentDiv.appendChild(heatmapContainer);
+
+            // Cleanup old timeline history render if we need room or keep it below?
+            // Optional: User only requested heatmap. I will just render the heatmap.
+            const historyNote = document.createElement('div');
+            historyNote.style.marginTop = '20px';
+            historyNote.style.opacity = '0.6';
+            historyNote.style.fontSize = '0.9rem';
+            historyNote.style.textAlign = 'center';
+            historyNote.textContent = 'Hover over colored blocks for daily insights. Deeper greens equal higher EXP yields.';
+            contentDiv.appendChild(historyNote);
         }
 
         // --- Statistics Actions ---
