@@ -942,7 +942,26 @@
                         </div>
                     </div>
                 </div>
-                <div class="form-group">
+                <!-- Skill Rewards Addon -->
+                <div class="form-row" style="margin-top: 15px;">
+                    <div class="form-group" style="width: 100%;">
+                        <label>Skill Rewards</label>
+                        <div id="modalSkillRewardsList"
+                            style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 5px;"></div>
+                        <div style="display: flex; gap: 5px;">
+                            <select id="modalSkillSelect"
+                                style="flex: 2; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                <option value="">Select a Skill...</option>
+                            </select>
+                            <input type="number" id="modalSkillExp" placeholder="EXP" value="50"
+                                style="width: 60px; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                            <button type="button" class="btn" onclick="addSkillReward()"
+                                style="padding: 5px 10px;">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 15px;">
                     <label>Projects</label>
                     <div id="modalTags" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
                 </div>
@@ -1283,6 +1302,103 @@
         </div>
     </div>
 
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>New Task</h2>
+                <button class="close-btn" onclick="closeTaskModal()">Close</button>
+            </div>
+            <div class="modal-body" style="padding: 10px; overflow-y: auto; max-height: 80vh;">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="modalTitle" placeholder="Task Title">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="modalDesc" rows="3" placeholder="Details about the task..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Image URL (Optional)</label>
+                    <input type="text" id="modalImage" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label>Upload Photo (Optional)</label>
+                    <input type="file" id="modalPhotoFile" accept="image/*" onchange="previewPhoto(event)">
+                    <input type="hidden" id="modalPhotoBase64">
+                    <img id="modalPhotoPreview" src="" alt="Photo Preview"
+                        style="max-width: 100%; max-height: 150px; margin-top: 10px; display: none; border-radius: 8px;">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Group</label>
+                        <select id="modalGroup"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Due Date (Optional)</label>
+                        <input type="date" id="modalDueDate">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Repeat</label>
+                    <select id="modalRepeat">
+                        <option value="none">None</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+
+                <div class="form-section">
+                    <h4>Subtasks</h4>
+                    <div id="modalSubtasks"></div>
+                    <button class="btn" onclick="addSubtaskInput()">+ Add Subtask</button>
+                </div>
+
+                <div class="form-section">
+                    <h4>Attribute Rewards</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <select id="modalAuthAttribute" style="flex: 1;"></select>
+                        <input type="number" id="modalAuthExp" value="10" min="1" style="width: 80px;">
+                        <button class="btn" onclick="addAttributeReward()">Add</button>
+                    </div>
+                    <div id="modalAttributeRewardsList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+
+                <div class="form-section">
+                    <h4>Skill Rewards</h4>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <select id="modalSkillSelect" style="flex: 1;"></select>
+                        <input type="number" id="modalSkillExp" value="50" min="1" style="width: 80px;">
+                        <button class="btn" onclick="addSkillReward()">Add</button>
+                    </div>
+                    <div id="modalSkillRewardsList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Base EXP Reward</label>
+                        <input type="number" id="modalExp" value="25" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Gold Reward</label>
+                        <input type="number" id="modalGold" value="10" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Time Spent (Minutes)</label>
+                    <input type="number" id="modalTimeSpent" value="0" min="0">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn btn-primary" onclick="saveTaskFromModal()">Save Task</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- State Management ---
         const defaultState = {
@@ -1313,6 +1429,7 @@
                     { id: 'urgent', name: '緊急 (Urgent)', color: '#F56565' },
                     { id: 'longterm', name: '長期 (Long-term)', color: '#48BB78' }
                 ],
+                skills: [], // Custom Skills Grid
                 totalFocusTime: 0,
                 activities: [], // Activity Log
                 // Store & Inventory
@@ -1452,6 +1569,7 @@
         if (!state.player.inventory) state.player.inventory = [];
         if (!state.player.achievements) state.player.achievements = [];
         if (!state.player.reflections) state.player.reflections = []; // Initialize reflections
+        if (!state.player.skills) state.player.skills = []; // Initialize skills
         if (typeof state.player.gold === 'undefined') state.player.gold = 0;
         if (!state.player.theme) {
             state.player.theme = defaultState.player.theme;
@@ -2791,6 +2909,14 @@
                         <div onclick="openTaskModal('${t.id}')" style="cursor: pointer; flex: 1;">
                             <span style="${t.completed ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${t.title}</span>
                             ${dueDateText}
+                            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                                ${(t.attributeRewards || []).map(r => `
+                                    <span class="badge ${attributesConfig[r.attribute].badgeClass}" style="font-size: 0.65rem; padding: 1px 4px;">${attributesConfig[r.attribute].label.split(' ')[1]} +${r.exp}</span>
+                                `).join('')}
+                                ${(t.skillRewards || []).map(r => `
+                                    <span class="badge" style="font-size: 0.65rem; padding: 1px 4px; background: var(--accent-color);">${r.icon} ${r.name} +${r.exp}</span>
+                                `).join('')}
+                            </div>
                         </div>
                     </div>
                     <span style="font-size: 0.8rem; opacity: 0.7;">${t.completed ? '✅ Done' : '⚔️ Active'}</span>
@@ -3212,12 +3338,15 @@
                             <div style="font-size: 0.8rem; opacity: 0.7;">
                                 Rewards: EXP +${task.rewardExp}, Gold +${task.rewardGold}
                             </div>
+                            <div class="badge-container" style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: 5px;">
+                                 ${(task.attributeRewards || []).map(r => `
+                                     <span class="badge ${attributesConfig[r.attribute].badgeClass}" style="font-size: 0.7rem;">${attributesConfig[r.attribute].label.split(' ')[1]} +${r.exp}</span>
+                                 `).join('')}
+                                 ${(task.skillRewards || []).map(r => `
+                                     <span class="badge" style="font-size: 0.7rem; background: var(--accent-color);">${r.icon} ${r.name} +${r.exp}</span>
+                                 `).join('')}
+                            </div>
                         </div>
-                    </div>
-                    <div class="badge-container" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px;">
-                         ${(task.attributeRewards || []).map(r => `
-                             <span class="badge ${attributesConfig[r.attribute].badgeClass}" style="font-size: 0.7rem;">${attributesConfig[r.attribute].label.split(' ')[1]} +${r.exp}</span>
-                         `).join('')}
                     </div>
                 </div>
                 ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5;" onclick="deleteTask('${task.id}')">🗑️</button>`}
@@ -3242,9 +3371,12 @@
 
             // Reset Rewards List
             document.getElementById('modalAttributeRewardsList').innerHTML = '';
-            // Store rewards in a temporary data attribute or variable?
-            // Let's use the DOM to store state for simplicity in this vanilla JS setup.
-            // But clearing it first is good.
+            document.getElementById('modalSkillRewardsList').innerHTML = '';
+
+            // Populate Skills Dropdown
+            const skillSelect = document.getElementById('modalSkillSelect');
+            skillSelect.innerHTML = '<option value="">Select a Skill...</option>' +
+                state.player.skills.map(s => `<option value="${s.id}">${s.icon} ${s.name}</option>`).join('');
 
             // Reset Subtasks
             document.getElementById('modalSubtasks').innerHTML = '';
@@ -3271,6 +3403,18 @@
 
                 document.getElementById('modalTitle').value = task.title;
                 document.getElementById('modalDesc').value = task.description || '';
+                document.getElementById('modalImage').value = task.image || '';
+                if (task.photo) {
+                    document.getElementById('modalPhotoPreview').src = task.photo;
+                    document.getElementById('modalPhotoPreview').style.display = 'block';
+                    document.getElementById('modalPhotoBase64').value = task.photo;
+                } else {
+                    document.getElementById('modalPhotoPreview').src = '';
+                    document.getElementById('modalPhotoPreview').style.display = 'none';
+                    document.getElementById('modalPhotoBase64').value = '';
+                }
+                document.getElementById('modalPhotoFile').value = ''; // Clear file input
+
                 // Populate Subtasks
                 if (task.subtasks) {
                     task.subtasks.forEach(st => addSubtaskInput(st.title, st.completed));
@@ -3279,6 +3423,17 @@
                 // Attribute Rewards
                 const rewards = task.attributeRewards || (task.attribute ? [{ attribute: task.attribute, exp: task.rewardExp || 10 }] : []);
                 rewards.forEach(r => addAttributeRewardToUI(r.attribute, r.exp));
+
+                // Skill Rewards
+                const skillRewards = task.skillRewards || [];
+                skillRewards.forEach(r => addSkillRewardToUI(r.id, r.exp, r.name, r.icon));
+
+                // Tags
+                document.querySelectorAll('input[name="modalTag"]').forEach(cb => {
+                    cb.checked = task.tags && task.tags.includes(cb.value);
+                });
+
+                document.getElementById('modalGroup').value = task.groupId || 'default';
                 document.getElementById('modalRepeat').value = task.repeat || 'none';
                 document.getElementById('modalDueDate').value = task.dueDate || '';
                 document.getElementById('modalExp').value = task.rewardExp || 25;
@@ -3388,9 +3543,6 @@
 
         function addAttributeRewardToUI(attribute, exp) {
             const container = document.getElementById('modalAttributeRewardsList');
-            // Check if already exists? Allow duplicates or sum them?
-            // Simple: Allow adding, maybe filter later. UI: Filter duplicates if needed, but let's allow multiple for now or just append.
-            // Better: Check if attr exists and update?
             const existing = Array.from(container.children).find(div => div.dataset.attr === attribute);
             if (existing) {
                 existing.remove(); // Replace old
@@ -3407,6 +3559,48 @@
             div.style.gap = '5px';
             div.innerHTML = `
                 ${attributesConfig[attribute].label.split(' ')[0]} +${exp}
+                <span onclick="this.parentElement.remove()" style="cursor: pointer; opacity: 0.7; font-weight: bold; margin-left: 2px;">&times;</span>
+            `;
+            container.appendChild(div);
+        }
+
+        function addSkillReward() {
+            const skillSelect = document.getElementById('modalSkillSelect');
+            const expInput = document.getElementById('modalSkillExp');
+            const skillId = skillSelect.value;
+            const exp = parseInt(expInput.value) || 0;
+
+            if (!skillId) return alert("Please select a skill.");
+            if (exp <= 0) return alert("EXP must be positive.");
+
+            const skill = state.player.skills.find(s => s.id === skillId);
+            if (!skill) return;
+
+            addSkillRewardToUI(skill.id, exp, skill.name, skill.icon);
+            expInput.value = 50; // Reset default
+            skillSelect.value = ""; // Reset visual
+        }
+
+        function addSkillRewardToUI(skillId, exp, name, icon) {
+            const container = document.getElementById('modalSkillRewardsList');
+            const existing = Array.from(container.children).find(div => div.dataset.id === skillId);
+            if (existing) {
+                existing.remove(); // Replace old
+            }
+
+            const div = document.createElement('div');
+            div.className = 'badge';
+            div.dataset.id = skillId;
+            div.dataset.exp = exp;
+            div.dataset.name = name;
+            div.dataset.icon = icon;
+            div.style.background = 'var(--accent-color)';
+            div.style.color = 'white';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.gap = '5px';
+            div.innerHTML = `
+                ${icon} ${name} +${exp}
                 <span onclick="this.parentElement.remove()" style="cursor: pointer; opacity: 0.7; font-weight: bold; margin-left: 2px;">&times;</span>
             `;
             container.appendChild(div);
@@ -3449,9 +3643,17 @@
                 const dueDate = document.getElementById('modalDueDate').value;
 
                 // Gather Attribute Rewards
-                const rewardDivs = document.getElementById('modalAttributeRewardsList').children;
-                const attributeRewards = Array.from(rewardDivs).map(div => ({
+                const attrRewardsList = document.getElementById('modalAttributeRewardsList');
+                const attributeRewards = Array.from(attrRewardsList.children).map(div => ({
                     attribute: div.dataset.attr,
+                    exp: parseInt(div.dataset.exp)
+                }));
+
+                const skillRewardsList = document.getElementById('modalSkillRewardsList');
+                const skillRewards = Array.from(skillRewardsList.children).map(div => ({
+                    id: div.dataset.id,
+                    name: div.dataset.name,
+                    icon: div.dataset.icon,
                     exp: parseInt(div.dataset.exp)
                 }));
 
@@ -3521,7 +3723,7 @@
                         state.tasks[taskIndex] = {
                             ...state.tasks[taskIndex],
                             title, description: desc, image: img, photo: photoData,
-                            attribute: primaryAttribute, attributeRewards,
+                            attribute: primaryAttribute, attributeRewards, skillRewards,
                             groupId: group, tags, subtasks, repeat, dueDate, rewardExp: exp, rewardGold: gold,
                             timeSpent: timeSpentSec // Update time
                         };
@@ -3539,6 +3741,7 @@
                         photo: photoData,
                         attribute: primaryAttribute,
                         attributeRewards: attributeRewards,
+                        skillRewards: skillRewards,
                         groupId: group,
                         tags: tags,
                         subtasks: subtasks,
@@ -3645,6 +3848,29 @@
                     // Fallback for old data
                 }
 
+                // Skill Rewards
+                if (task.skillRewards && Array.isArray(task.skillRewards)) {
+                    task.skillRewards.forEach(reward => {
+                        const skill = state.player.skills.find(s => s.id === reward.id);
+                        if (skill) {
+                            skill.exp = (skill.exp || 0) + reward.exp;
+                            const currentLevel = skill.level || 1;
+                            const newLevel = Math.floor(skill.exp / 100) + 1;
+
+                            if (newLevel > currentLevel) {
+                                skill.level = newLevel;
+                                if (typeof showLevelUpOverlay === 'function') {
+                                    showLevelUpOverlay(`${skill.icon} ${skill.name}`, `升級至 Lv.${skill.level}!`);
+                                } else {
+                                    showToast(`${skill.icon} ${skill.name} Level Up!`, `Now Level ${skill.level}`);
+                                }
+                            } else {
+                                showToast(`${skill.icon} ${skill.name} EXP 獲得`, `+${reward.exp} EXP`);
+                            }
+                        }
+                    });
+                }
+
                 state.player.exp += task.rewardExp;
                 state.player.gold += task.rewardGold;
 
@@ -3662,6 +3888,7 @@
                         exp: task.rewardExp,
                         gold: task.rewardGold,
                         attributeRewards: task.attributeRewards,
+                        skillRewards: task.skillRewards,
                         groupName: group ? group.name : 'Unknown',
                         projects: projectTags.map(p => ({ name: p.name, color: p.color })),
                         timeSpent: task.timeSpent || 0 // Added for Focus Charts
@@ -3750,6 +3977,17 @@
                             attr.exp = Math.max(0, attr.exp - reward.exp);
                             // Handling level down is complex, let's ignore level down for now to keep it simple,
                             // or just let exp go negative/zero at current level.
+                        }
+                    });
+                }
+
+                // Revert Skill EXP
+                if (task.skillRewards) {
+                    task.skillRewards.forEach(reward => {
+                        const skill = state.player.skills.find(s => s.id === reward.id);
+                        if (skill) {
+                            skill.exp = Math.max(0, skill.exp - reward.exp);
+                            skill.level = Math.floor(skill.exp / 100) + 1;
                         }
                     });
                 }
@@ -3975,7 +4213,7 @@
             statsListCard.className = 'glass glass-card';
             let statsHtml = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">';
             for (const [key, val] of Object.entries(p.attributes)) {
-                // val is now { level, exp }
+                // val is now { level, exp }, so map to level
                 const level = val.level || 1;
                 const exp = val.exp || 0;
                 const attrExpNeeded = level * 100;
@@ -4039,6 +4277,82 @@
             contentDiv.appendChild(title);
             contentDiv.appendChild(grid);
 
+            // --- SKILLS SECTION ---
+            const skillsSection = document.createElement('div');
+            skillsSection.style.marginTop = '40px';
+
+            const skillsHeader = document.createElement('div');
+            skillsHeader.style.display = 'flex';
+            skillsHeader.style.justifyContent = 'space-between';
+            skillsHeader.style.alignItems = 'center';
+            skillsHeader.style.marginBottom = '20px';
+            skillsHeader.innerHTML = `
+                <h2 class="page-title" style="margin: 0;">技能 (Skills)</h2>
+                <button class="btn btn-primary" onclick="openSkillModal()">+ 新增技能 (Add Skill)</button>
+            `;
+            skillsSection.appendChild(skillsHeader);
+
+            const skillsGrid = document.createElement('div');
+            skillsGrid.style.display = 'grid';
+            skillsGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+            skillsGrid.style.gap = '20px';
+
+            const pastelColors = ['#E9D8FD', '#C4F1F9', '#C6F6D5', '#FEFCBF', '#FED7E2', '#FEEBC8'];
+
+            (state.player.skills || []).forEach((skill, idx) => {
+                const bgColor = pastelColors[idx % pastelColors.length];
+                const xpColor = '#4299E1'; // standard bar color
+
+                // Real EXP progress towards current level
+                const currentLevel = skill.level || 1;
+                const totalExp = skill.exp || 0;
+                // Since Level = FLOOR(TotalEXP / 100) + 1, the progress in the current level is TotalEXP % 100.
+                const currentLevelExp = totalExp % 100;
+                const expNeeded = 100;
+                const percent = Math.min(100, (currentLevelExp / expNeeded) * 100);
+
+                const card = document.createElement('div');
+                card.className = 'glass glass-card';
+                card.style.padding = '20px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.cursor = 'pointer';
+                card.onclick = () => openSkillModal(skill.id);
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                        <div style="width: 50px; height: 50px; border-radius: 50%; background: ${bgColor}; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">
+                            ${skill.icon}
+                        </div>
+                        <div style="border: 1px solid ${bgColor}; color: #4A5568; background: white; border-radius: 20px; padding: 2px 10px; font-weight: bold; font-size: 0.85rem;">
+                            Lv.${currentLevel}
+                        </div>
+                    </div>
+                    <div style="font-weight: bold; font-size: 1.2rem; margin-bottom: 20px; color: var(--text-primary);">
+                        ${skill.name}
+                    </div>
+                    <div style="height: 6px; background: rgba(0,0,0,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
+                        <div style="height: 100%; width: ${percent}%; background: ${xpColor}; border-radius: 3px;"></div>
+                    </div>
+                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">
+                        ${currentLevelExp} / ${expNeeded}
+                    </div>
+                `;
+                skillsGrid.appendChild(card);
+            });
+
+            if (!state.player.skills || state.player.skills.length === 0) {
+                skillsGrid.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 2px dashed rgba(0,0,0,0.1); color: var(--text-secondary);">
+                        尚未建立任何技能。點擊右上角新增技能！<br>
+                        <span style="font-size: 0.8rem; opacity: 0.7;">(No skills created yet. Click Add Skill to start tracking progress)</span>
+                    </div>
+                `;
+            }
+
+            skillsSection.appendChild(skillsGrid);
+            contentDiv.appendChild(skillsSection);
+
             // Render Chart
             renderChart();
         }
@@ -4072,22 +4386,123 @@
                 });
             } else if (type === 'task') {
                 state.tasks.forEach(t => {
-                    if (t.image || t.photo) {
-                        t.image = '';
+                    if (t.photo || t.image) {
                         t.photo = null;
+                        t.image = null;
                         count++;
                     }
                 });
             }
 
             if (saveState()) {
-                alert(`Cleared images from ${count} ${type}s.`);
                 renderStatusPage(); // Refresh to show new storage
+                showToast("Images Cleared", `Removed images from ${count} ${type}s.`);
             } else {
                 alert("Error saving cleaned data.");
             }
         }
 
+        // --- View/Edit Skill Modal ---
+        function openSkillModal(skillId = null) {
+            let modal = document.getElementById('skillModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'skillModal';
+                modal.className = 'modal-backdrop';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width: 400px;">
+                        <div class="modal-header">
+                            <h2 id="skillModalTitle">New Skill</h2>
+                            <button class="close-btn" onclick="document.getElementById('skillModal').classList.remove('show')">Close</button>
+                        </div>
+                        <div class="modal-body" style="padding: 10px;">
+                            <input type="hidden" id="editSkillId">
+                            <div class="form-group">
+                                <label>Skill Name</label>
+                                <input type="text" id="editSkillName" placeholder="e.g. Programming">
+                            </div>
+                            <div class="form-group">
+                                <label>Icon (Emoji)</label>
+                                <input type="text" id="editSkillIcon" value="💻" style="width: 80px; text-align: center; font-size: 1.5rem;">
+                            </div>
+                            <div class="form-group">
+                                <label>Total EXP</label>
+                                <input type="number" id="editSkillExp" value="0" min="0">
+                                <div style="font-size: 0.8rem; opacity: 0.7; margin-top: 5px;">(Level is calculated: 1 level per 100 EXP)</div>
+                            </div>
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                                <button class="btn" style="background: rgba(229, 62, 62, 0.1); color: #E53E3E; border: 1px solid rgba(229, 62, 62, 0.3); display: none;" id="btnDeleteSkill" onclick="deleteSkill()">Delete</button>
+                                <button class="btn btn-primary" onclick="saveSkill()">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+
+            if (skillId) {
+                const skill = state.player.skills.find(s => s.id === skillId);
+                if (skill) {
+                    document.getElementById('skillModalTitle').textContent = 'Edit Skill';
+                    document.getElementById('editSkillId').value = skill.id;
+                    document.getElementById('editSkillName').value = skill.name;
+                    document.getElementById('editSkillIcon').value = skill.icon;
+                    document.getElementById('editSkillExp').value = skill.exp || 0;
+                    document.getElementById('btnDeleteSkill').style.display = 'block';
+                }
+            } else {
+                document.getElementById('skillModalTitle').textContent = 'New Skill';
+                document.getElementById('editSkillId').value = '';
+                document.getElementById('editSkillName').value = '';
+                document.getElementById('editSkillIcon').value = '🌟';
+                document.getElementById('editSkillExp').value = 0;
+                document.getElementById('btnDeleteSkill').style.display = 'none';
+            }
+
+            modal.classList.add('show');
+        }
+
+        function saveSkill() {
+            const id = document.getElementById('editSkillId').value;
+            const name = document.getElementById('editSkillName').value;
+            const icon = document.getElementById('editSkillIcon').value || '🌟';
+            const exp = parseInt(document.getElementById('editSkillExp').value) || 0;
+            const level = Math.floor(exp / 100) + 1; // Basic calculation
+
+            if (!name) return alert("Skill Name is required.");
+
+            if (id) {
+                const skill = state.player.skills.find(s => s.id === id);
+                if (skill) {
+                    skill.name = name;
+                    skill.icon = icon;
+                    skill.exp = exp;
+                    skill.level = level;
+                }
+            } else {
+                state.player.skills.push({
+                    id: 'sk_' + Date.now(),
+                    name,
+                    icon,
+                    exp,
+                    level
+                });
+            }
+
+            saveState();
+            renderStatusPage();
+            document.getElementById('skillModal').classList.remove('show');
+        }
+
+        function deleteSkill() {
+            const id = document.getElementById('editSkillId').value;
+            if (id && confirm('Delete this skill?')) {
+                state.player.skills = state.player.skills.filter(s => s.id !== id);
+                saveState();
+                renderStatusPage();
+                document.getElementById('skillModal').classList.remove('show');
+            }
+        }
         function renderChart() {
             const ctx = document.getElementById('radarChart').getContext('2d');
             const labels = Object.keys(state.player.attributes).map(k => attributesConfig[k].label.split(' ')[0]);
@@ -5679,6 +6094,79 @@
         }
 
         // --- Toast Notification ---
+        function showLevelUpOverlay(title, subtitle) {
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.backgroundColor = 'rgba(255, 215, 0, 0.3)';
+            overlay.style.zIndex = '9999';
+            overlay.style.display = 'flex';
+            overlay.style.flexDirection = 'column';
+            overlay.style.justifyContent = 'center';
+            overlay.style.alignItems = 'center';
+            overlay.style.pointerEvents = 'none';
+            overlay.style.transition = 'opacity 0.8s ease-out';
+
+            // Add keyframes
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes levelUpPop {
+                    0% { transform: scale(0.5); opacity: 0; }
+                    80% { transform: scale(1.1); opacity: 1; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                @keyframes screenShake {
+                    0% { transform: translate(1px, 1px) rotate(0deg); }
+                    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+                    20% { transform: translate(-3px, 0px) rotate(1deg); }
+                    30% { transform: translate(3px, 2px) rotate(0deg); }
+                    40% { transform: translate(1px, -1px) rotate(1deg); }
+                    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+                    60% { transform: translate(-3px, 1px) rotate(0deg); }
+                    70% { transform: translate(3px, 1px) rotate(-1deg); }
+                    80% { transform: translate(-1px, -1px) rotate(1deg); }
+                    90% { transform: translate(1px, 2px) rotate(0deg); }
+                    100% { transform: translate(1px, -2px) rotate(-1deg); }
+                }
+            `;
+            document.head.appendChild(style);
+
+            overlay.innerHTML = `
+                <div style="background: white; padding: 40px 60px; border-radius: 20px; text-align: center; box-shadow: 0 0 50px rgba(255,215,0,0.8); animation: levelUpPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                    <h1 style="font-size: 3rem; margin: 0; color: #D69E2E;">🎉 LEVEL UP! 🎉</h1>
+                    <h2 style="font-size: 2rem; margin: 10px 0; color: var(--text-primary);">${title}</h2>
+                    <p style="font-size: 1.5rem; color: var(--text-secondary); margin: 0;">${subtitle}</p>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const container = document.querySelector('.container') || document.body;
+            const originalAnimation = container.style.animation;
+            container.style.animation = 'screenShake 0.5s';
+
+            if (typeof confetti !== 'undefined') {
+                confetti({
+                    particleCount: 200,
+                    spread: 120,
+                    origin: { y: 0.4 },
+                    zIndex: 10000
+                });
+            }
+
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                container.style.animation = originalAnimation;
+                setTimeout(() => {
+                    overlay.remove();
+                    style.remove();
+                }, 800);
+            }, 2500);
+        }
+
         function showToast(title, message) {
             toastDiv.querySelector('.toast-message h4').innerHTML = title;
             toastDiv.querySelector('.toast-message p').innerHTML = message;
