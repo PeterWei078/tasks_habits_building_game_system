@@ -1046,6 +1046,10 @@
 
                 <!-- System -->
                 <li class="nav-category">系統 (System)</li>
+                <li class="nav-item" id="nav-patch" onclick="switchTab('patch')">
+                    <span class="nav-icon">📦</span>
+                    <span class="nav-text">補充包 (Patch)</span>
+                </li>
                 <li class="nav-item" onclick="openDataManagementModal()">
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-text">設定與備份 (Settings & Data)</span>
@@ -1635,6 +1639,7 @@
                 ],
                 inventory: [],
                 achievements: [], // Archived completed projects
+                patches: [], // Patch/Inbox projects
                 reflections: [], // New Reflections Data
                 theme: 'default' // UI Background Color Theme
             },
@@ -1653,6 +1658,9 @@
         }
         if (!state.player.tags) {
             state.player.tags = defaultState.player.tags;
+        }
+        if (!state.player.patches) {
+            state.player.patches = [];
         }
         if (!state.player.shopCategories) {
             state.player.shopCategories = defaultState.player.shopCategories;
@@ -1818,6 +1826,7 @@
             else if (currentTab === 'status') renderStatusPage();
             else if (currentTab === 'focus') renderFocusPage();
             else if (currentTab === 'projects') renderProjectsPage();
+            else if (currentTab === 'patch') renderPatchPage();
             else if (currentTab === 'statistics') renderStatisticsPage();
             else if (currentTab === 'store') renderStorePage();
             else if (currentTab === 'achievements') renderAchievementsPage();
@@ -2610,6 +2619,71 @@
         }
 
 
+
+        // --- Patches Page ---
+        function renderPatchPage() {
+            const contentDiv = document.getElementById('app-content');
+            contentDiv.innerHTML = '';
+
+            // Ensure settings exist (Fix for blank page crash)
+            if (!state.settings) state.settings = {};
+
+            // Header & Controls
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.style.display = 'flex';
+            title.style.justifyContent = 'space-between';
+            title.style.alignItems = 'center';
+
+            title.innerHTML = `
+                補充包 (Patches)
+            `;
+
+            // Action Card
+            const actionCard = document.createElement('div');
+            actionCard.className = 'glass glass-card';
+            actionCard.style.display = 'flex';
+            actionCard.style.justifyContent = 'space-between';
+            actionCard.style.alignItems = 'center';
+            actionCard.style.cursor = 'pointer';
+            actionCard.style.marginBottom = '20px';
+            actionCard.style.padding = '15px 25px';
+            actionCard.style.transition = 'transform 0.2s, box-shadow 0.2s';
+
+            actionCard.innerHTML = `
+                <div>
+                    <h3 style="margin: 0; font-size: 1.2rem;">Create New Patch</h3>
+                    <p style="opacity: 0.7; font-size: 0.9rem; margin: 3px 0 0 0;">Draft projects before making them official</p>
+                </div>
+                <button class="btn btn-primary" style="padding: 10px 20px; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); pointer-events: none;">+ New Patch</button>
+            `;
+
+            actionCard.onmouseover = () => {
+                actionCard.style.transform = 'translateY(-2px)';
+                actionCard.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+            };
+            actionCard.onmouseout = () => {
+                actionCard.style.transform = 'translateY(0)';
+                actionCard.style.boxShadow = 'none';
+            };
+            actionCard.onclick = () => openProjectModal(null, true); // true = isPatch
+
+            // Patches Container
+            const patchesContainer = document.createElement('div');
+
+            let displayPatches = state.player.patches;
+
+            if (displayPatches.length > 0) {
+                patchesContainer.appendChild(createProjectGrid(displayPatches, true)); // true = pass isPatch internally if needed
+            } else {
+                patchesContainer.innerHTML = '<div style="text-align:center; opacity:0.6; margin-top: 20px;">No patches found. Start by creating one!</div>';
+            }
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(actionCard);
+            contentDiv.appendChild(patchesContainer);
+        }
+
         // --- Projects Page ---
         function renderProjectsPage() {
             const contentDiv = document.getElementById('app-content');
@@ -2717,7 +2791,7 @@
             renderProjectsPage();
         };
 
-        function createProjectGrid(projects) {
+        function createProjectGrid(projects, isPatch = false) {
             const grid = document.createElement('div');
             grid.style.display = 'grid';
             grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
@@ -2728,8 +2802,8 @@
                 const card = document.createElement('div');
                 card.className = 'glass glass-card';
                 card.style.cursor = 'pointer';
-                // Force global function call via attribute
-                card.setAttribute('onclick', `openProjectModal('${project.id}')`);
+                // Force global function call via attribute, passing true if it's a Patch
+                card.setAttribute('onclick', `openProjectModal('${project.id}', ${isPatch})`);
 
                 // Calculate progress
                 const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(project.id));
@@ -2771,12 +2845,16 @@
 
         // --- Project Modal ---
         let editingProjectId = null;
+        let isPatchMode = false;
 
         // --- Modal Logic : Projects ---
-        function openProjectModal(projectId = null) {
+        function openProjectModal(projectId = null, isPatch = false) {
             try {
                 editingProjectId = projectId;
-                const project = projectId ? state.player.tags.find(t => t.id === projectId) : null;
+                isPatchMode = isPatch;
+
+                const targetArray = isPatchMode ? state.player.patches : state.player.tags;
+                const project = projectId ? targetArray.find(t => t.id === projectId) : null;
 
                 // Check if state search failed
                 if (projectId && !project) {
@@ -2857,7 +2935,8 @@
                                     <div id="projTasksList"></div>
                                 </div>
 
-                                <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
+                                <button type="button" id="btnSaveProject" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
+                                <button type="button" id="btnConvertToProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(72, 187, 120, 0.2); color: #48BB78; border: 1px solid #48BB78; display: none;" onclick="convertPatchToProject()">Convert to Project (轉為正式專案)</button>
                                 <button type="button" id="btnDeleteProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E;" onclick="deleteProject()">Delete Project</button>
                         </div>
                     `;
@@ -2900,7 +2979,7 @@
 
                 // Clear or Set Values
                 if (project) {
-                    titleEl.textContent = 'Edit Project';
+                    titleEl.textContent = isPatchMode ? 'Edit Patch' : 'Edit Project';
                     document.getElementById('projName').value = project.name;
                     document.getElementById('projGroup').value = project.groupId || 'default';
                     document.getElementById('projColor').value = project.color || '#6B46C1';
@@ -2909,14 +2988,23 @@
                     document.getElementById('projRewardExp').value = project.rewardExp || 0;
                     document.getElementById('projRewardGold').value = project.rewardGold || 0;
                     document.getElementById('projDesc').value = project.description || '';
+
+                    document.getElementById('btnSaveProject').textContent = isPatchMode ? 'Save Patch' : 'Save Project';
+                    document.getElementById('btnDeleteProject').textContent = isPatchMode ? 'Delete Patch' : 'Delete Project';
+
                     btnDelete.style.display = 'block';
+
+                    const btnConvert = document.getElementById('btnConvertToProject');
+                    if (btnConvert) {
+                        btnConvert.style.display = isPatchMode ? 'block' : 'none';
+                    }
 
                     renderProjectPhotos(project.photos || []);
                     renderProjectTasks(projectId);
 
                 } else {
                     // New
-                    titleEl.textContent = 'New Project';
+                    titleEl.textContent = isPatchMode ? 'New Patch' : 'New Project';
                     document.getElementById('projName').value = '';
                     document.getElementById('projGroup').value = 'default';
                     document.getElementById('projColor').value = '#6B46C1';
@@ -2925,10 +3013,17 @@
                     document.getElementById('projRewardExp').value = 0;
                     document.getElementById('projRewardGold').value = 0;
                     document.getElementById('projDesc').value = '';
+
+                    document.getElementById('btnSaveProject').textContent = isPatchMode ? 'Save Patch' : 'Save Project';
+                    document.getElementById('btnDeleteProject').textContent = isPatchMode ? 'Delete Patch' : 'Delete Project';
+
                     btnDelete.style.display = 'none';
 
+                    const btnConvert = document.getElementById('btnConvertToProject');
+                    if (btnConvert) btnConvert.style.display = 'none';
+
                     renderProjectPhotos([]);
-                    document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save project first to add tasks.</div>';
+                    document.getElementById('projTasksList').innerHTML = '<div style="opacity: 0.6; text-align: center;">Save first to add tasks.</div>';
                 }
 
                 // Add Complete Button Logic
@@ -3198,7 +3293,8 @@
 
                 if (editingProjectId) {
                     // Update
-                    const project = state.player.tags.find(t => t.id === editingProjectId);
+                    const targetArray = isPatchMode ? state.player.patches : state.player.tags;
+                    const project = targetArray.find(t => t.id === editingProjectId);
                     if (project) {
                         project.name = name;
                         project.groupId = groupId;
@@ -3210,12 +3306,12 @@
                         project.description = description;
                         project.photos = photos;
                     } else {
-                        alert("Critical: Project ID not found in state!");
+                        alert("Critical: Project/Patch ID not found in state!");
                     }
                 } else {
                     // Create
                     const newProject = {
-                        id: 'p_' + Date.now(),
+                        id: (isPatchMode ? 'patch_' : 'p_') + Date.now(),
                         name,
                         groupId,
                         color,
@@ -3226,7 +3322,13 @@
                         description,
                         photos
                     };
-                    state.player.tags.push(newProject);
+
+                    if (isPatchMode) {
+                        state.player.patches.push(newProject);
+                    } else {
+                        state.player.tags.push(newProject);
+                    }
+
                     editingProjectId = newProject.id; // Switch to edit mode
                 }
 
@@ -3235,13 +3337,37 @@
                 renderManageGroups(); // Update list if open
 
                 // Refresh modal to show new state (like "Delete" button appearing)
-                openProjectModal(editingProjectId);
-                showToast("Project Saved", "Changes have been successfully saved.");
+                openProjectModal(editingProjectId, isPatchMode);
+                showToast(isPatchMode ? "Patch Saved" : "Project Saved", "Changes have been successfully saved.");
 
             } catch (e) {
-                console.error("Error saving project:", e);
-                alert("Error saving project: " + e.message);
+                console.error("Error saving project/patch:", e);
+                alert("Error saving: " + e.message);
             }
+        }
+
+        function convertPatchToProject() {
+            if (!editingProjectId || !isPatchMode) return;
+
+            const patchIndex = state.player.patches.findIndex(t => t.id === editingProjectId);
+            if (patchIndex === -1) return alert("Patch not found!");
+
+            const patchToConvert = state.player.patches[patchIndex];
+
+            // Remove from Patches
+            state.player.patches.splice(patchIndex, 1);
+
+            // Add to Projects
+            state.player.tags.push(patchToConvert);
+
+            saveState();
+            render(); // Refresh the Patch Page to remove it and fix the view
+
+            // Close the modal entirely since it's no longer a patch
+            const modal = document.getElementById('projectModal');
+            if (modal) modal.classList.remove('show');
+
+            showToast("Converted to Project!", `"${patchToConvert.name}" is now an official Project.`);
         }
 
         function toggleProjectCompletion(projectId) {
@@ -3311,23 +3437,27 @@
 
         function deleteProject() {
             if (!editingProjectId) return;
-            // Use deleteTag logic which handles archiving and confirmation
-            // We set a flag or just call it. deleteTag will ask for confirmation.
-            // Note: deleteTag calls render() which might close the modal if we are not careful, 
-            // but since modal is appended to body, it should be fine. 
-            // We manually close the modal after deletion.
 
-            // To avoid double confirmation if deleteTag has one, we can just call deleteTag.
-            // But deleteTag's confirmation is "Delete this project?".
-            // The user wanted "Delete this project? Linked tasks will remain..."
-            // Let's rely on deleteTag's confirmation for consistency or update deleteTag if needed.
-            // For now, simple Delegation.
+            if (isPatchMode) {
+                if (confirm("Delete this patch?")) {
+                    const patchIndex = state.player.patches.findIndex(t => t.id === editingProjectId);
+                    if (patchIndex !== -1) {
+                        state.player.patches.splice(patchIndex, 1);
+                        saveState();
 
+                        const modal = document.getElementById('projectModal');
+                        if (modal) modal.classList.remove('show');
+
+                        render();
+                        showToast("Patch Deleted", "The patch has been removed.");
+                    }
+                }
+                return;
+            }
+
+            // Normal Project Deletion
             const project = state.player.tags.find(t => t.id === editingProjectId);
             if (project) {
-                // Manually call deleteTag Logic to control flow if needed, OR just call it.
-                // Converting deleteTag to return boolean is best.
-                // But here I will just call it and assume if state changed, it worked.
                 const initialLength = state.player.tags.length;
                 deleteTag(editingProjectId);
                 if (state.player.tags.length < initialLength) {
@@ -3563,13 +3693,20 @@
             // Reset Subtasks
             document.getElementById('modalSubtasks').innerHTML = '';
 
-            // Populate Tags/Projects
+            // Populate Tags/Projects & Patches
             const tagsContainer = document.getElementById('modalTags');
-            tagsContainer.innerHTML = state.player.tags.map(t => `
+
+            // Combine Tags and Patches for Selection
+            const allLinkableItems = [
+                ...state.player.tags.map(t => ({ ...t, isPatch: false })),
+                ...state.player.patches.map(p => ({ ...p, isPatch: true }))
+            ];
+
+            tagsContainer.innerHTML = allLinkableItems.map(t => `
                 <label style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem; background: rgba(0,0,0,0.1); padding: 5px 8px; border-radius: 6px; cursor: pointer;">
                     <input type="checkbox" name="modalTag" value="${t.id}" ${prefillTag === t.id ? 'checked' : ''}>
                     <span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${t.color};"></span>
-                    ${t.name}
+                    ${t.name} ${t.isPatch ? '<span style="font-size: 0.7rem; background:#E2E8F0; color:#4A5568; padding: 1px 4px; border-radius:3px;">(Patch)</span>' : ''}
                 </label>
             `).join('');
 
