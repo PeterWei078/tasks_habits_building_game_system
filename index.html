@@ -1365,6 +1365,28 @@
         </div>
     </div>
 
+    <!-- Page Info Modal (Generic) -->
+    <div id="pageInfoModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="pageInfoTitle">Page Info</h2>
+                <button class="close-btn" onclick="closePageInfoModal()">Close</button>
+            </div>
+            <div class="modal-body" style="padding: 10px;">
+                <div id="pageInfoDisplay" style="white-space: pre-wrap; line-height: 1.5; margin-bottom: 20px;"></div>
+                <textarea id="pageInfoEditor"
+                    style="display: none; width: 100%; height: 250px; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white; resize: vertical; margin-bottom: 20px; font-family: inherit; line-height: 1.5;"></textarea>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="btnEditPageInfo" class="btn btn-secondary" onclick="toggleEditPageInfo()">✏️ Edit
+                        Info</button>
+                    <button id="btnSavePageInfo" class="btn btn-primary" style="display: none;"
+                        onclick="savePageInfo()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Data Management Modal -->
     <div id="dataManagementModal" class="modal-backdrop">
         <div class="modal-content" style="max-width: 600px;">
@@ -1641,7 +1663,17 @@
                 achievements: [], // Archived completed projects
                 patches: [], // Patch/Inbox projects
                 reflections: [], // New Reflections Data
-                theme: 'default' // UI Background Color Theme
+                theme: 'default', // UI Background Color Theme
+                pageInfos: {
+                    'tasks': "Welcome to **Tasks**!\n\nHere you can track your daily, urgent, and long-term quests. Complete them to earn EXP and Gold.",
+                    'focus': "Welcome to **Focus Mode**!\n\nUse the Pomodoro timer to concentrate on your tasks uninterrupted.",
+                    'projects': "Welcome to **Projects**!\n\nOrganize large, multi-step goals here. Track progress bars and completion status.",
+                    'status': "Welcome to **Status**!\n\nView your current Level, Attribute stats, and overall character progression.",
+                    'activity': "Welcome to **Activity**!\n\nReview your historical task completions and analyze your productivity heatmap.",
+                    'statistics': "Welcome to **Statistics**!\n\nAnalyze your attribute growth over time using the interactive radar charts.",
+                    'reflections': "Welcome to **Reflections**!\n\nWrite daily journal entries to track your thoughts and lessons learned.",
+                    'patch': "Welcome to **Patches**!\n\nDraft new projects or task lists here before officially moving them to your Projects board."
+                }
             },
             tasks: [
                 { id: 1, title: "晨跑 3 公里 (Morning Run)", attributeRewards: [{ attribute: "agility", exp: 20 }], completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
@@ -1667,6 +1699,9 @@
         }
         if (!state.player.storeDescription) {
             state.player.storeDescription = defaultState.player.storeDescription;
+        }
+        if (!state.player.pageInfos) {
+            state.player.pageInfos = defaultState.player.pageInfos;
         }
         // Cleanup Invalid Activities
         if (state.player.activities) {
@@ -1852,7 +1887,13 @@
             contentDiv.innerHTML = ''; // Prevent duplication
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '專注 (Focus)';
+            title.style.display = 'flex';
+            title.style.justifyContent = 'space-between';
+            title.style.alignItems = 'center';
+            title.innerHTML = `
+                專注 (Focus)
+                <button onclick="openPageInfoModal('focus', '專注 (Focus)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+            `;
 
             // Task Selector
             const taskSelector = document.createElement('div');
@@ -2378,7 +2419,13 @@
             contentDiv.innerHTML = ''; // Prevent duplication
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '統計 (Statistics)';
+            title.style.display = 'flex';
+            title.style.justifyContent = 'space-between';
+            title.style.alignItems = 'center';
+            title.innerHTML = `
+                統計 (Statistics)
+                <button onclick="openPageInfoModal('statistics', '統計 (Statistics)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+            `;
 
             // Global Stats
             const totalHours = ((state.player.totalFocusTime || 0) / 3600).toFixed(1);
@@ -2637,6 +2684,7 @@
 
             title.innerHTML = `
                 補充包 (Patches)
+                <button onclick="openPageInfoModal('patch', '補充包 (Patch)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
             `;
 
             // Action Card
@@ -2706,8 +2754,10 @@
 
             title.innerHTML = `
                 專案 (Projects)
-                <label style="font-size: 0.9rem; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 8px;">
-                    <input type="checkbox" id="hideCompletedProjects" ${state.settings.hideCompletedProjects ? 'checked' : ''} onchange="toggleHideCompletedProjects(this.checked)">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button onclick="openPageInfoModal('projects', '專案 (Projects)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+                    <label style="font-size: 0.9rem; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 8px;">
+                        <input type="checkbox" id="hideCompletedProjects" ${state.settings.hideCompletedProjects ? 'checked' : ''} onchange="toggleHideCompletedProjects(this.checked)">
                     Hide Completed
                 </label>
             `;
@@ -3503,7 +3553,13 @@
             contentDiv.innerHTML = ''; // Prevent duplication
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '專案任務 (Project Quests)';
+            title.style.display = 'flex';
+            title.style.justifyContent = 'space-between';
+            title.style.alignItems = 'center';
+            title.innerHTML = `
+                專案任務 (Project Quests)
+                <button onclick="openPageInfoModal('tasks', '任務 (Tasks)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+            `;
 
             // Group Filters (Tabs style)
             const groupFilterContainer = document.createElement('div');
@@ -4507,7 +4563,13 @@
 
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '玩家狀態 (Player Status)';
+            title.style.display = 'flex';
+            title.style.justifyContent = 'space-between';
+            title.style.alignItems = 'center';
+            title.innerHTML = `
+                玩家狀態 (Player Status)
+                <button onclick="openPageInfoModal('status', '狀態 (Status)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+            `;
 
             const grid = document.createElement('div');
             grid.className = 'stats-grid';
@@ -5058,6 +5120,76 @@
 
             // Switch back to read mode
             openStoreInfoModal();
+        }
+
+        // --- Page Info Modal (Generic) ---
+        let currentPageInfoId = null;
+
+        function openPageInfoModal(pageId, pageTitle) {
+            currentPageInfoId = pageId;
+
+            const modal = document.getElementById('pageInfoModal');
+            const titleEl = document.getElementById('pageInfoTitle');
+            const display = document.getElementById('pageInfoDisplay');
+            const editor = document.getElementById('pageInfoEditor');
+            const btnEdit = document.getElementById('btnEditPageInfo');
+            const btnSave = document.getElementById('btnSavePageInfo');
+
+            // Set Title
+            titleEl.textContent = `${pageTitle} Info`;
+
+            // Reset to read mode
+            display.style.display = 'block';
+            editor.style.display = 'none';
+            btnEdit.style.display = 'inline-block';
+            btnSave.style.display = 'none';
+
+            // Populate content (fallback to a default message if not found)
+            let desc = state.player.pageInfos[pageId] || "No information provided for this page yet.";
+
+            // Simple markdown-to-html conversion for display
+            let htmlDesc = desc
+                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^\- (.*$)/gim, '<li>$1</li>');
+
+            // Wrap list items in <ul>
+            htmlDesc = htmlDesc.replace(/(<li>.*<\/li>(\n<li>.*<\/li>)*)/gi, '<ul>$1</ul>');
+
+            display.innerHTML = htmlDesc;
+            editor.value = desc;
+
+            modal.classList.add('show');
+        }
+
+        function closePageInfoModal() {
+            document.getElementById('pageInfoModal').classList.remove('show');
+            currentPageInfoId = null;
+        }
+
+        function toggleEditPageInfo() {
+            const display = document.getElementById('pageInfoDisplay');
+            const editor = document.getElementById('pageInfoEditor');
+            const btnEdit = document.getElementById('btnEditPageInfo');
+            const btnSave = document.getElementById('btnSavePageInfo');
+
+            display.style.display = 'none';
+            editor.style.display = 'block';
+            btnEdit.style.display = 'none';
+            btnSave.style.display = 'inline-block';
+        }
+
+        function savePageInfo() {
+            if (!currentPageInfoId) return;
+
+            const editor = document.getElementById('pageInfoEditor');
+            state.player.pageInfos[currentPageInfoId] = editor.value;
+            saveState();
+
+            // Switch back to read mode (re-render)
+            openPageInfoModal(currentPageInfoId, document.getElementById('pageInfoTitle').textContent.replace(' Info', ''));
         }
 
         // --- Store Management ---
@@ -6132,8 +6264,14 @@
 
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '活動矩陣 (Activity Matrix)';
+            title.innerHTML = `
+                活動矩陣 (Activity Matrix)
+                <button onclick="openPageInfoModal('activity', '活動 (Activity)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+            `;
             title.style.margin = '0';
+            title.style.display = 'flex';
+            title.style.alignItems = 'center';
+            title.style.gap = '10px';
 
             const toggleGroup = document.createElement('div');
             toggleGroup.style.display = 'flex';
@@ -6442,7 +6580,10 @@
             const container = document.getElementById('app-content');
             container.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                    <h2 class="page-title" style="margin: 0;">My Reflections</h2>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <h2 class="page-title" style="margin: 0;">My Reflections</h2>
+                        <button onclick="openPageInfoModal('reflections', '感想 (Reflections)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+                    </div>
                     <div style="display: flex; gap: 10px;">
                          <button class="btn" style="background: rgba(255,255,255,0.3);" onclick="document.getElementById('nav-statistics').click()">📊 Stats</button>
                          <button class="btn btn-primary" onclick="openReflectionModal()">+ New</button>
