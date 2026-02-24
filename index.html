@@ -2655,7 +2655,12 @@
                     <h3 style="margin: 0; font-size: 1.2rem;">Create New Patch</h3>
                     <p style="opacity: 0.7; font-size: 0.9rem; margin: 3px 0 0 0;">Draft projects before making them official</p>
                 </div>
-                <button class="btn btn-primary" style="padding: 10px 20px; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); pointer-events: none;">+ New Patch</button>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn" style="background: rgba(255,255,255,0.1); font-size: 0.9rem;" onclick="event.stopPropagation(); exportPatches()">📤 Export</button>
+                    <button class="btn" style="background: rgba(255,255,255,0.1); font-size: 0.9rem;" onclick="event.stopPropagation(); document.getElementById('importPatchInput').click()">📥 Import</button>
+                    <button class="btn btn-primary" style="padding: 10px 20px; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); pointer-events: none;">+ New Patch</button>
+                </div>
+                <input type="file" id="importPatchInput" accept=".json" style="display: none;" onchange="importPatches(event)">
             `;
 
             actionCard.onmouseover = () => {
@@ -5443,11 +5448,116 @@
                         location.reload();
                     }
                 } catch (error) {
-                    console.error("Error parsing import file:", error);
-                    alert("Error: Invalid backup file format.");
+                    console.error("Import failed:", error);
+                    alert("Error importing data. File might be corrupted.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- Patches Export & Import ---
+        function exportPatches() {
+            if (!state.player.patches || state.player.patches.length === 0) {
+                alert("No patches found to export.");
+                return;
+            }
+
+            // Collect patch IDs
+            const patchIds = state.player.patches.map(p => p.id);
+
+            // Collect associated tasks
+            const relatedTasks = state.tasks.filter(t => t.tags && t.tags.some(tagId => patchIds.includes(tagId)));
+
+            const exportData = {
+                type: 'solo_leveling_patches',
+                version: '1.0',
+                patches: state.player.patches,
+                tasks: relatedTasks
+            };
+
+            const dataBlob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+
+            const a = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            a.download = `solo_leveling_patches_${dateStr}.json`;
+            a.href = url;
+            document.body.appendChild(a);
+            a.click();
+
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Export Successful", "Patches downloaded successfully.");
+        }
+
+        function importPatches(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const contents = e.target.result;
+                    const parsedData = JSON.parse(contents);
+
+                    // Validation
+                    if (parsedData.type !== 'solo_leveling_patches' || !Array.isArray(parsedData.patches) || !Array.isArray(parsedData.tasks)) {
+                        throw new Error("Invalid patch file structure.");
+                    }
+
+                    if (!confirm(`Import ${parsedData.patches.length} patch(es) and ${parsedData.tasks.length} task(s)? This will add to your existing patches.`)) {
+                        // Clear input so same file can trigger change event again
+                        event.target.value = '';
+                        return;
+                    }
+
+                    let patchesAdded = 0;
+                    let tasksAdded = 0;
+
+                    // Ensure state.player.patches exists
+                    if (!state.player.patches) state.player.patches = [];
+
+                    // Map old ID to new ID if conflicts occur (or always generate new ones to be safe)
+                    // It's safer to always generate new IDs for imported patches to prevent any overlaps,
+                    // especially if sharing patches across different people.
+                    const idMapping = {};
+
+                    parsedData.patches.forEach(patch => {
+                        const newId = 'patch_imported_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                        idMapping[patch.id] = newId;
+
+                        const newPatch = { ...patch, id: newId };
+                        state.player.patches.push(newPatch);
+                        patchesAdded++;
+                    });
+
+                    // Import associated tasks and remap their tag references
+                    parsedData.tasks.forEach(task => {
+                        const newTaskId = Date.now() + Math.random(); // Standard numeric/float task ID in this app
+
+                        // Remap tags
+                        const updatedTags = (task.tags || []).map(tag => idMapping[tag] || tag);
+
+                        const newTask = {
+                            ...task,
+                            id: newTaskId,
+                            tags: updatedTags
+                        };
+                        state.tasks.push(newTask);
+                        tasksAdded++;
+                    });
+
+                    saveState();
+                    render(); // Refresh UI
+
+                    showToast("Import Successful", `Added ${patchesAdded} patch(es) and ${tasksAdded} task(s).`);
+
+                } catch (error) {
+                    console.error("Patch import failed:", error);
+                    alert("Error importing patches. Please ensure it is a valid Patch export JSON file.");
                 }
 
-                // Reset the input so the same file could be selected again if needed
+                // Clear input
                 event.target.value = '';
             };
             reader.readAsText(file);
