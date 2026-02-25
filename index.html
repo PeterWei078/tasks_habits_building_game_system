@@ -3490,11 +3490,45 @@
             openProjectModal(projectId); // Re-render modal to toggle button state
         }
 
-        function deleteProject() {
+        // --- Custom Async UI Confirm Modal ---
+        // Replacing native window.confirm() due to browser glitches during timer intervals
+        function uiConfirm(message) {
+            return new Promise((resolve) => {
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop show';
+                backdrop.style.zIndex = '99999'; // Ensure it's on top of everything
+
+                backdrop.innerHTML = `
+                    <div class="modal-content" style="max-width: 400px; text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">⚠️</div>
+                        <h3 style="margin-bottom: 20px;">${message}</h3>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="uiBtnCancel" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+                            <button id="uiBtnConfirm" class="btn btn-primary" style="flex: 1; background: #E53E3E;">Confirm</button>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(backdrop);
+
+                document.getElementById('uiBtnCancel').onclick = () => {
+                    document.body.removeChild(backdrop);
+                    resolve(false);
+                };
+
+                document.getElementById('uiBtnConfirm').onclick = () => {
+                    document.body.removeChild(backdrop);
+                    resolve(true);
+                };
+            });
+        }
+
+        async function deleteProject() {
             if (!editingProjectId) return;
 
             if (isPatchMode) {
-                if (confirm("Delete this patch?")) {
+                const confirmed = await uiConfirm("Delete this patch?");
+                if (confirmed) {
                     const patchIndex = state.player.patches.findIndex(t => t.id === editingProjectId);
                     if (patchIndex !== -1) {
                         state.player.patches.splice(patchIndex, 1);
@@ -3514,7 +3548,7 @@
             const project = state.player.tags.find(t => t.id === editingProjectId);
             if (project) {
                 const initialLength = state.player.tags.length;
-                deleteTag(editingProjectId);
+                await deleteTag(editingProjectId);
                 if (state.player.tags.length < initialLength) {
                     const modal = document.getElementById('projectModal');
                     if (modal) modal.classList.remove('show');
@@ -5827,8 +5861,9 @@
             input.value = '';
         }
 
-        function deleteTag(id) {
-            if (!confirm("Delete this project?")) return;
+        async function deleteTag(id) {
+            const confirmed = await uiConfirm("Delete this project?");
+            if (!confirmed) return;
 
             const project = state.player.tags.find(t => t.id === id);
 
