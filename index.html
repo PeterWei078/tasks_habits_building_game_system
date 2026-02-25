@@ -1202,6 +1202,30 @@
 
     </div>
 
+    <!-- Timer Settings Modal -->
+    <div id="timerSettingsModal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2>Timer Settings</h2>
+                <button class="close-btn" onclick="closeTimerSettingsModal()">Close</button>
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Pomodoro Time (minutes)</label>
+                <input type="number" id="settingPomodoroTime" min="1" max="120" style="width: 100%;">
+            </div>
+            <div class="form-group">
+                <label>Short Break (minutes)</label>
+                <input type="number" id="settingShortBreakTime" min="1" max="60" style="width: 100%;">
+            </div>
+            <div class="form-group">
+                <label>Long Break (minutes)</label>
+                <input type="number" id="settingLongBreakTime" min="1" max="120" style="width: 100%;">
+            </div>
+            <button class="btn btn-primary" style="width: 100%; padding: 15px; margin-top: 10px;"
+                onclick="saveTimerSettings()">Save Changes</button>
+        </div>
+    </div>
+
     <!-- Management Modal -->
     <div id="managementModal" class="modal-backdrop">
         <div class="modal-content">
@@ -1639,6 +1663,11 @@
                 ],
                 skills: [], // Custom Skills Grid
                 totalFocusTime: 0,
+                timerSettings: {
+                    pomodoro: 25,
+                    short: 5,
+                    long: 15
+                },
                 activities: [], // Activity Log
                 // Store & Inventory
                 gold: 0,
@@ -1693,6 +1722,9 @@
         }
         if (!state.player.patches) {
             state.player.patches = [];
+        }
+        if (!state.player.timerSettings) {
+            state.player.timerSettings = defaultState.player.timerSettings;
         }
         if (!state.player.shopCategories) {
             state.player.shopCategories = defaultState.player.shopCategories;
@@ -1918,10 +1950,13 @@
             timerCard.style.textAlign = 'center';
             timerCard.style.padding = '40px';
             timerCard.innerHTML = `
-                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 30px;">
-                    <button class="btn ${timerMode === 'pomodoro' ? 'btn-primary' : ''}" onclick="setTimerMode('pomodoro')">🍅 Pomodoro (25m)</button>
-                    <button class="btn ${timerMode === 'short' ? 'btn-primary' : ''}" onclick="setTimerMode('short')">☕ Short Break (5m)</button>
-                    <button class="btn ${timerMode === 'long' ? 'btn-primary' : ''}" onclick="setTimerMode('long')">💤 Long Break (15m)</button>
+                <div style="display: flex; justify-content: flex-end; margin-bottom: -10px;">
+                    <button class="btn" onclick="openTimerSettingsModal()" style="background: rgba(255,255,255,0.2); padding: 5px 10px; font-size: 0.9rem;">⚙️ 時間設置 (Timer Settings)</button>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap;">
+                    <button class="btn ${timerMode === 'pomodoro' ? 'btn-primary' : ''}" onclick="setTimerMode('pomodoro')">🍅 Pomodoro (${state.player.timerSettings.pomodoro}m)</button>
+                    <button class="btn ${timerMode === 'short' ? 'btn-primary' : ''}" onclick="setTimerMode('short')">☕ Short Break (${state.player.timerSettings.short}m)</button>
+                    <button class="btn ${timerMode === 'long' ? 'btn-primary' : ''}" onclick="setTimerMode('long')">💤 Long Break (${state.player.timerSettings.long}m)</button>
                 </div>
                 
                 <div style="position: relative; width: 250px; height: 250px; margin: 0 auto 30px;">
@@ -1951,9 +1986,9 @@
         function setTimerMode(mode) {
             timerMode = mode;
             pauseTimer();
-            if (mode === 'pomodoro') timeLeft = 25 * 60;
-            else if (mode === 'short') timeLeft = 5 * 60;
-            else if (mode === 'long') timeLeft = 15 * 60;
+            if (mode === 'pomodoro') timeLeft = state.player.timerSettings.pomodoro * 60;
+            else if (mode === 'short') timeLeft = state.player.timerSettings.short * 60;
+            else if (mode === 'long') timeLeft = state.player.timerSettings.long * 60;
             render();
         }
 
@@ -2014,11 +2049,35 @@
         }
 
         function formatTime(seconds) {
-            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const s = (seconds % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
+        function openTimerSettingsModal() {
+            document.getElementById('settingPomodoroTime').value = state.player.timerSettings.pomodoro;
+            document.getElementById('settingShortBreakTime').value = state.player.timerSettings.short;
+            document.getElementById('settingLongBreakTime').value = state.player.timerSettings.long;
+            document.getElementById('timerSettingsModal').classList.add('show');
+        }
+
+        function closeTimerSettingsModal() {
+            document.getElementById('timerSettingsModal').classList.remove('show');
+        }
+
+        function saveTimerSettings() {
+            const pomodoro = parseInt(document.getElementById('settingPomodoroTime').value) || 25;
+            const shortBreak = parseInt(document.getElementById('settingShortBreakTime').value) || 5;
+            const longBreak = parseInt(document.getElementById('settingLongBreakTime').value) || 15;
+
+            state.player.timerSettings.pomodoro = Math.max(1, pomodoro);
+            state.player.timerSettings.short = Math.max(1, shortBreak);
+            state.player.timerSettings.long = Math.max(1, longBreak);
+
+            saveState();
+            setTimerMode(timerMode); // Refresh timer clock automatically
+            closeTimerSettingsModal();
+        }
         function updateTimerUI() {
             // Update Text
             const timeDisplay = document.getElementById('timer-text');
