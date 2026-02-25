@@ -3581,6 +3581,7 @@
         // --- Filter State ---
         let currentGroupId = 'default';
         let currentTagFilter = null; // null means all tags
+        let currentTaskSort = 'default'; // default | dueDate
         let editingTaskId = null;
 
         function renderTasksPage() {
@@ -3658,7 +3659,11 @@
                     <h3 style="margin: 0;">Create New Task</h3>
                     <p style="opacity: 0.6; font-size: 0.9rem;">Define your goals and rewards</p>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="taskSortSelect" style="padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: inherit; cursor: pointer;" onchange="currentTaskSort = this.value; render();">
+                        <option value="default" ${currentTaskSort === 'default' ? 'selected' : ''} style="color: black;">預設 (A-Z)</option>
+                        <option value="dueDate" ${currentTaskSort === 'dueDate' ? 'selected' : ''} style="color: black;">截止日期 (Due Date)</option>
+                    </select>
                     <button class="btn" onclick="openManagementModal()" style="background: rgba(255,255,255,0.5);">⚙️ Manage Lists</button>
                     <button class="btn btn-primary" onclick="openTaskModal()">+ New Task</button>
                 </div>
@@ -3684,8 +3689,21 @@
                 return groupMatch && tagMatch;
             });
 
-            // Sort Alphabetically
-            filteredTasks.sort((a, b) => a.title.localeCompare(b.title));
+            // Sort Logic
+            if (currentTaskSort === 'dueDate') {
+                filteredTasks.sort((a, b) => {
+                    // Put tasks with no due date at the end
+                    if (!a.dueDate && !b.dueDate) return a.title.localeCompare(b.title);
+                    if (!a.dueDate) return 1;
+                    if (!b.dueDate) return -1;
+                    // Sort by date ascending, then title
+                    if (a.dueDate === b.dueDate) return a.title.localeCompare(b.title);
+                    return new Date(a.dueDate) - new Date(b.dueDate);
+                });
+            } else {
+                // Default: Sort Alphabetically
+                filteredTasks.sort((a, b) => a.title.localeCompare(b.title));
+            }
 
             if (filteredTasks.length === 0) {
                 listContainer.innerHTML = `<div style="text-align:center; opacity:0.6; padding: 20px;">此分組或標籤下暫無任務。</div>`;
