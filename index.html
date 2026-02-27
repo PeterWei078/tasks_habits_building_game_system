@@ -3662,6 +3662,27 @@
         let currentTaskSort = 'default'; // default | dueDate
         let editingTaskId = null;
 
+        window.toggleHideCompletedTasks = function (checked) {
+            state.hideCompletedTasks = checked;
+            saveState();
+            renderTasksPage();
+        };
+
+        window.triggerDeleteCompletedTasks = async function () {
+            const completedCount = state.tasks.filter(t => t.completed).length;
+            if (completedCount === 0) {
+                alert("No completed tasks to delete!");
+                return;
+            }
+            const confirmed = await uiConfirm(`Are you sure you want to permanently delete ${completedCount} completed task(s)?\n\nNote: This will clean up your list, but you will KEEP all EXP, Coins, and activity history earned from these tasks.`);
+            if (confirmed) {
+                // Filter keeping ONLY tasks that are NOT completed
+                state.tasks = state.tasks.filter(t => !t.completed);
+                saveState();
+                renderTasksPage();
+            }
+        };
+
         function renderTasksPage() {
             contentDiv.innerHTML = ''; // Prevent duplication
             const title = document.createElement('h2');
@@ -3727,6 +3748,9 @@
 
 
             // Add Task Button (Replaces inline form)
+            // Ensure state configuration exists
+            if (typeof state.hideCompletedTasks === 'undefined') state.hideCompletedTasks = false;
+
             const actionCard = document.createElement('div');
             actionCard.className = 'glass glass-card';
             actionCard.style.display = 'flex';
@@ -3737,7 +3761,11 @@
                     <h3 style="margin: 0;">Create New Task</h3>
                     <p style="opacity: 0.6; font-size: 0.9rem;">Define your goals and rewards</p>
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem; margin-right: 10px;">
+                        <input type="checkbox" ${state.hideCompletedTasks ? 'checked' : ''} onchange="toggleHideCompletedTasks(this.checked)" style="width: auto;">
+                        隱藏已完成 (Hide Completed)
+                    </label>
                     <select id="taskSortSelect" style="padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: inherit; cursor: pointer;" onchange="currentTaskSort = this.value; render();">
                         <option value="default" ${currentTaskSort === 'default' ? 'selected' : ''} style="color: black;">預設 (A-Z)</option>
                         <option value="dueDate" ${currentTaskSort === 'dueDate' ? 'selected' : ''} style="color: black;">截止日期 (Due Date)</option>
@@ -3747,10 +3775,24 @@
                 </div>
             `;
 
+            const listCardHeader = document.createElement('div');
+            listCardHeader.style.display = 'flex';
+            listCardHeader.style.justifyContent = 'space-between';
+            listCardHeader.style.alignItems = 'center';
+            listCardHeader.innerHTML = `
+                <h3 style="margin: 0;">任務列表 (Quest List)</h3>
+                <button class="btn" onclick="triggerDeleteCompletedTasks()" style="background: rgba(229, 62, 62, 0.8); color: white; padding: 6px 12px; font-size: 0.85rem;">🗑️ Delete Completed</button>
+            `;
+
             // Task List
             const listCard = document.createElement('div');
             listCard.className = 'glass glass-card';
-            listCard.innerHTML = `<h3>任務列表 (Quest List)</h3><div id="taskList" style="margin-top: 15px;"></div>`;
+            listCard.appendChild(listCardHeader);
+
+            const listContainer = document.createElement('div');
+            listContainer.id = 'taskList';
+            listContainer.style.marginTop = '15px';
+            listCard.appendChild(listContainer);
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(groupFilterContainer);
@@ -3758,10 +3800,9 @@
             contentDiv.appendChild(actionCard);
             contentDiv.appendChild(listCard);
 
-            const listContainer = document.getElementById('taskList');
-
             // Filter Logic
             const filteredTasks = state.tasks.filter(t => {
+                if (state.hideCompletedTasks && t.completed) return false;
                 const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
                 const tagMatch = currentTagFilter ? (t.tags && t.tags.includes(currentTagFilter)) : true;
                 return groupMatch && tagMatch;
