@@ -3754,6 +3754,16 @@
             };
             tagFilterContainer.appendChild(allTagChip);
 
+            // "Uncategorized" Tag Option
+            const uncategorizedTagChip = document.createElement('div');
+            uncategorizedTagChip.className = `filter-chip ${currentTagFilter === 'uncategorized' ? 'active' : ''}`;
+            uncategorizedTagChip.textContent = '# 未分類 (Uncategorized)';
+            uncategorizedTagChip.onclick = () => {
+                currentTagFilter = 'uncategorized';
+                render();
+            };
+            tagFilterContainer.appendChild(uncategorizedTagChip);
+
             state.player.tags.forEach(tag => {
                 const chip = document.createElement('div');
                 chip.className = `filter-chip ${currentTagFilter === tag.id ? 'active' : ''}`;
@@ -3824,7 +3834,14 @@
             const filteredTasks = state.tasks.filter(t => {
                 if (state.hideCompletedTasks && t.completed) return false;
                 const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
-                const tagMatch = currentTagFilter ? (t.tags && t.tags.includes(currentTagFilter)) : true;
+
+                let tagMatch = true;
+                if (currentTagFilter === 'uncategorized') {
+                    tagMatch = !t.tags || t.tags.length === 0;
+                } else if (currentTagFilter) {
+                    tagMatch = t.tags && t.tags.includes(currentTagFilter);
+                }
+
                 return groupMatch && tagMatch;
             });
 
