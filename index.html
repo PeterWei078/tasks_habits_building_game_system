@@ -1878,6 +1878,20 @@
             }
         }
 
+        // Helper to check if a project/tag should be considered "completed" and hidden if toggled
+        function isProjectCompleted(p) {
+            if (!p) return false;
+            // Explicitly marked as complete
+            if (p.completed) return true;
+
+            // Check progress-based completion
+            const pTasks = state.tasks.filter(t => t.tags && t.tags.includes(p.id));
+            const pTotal = pTasks.length;
+            if (pTotal === 0) return false; // Not complete if no tasks associated
+            const pCompleted = pTasks.filter(t => t.completed).length;
+            return pCompleted === pTotal;
+        }
+
         // --- Attributes Config ---
         const attributesConfig = {
             strength: { label: "力量 (STR)", color: "rgba(255, 99, 132, 0.7)", border: "rgb(255, 99, 132)", badgeClass: "badge-str" },
@@ -2894,18 +2908,8 @@
 
             // Filter Logic
             let displayProjects = state.player.tags;
-            if (state.settings.hideCompletedProjects) {
-                displayProjects = displayProjects.filter(p => {
-                    // Check explicit completion
-                    if (p.completed) return false;
-
-                    // Check progress completion
-                    const pTasks = state.tasks.filter(t => t.tags && t.tags.includes(p.id));
-                    const pTotal = pTasks.length;
-                    if (pTotal === 0) return true; // No tasks = not complete by progress default
-                    const pCompleted = pTasks.filter(t => t.completed).length;
-                    return pCompleted < pTotal;
-                });
+            if (state.settings && state.settings.hideCompletedProjects) {
+                displayProjects = displayProjects.filter(p => !isProjectCompleted(p));
             }
 
             // Default Group
@@ -3764,7 +3768,12 @@
             };
             tagFilterContainer.appendChild(uncategorizedTagChip);
 
-            state.player.tags.forEach(tag => {
+            let filteredTags = state.player.tags;
+            if (state.settings && state.settings.hideCompletedProjects) {
+                filteredTags = filteredTags.filter(tag => !isProjectCompleted(tag));
+            }
+
+            filteredTags.forEach(tag => {
                 const chip = document.createElement('div');
                 chip.className = `filter-chip ${currentTagFilter === tag.id ? 'active' : ''}`;
                 chip.textContent = `# ${tag.name}`;
