@@ -286,6 +286,54 @@
             z-index: 2;
         }
 
+        /* Legendary Spoils Tier Badges */
+        .spoils-tier-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-left: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+            border-width: 1px;
+            border-style: solid;
+        }
+
+        .spoils-tier-bronze {
+            background: linear-gradient(135deg, #FBD38D 0%, #ED8936 100%);
+            color: white;
+            border-color: #DD6B20;
+        }
+
+        .spoils-tier-silver {
+            background: linear-gradient(135deg, #E2E8F0 0%, #A0AEC0 100%);
+            color: #2D3748;
+            border-color: #CBD5E0;
+        }
+
+        .spoils-tier-gold {
+            background: linear-gradient(135deg, #F6E05E 0%, #B7791F 100%);
+            color: white;
+            border-color: #F6AD55;
+        }
+
+        .spoils-tier-platinum {
+            background: linear-gradient(135deg, #E2E8F0 0%, #A0AEC0 100%);
+            color: #2D3748;
+            border-color: #CBD5E0;
+            box-shadow: 0 0 10px rgba(160, 174, 192, 0.5);
+        }
+
+        .spoils-tier-diamond {
+            background: linear-gradient(135deg, #EBF8FF 0%, #90CDF4 100%);
+            color: #2C5282;
+            border-color: #63B3ED;
+            box-shadow: 0 0 10px rgba(144, 205, 244, 0.5);
+        }
+
+
+
         .item-corner-icon {
             position: absolute;
             top: 5px;
@@ -2628,15 +2676,14 @@
                 groupedPurchases[yearMonth].push(item);
             });
 
-            const getTierColor = (tier) => {
-                switch (tier) {
-                    case 'Bronze': return '#cd7f32';
-                    case 'Silver': return '#c0c0c0';
-                    case 'Gold': return '#ffd700';
-                    case 'Platinum': return '#e5e4e2';
-                    case 'Diamond': return '#b9f2ff';
-                    default: return 'var(--text-primary)';
-                }
+            const getTierBadgeClass = (tier) => {
+                if (!tier) return 'spoils-tier-bronze';
+                const lowerTier = tier.toLowerCase();
+                if (lowerTier.includes('gold')) return 'spoils-tier-gold';
+                if (lowerTier.includes('silver')) return 'spoils-tier-silver';
+                if (lowerTier.includes('platinum')) return 'spoils-tier-platinum';
+                if (lowerTier.includes('diamond')) return 'spoils-tier-diamond';
+                return 'spoils-tier-bronze';
             };
 
             let purchasesHtml = `<h3 style="margin:0 0 15px 0;">🎉 戰利品 (Legendary Spoils)</h3>`;
@@ -2660,7 +2707,6 @@
                     `;
 
                     items.forEach(item => {
-                        const tierColor = getTierColor(item.tier);
                         purchasesHtml += `
                             <div style="display: flex; align-items: flex-start; gap: 15px; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background 0.2s; border-radius: 8px;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
                                 <div style="font-size: 2.5rem; text-shadow: 0 4px 8px rgba(0,0,0,0.3);">${item.icon || '📦'}</div>
@@ -2668,7 +2714,7 @@
                                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
                                         <h4 style="margin: 0; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; color: var(--text-primary);">
                                             ${item.title}
-                                            <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.3); color: ${tierColor}; border: 1px solid ${tierColor}55;">
+                                            <span class="spoils-tier-badge ${getTierBadgeClass(item.tier)}">
                                                 ${item.tier || 'Bronze'}
                                             </span>
                                         </h4>
