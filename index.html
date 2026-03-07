@@ -3869,6 +3869,9 @@
                     <h3 style="margin: 0;">Create New Task</h3>
                     <p style="opacity: 0.6; font-size: 0.9rem;">Define your goals and rewards</p>
                 </div>
+                <div style="flex: 1; margin: 0 20px; text-align: center; color: var(--accent-color); font-weight: 600; font-size: 0.9rem; background: rgba(107, 70, 193, 0.1); padding: 8px 15px; border-radius: 8px; border: 1px dashed var(--accent-color);">
+                    💡 完成Task時建議到“<span style="text-decoration: underline; cursor: pointer;" onclick="currentTab = 'reflections'; render();">感想(Reflections)</span>”頁面填寫感想。
+                </div>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem; margin-right: 10px;">
                         <input type="checkbox" ${state.hideCompletedTasks ? 'checked' : ''} onchange="toggleHideCompletedTasks(this.checked)" style="width: auto;">
