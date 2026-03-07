@@ -386,6 +386,29 @@
             transform: translateY(-1px);
         }
 
+        /* Tag-specific filter bar (Projects) */
+        .tag-filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding-bottom: 5px;
+        }
+
+        .tag-chip {
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px dashed rgba(255, 255, 255, 0.4);
+        }
+
+        .tag-chip.active {
+            border-style: solid;
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
         .group-selector {
             margin-bottom: 15px;
         }
@@ -3746,11 +3769,11 @@
 
             // Tag Filters
             const tagFilterContainer = document.createElement('div');
-            tagFilterContainer.className = 'filter-bar';
+            tagFilterContainer.className = 'tag-filter-bar';
 
             // "All" Tag Option
             const allTagChip = document.createElement('div');
-            allTagChip.className = `filter-chip ${currentTagFilter === null ? 'active' : ''}`;
+            allTagChip.className = `filter-chip tag-chip ${currentTagFilter === null ? 'active' : ''}`;
             allTagChip.textContent = '# 全部 (All)';
             allTagChip.onclick = () => {
                 currentTagFilter = null;
@@ -3760,7 +3783,7 @@
 
             // "Uncategorized" Tag Option
             const uncategorizedTagChip = document.createElement('div');
-            uncategorizedTagChip.className = `filter-chip ${currentTagFilter === 'uncategorized' ? 'active' : ''}`;
+            uncategorizedTagChip.className = `filter-chip tag-chip ${currentTagFilter === 'uncategorized' ? 'active' : ''}`;
             uncategorizedTagChip.textContent = '# 未分類 (Uncategorized)';
             uncategorizedTagChip.onclick = () => {
                 currentTagFilter = 'uncategorized';
@@ -3775,7 +3798,7 @@
 
             filteredTags.forEach(tag => {
                 const chip = document.createElement('div');
-                chip.className = `filter-chip ${currentTagFilter === tag.id ? 'active' : ''}`;
+                chip.className = `filter-chip tag-chip ${currentTagFilter === tag.id ? 'active' : ''}`;
                 chip.textContent = `# ${tag.name}`;
                 chip.style.borderColor = currentTagFilter === tag.id ? 'transparent' : tag.color; // Subtle hint
                 chip.onclick = () => {
