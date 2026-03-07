@@ -1110,6 +1110,10 @@
                     <span class="nav-icon">🛒</span>
                     <span class="nav-text">商店 (Store)</span>
                 </li>
+                <li class="nav-item" id="nav-badges" onclick="switchTab('badges')">
+                    <span class="nav-icon">🏅</span>
+                    <span class="nav-text">徽章 (Badges)</span>
+                </li>
                 <li class="nav-item" id="nav-achievements" onclick="switchTab('achievements')">
                     <span class="nav-icon">🏆</span>
                     <span class="nav-text">成就 (Achievements)</span>
@@ -2000,6 +2004,7 @@
             else if (currentTab === 'patch') renderPatchPage();
             else if (currentTab === 'statistics') renderStatisticsPage();
             else if (currentTab === 'store') renderStorePage();
+            else if (currentTab === 'badges') renderBadgesPage();
             else if (currentTab === 'achievements') renderAchievementsPage();
             else if (currentTab === 'reflections') renderReflectionsPage(); // Add Reflections Page
             else if (currentTab === 'activity') {
@@ -2217,34 +2222,31 @@
             title.className = 'page-title';
             title.textContent = '商店 (Store)';
 
-            // Shop Header (Redesigned)
+            // Shop Header
             const header = document.createElement('div');
             header.className = 'shop-header';
             header.innerHTML = `
-                    <div class="shop-nav-bar">
-                        <div class="shop-tabs">
-                            <div class="shop-tab ${currentStoreTab === 'shop' ? 'active' : ''}" onclick="switchStoreTab('shop')">Shop</div>
-                            <div class="shop-tab ${currentStoreTab === 'badge' ? 'active' : ''}" onclick="switchStoreTab('badge')">Badges</div>
-                            <div class="shop-tab ${currentStoreTab === 'inventory' ? 'active' : ''}" onclick="switchStoreTab('inventory')">Inventory</div>
-                        </div>
-                        <div class="gold-display">
-                            <span>💰</span> <span id="gold-count-anim">${state.player.gold}</span>
-                        </div>
-                        <div style="display: flex; gap: 5px;">
-                            <button onclick="openStoreInfoModal()" title="Store Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
-                            <button onclick="openManagementModal('storeCategories')" title="Manage Categories" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">🏷️</button>
-                            <button onclick="openManagementModal('store')" title="Manage Store Items" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">⚙️</button>
-                        </div>
+                <div class="shop-nav-bar">
+                    <div class="shop-tabs">
+                        <div class="shop-tab ${currentStoreTab === 'shop' ? 'active' : ''}" onclick="switchStoreTab('shop')">Shop</div>
+                        <div class="shop-tab ${currentStoreTab === 'inventory' ? 'active' : ''}" onclick="switchStoreTab('inventory')">Inventory</div>
                     </div>
-                `;
+                    <div class="gold-display">
+                        <span>💰</span> <span id="gold-count-anim">${state.player.gold}</span>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button onclick="openStoreInfoModal()" title="Store Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+                        <button onclick="openManagementModal('storeCategories')" title="Manage Categories" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">🏷️</button>
+                        <button onclick="openManagementModal('store')" title="Manage Store Items" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">⚙️</button>
+                    </div>
+                </div>
+            `;
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(header);
 
             if (currentStoreTab === 'shop') {
                 renderShopTab();
-            } else if (currentStoreTab === 'badge') {
-                renderBadgeTab();
             } else {
                 renderInventoryTab();
             }
@@ -2325,7 +2327,30 @@
             return category ? category.icon : '📦';
         }
 
-        function renderBadgeTab() {
+        // --- Badges Page ---
+        function renderBadgesPage() {
+            contentDiv.innerHTML = '';
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.textContent = '徽章 (Badges)';
+
+            const header = document.createElement('div');
+            header.className = 'shop-header';
+            header.innerHTML = `
+                <div class="shop-nav-bar">
+                    <div style="font-weight: bold; font-size: 1.1rem; color: var(--accent-color);">🏅 Badge Store & Collection</div>
+                    <div class="gold-display">
+                        <span>💰</span> <span id="gold-count-anim">${state.player.gold}</span>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                         <button onclick="openManagementModal('store')" title="Manage Badges" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">⚙️</button>
+                    </div>
+                </div>
+            `;
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(header);
+
             const grid = document.createElement('div');
             grid.className = 'shop-grid';
 
@@ -2342,13 +2367,13 @@
                     let cornerIcon = '';
                     if (item.badgeTier === 'gold') {
                         tierClass = 'badge-gold';
-                        cornerIcon = '<div class="badge-corner-icon">☀️</div>'; // Sun (Level 1)
+                        cornerIcon = '<div class="badge-corner-icon">☀️</div>';
                     } else if (item.badgeTier === 'silver') {
                         tierClass = 'badge-silver';
-                        cornerIcon = '<div class="badge-corner-icon">🌙</div>'; // Moon (Level 2)
+                        cornerIcon = '<div class="badge-corner-icon">🌙</div>';
                     } else if (item.badgeTier === 'bronze') {
                         tierClass = 'badge-bronze';
-                        cornerIcon = '<div class="badge-corner-icon">⭐</div>'; // Star (Level 3)
+                        cornerIcon = '<div class="badge-corner-icon">⭐</div>';
                     }
 
                     return `
@@ -2360,39 +2385,64 @@
                          <h4>${item.title}</h4>
                          <p class="desc">${item.description}</p>
                          ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-bottom: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
-                         <div style="font-size: 0.8rem; opacity: 0.7; margin: 5px 0;">${item.badgeCategory || 'General'}</div>
-                         <button class="btn-buy" onclick="event.stopPropagation(); claimBadge('${item.id}')" ${isOwned ? 'disabled' : ''} style="${isOwned ? 'opacity: 0.6; cursor: default;' : 'background: var(--accent-color);'}">
-                             ${isOwned ? 'Owned' : 'Claim Badge'}
+                         <div style="font-size: 0.8rem; opacity: 0.7; margin: 5px 0; text-align: center;">${item.badgeCategory || 'General'}</div>
+                         <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; color: ${isOwned ? '#48BB78' : 'inherit'};">Price: 💰 ${item.price}</div>
+                         <button class="btn-buy" onclick="event.stopPropagation(); buyBadge('${item.id}')" ${isOwned ? 'disabled' : (state.player.gold < item.price ? 'disabled' : '')} style="${isOwned ? 'background: #48BB78; color: white; opacity: 1; cursor: default;' : (state.player.gold < item.price ? 'opacity: 0.5;' : 'background: var(--accent-color);')}">
+                             ${isOwned ? '🏆 Owned' : (state.player.gold < item.price ? 'Need Gold' : 'Purchase')}
                          </button>
                      </div>
                  `}).join('');
             }
             contentDiv.appendChild(grid);
+
+            // Add Collection Link/Summary
+            const linkBox = document.createElement('div');
+            linkBox.className = 'glass glass-card';
+            linkBox.style.marginTop = '20px';
+            linkBox.style.textAlign = 'center';
+            linkBox.innerHTML = `
+                <p style="margin-bottom: 10px; opacity: 0.8;">想查看已獲得的勳章牆嗎？</p>
+                <button class="btn btn-primary" onclick="switchTab('achievements')">🏆 前往成就 (Achievements) 頁面</button>
+            `;
+            contentDiv.appendChild(linkBox);
         }
 
-        function claimBadge(itemId) {
+        function buyBadge(itemId) {
             const item = state.player.shopItems.find(i => i.id === itemId);
             if (!item) return;
+
+            if (state.player.gold < item.price) {
+                showToast('Not enough gold!', 'error');
+                return;
+            }
 
             if (state.player.inventory.some(i => i.itemId === item.id)) {
                 showToast('You already own this badge!', 'info');
                 return;
             }
 
+            state.player.gold -= item.price;
             state.player.inventory.push({
                 itemId: item.id,
                 purchaseDate: Date.now(),
-                isUsed: false
+                isUsed: false,
+                snapshot: {
+                    title: item.title,
+                    description: item.description,
+                    icon: item.icon,
+                    tier: item.badgeTier || item.itemTier || item.tier,
+                    category: item.category
+                }
             });
 
             // Log Activity
             state.player.activities.unshift({
                 id: 'act_' + Date.now(),
                 type: 'BADGE_CLAIM',
-                title: `Claimed Badge: ${item.title}`,
+                title: `Purchased Badge: ${item.title}`,
                 timestamp: Date.now(),
                 details: {
-                    gold: 0,
+                    gold: -item.price,
                     exp: 0,
                     icon: item.icon,
                     badgeCategory: item.badgeCategory
@@ -2400,8 +2450,8 @@
             });
 
             saveState();
-            showToast(`Claimed ${item.title}!`, 'success');
-            renderStorePage();
+            showToast(`Purchased ${item.title}!`, 'success');
+            renderBadgesPage();
         }
 
         function renderInventoryTab() {
@@ -2420,11 +2470,27 @@
 
                     const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId) || { title: 'Unknown', icon: '❓', description: 'Item removed from shop', category: 'Unknown' };
 
-                    // Skip Badges in Inventory Tab
+                    // Skip Badges in Inventory Tab (They have their own page now)
                     if (originalItem.category === 'Badge') return '';
 
+                    // Apply tier-based styling
+                    const itemTier = originalItem.itemTier || invItem.snapshot?.tier || '';
+                    let tierClass = '';
+                    let cornerIcon = '';
+                    if (itemTier === 'gold' || itemTier === 'Legendary') {
+                        tierClass = 'tier-gold';
+                        cornerIcon = '<div class="item-corner-icon">☀️</div>';
+                    } else if (itemTier === 'silver' || itemTier === 'Silver') {
+                        tierClass = 'tier-silver';
+                        cornerIcon = '<div class="item-corner-icon">🌙</div>';
+                    } else if (itemTier === 'bronze' || itemTier === 'Bronze') {
+                        tierClass = 'tier-bronze';
+                        cornerIcon = '<div class="item-corner-icon">⭐</div>';
+                    }
+
                     return `
-                        <div class="store-item-card">
+                        <div class="store-item-card ${tierClass}" style="position: relative;">
+                            ${cornerIcon}
                             <div class="item-icon-wrapper">${originalItem.icon}</div>
                             <h4>${originalItem.title}</h4>
                             <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
