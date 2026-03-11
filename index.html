@@ -2278,9 +2278,18 @@
             const grid = document.createElement('div');
             grid.className = 'shop-grid';
 
-            const filteredItems = currentCategoryFilter === 'All'
+            let filteredItems = currentCategoryFilter === 'All'
                 ? state.player.shopItems.filter(item => item.category !== 'Badge')
                 : state.player.shopItems.filter(item => item.category === currentCategoryFilter && item.category !== 'Badge');
+
+            filteredItems = filteredItems.filter(item => {
+                const isNoTier = !item.itemTier || item.itemTier === 'none' || item.itemTier === '';
+                if (!isNoTier) {
+                    const hasPurchased = state.player.inventory.some(i => i.itemId === item.id);
+                    return !hasPurchased;
+                }
+                return true;
+            });
 
             grid.innerHTML = filteredItems.map(item => {
                 let tierClass = '';
@@ -2465,16 +2474,51 @@
             }).length === 0) {
                 grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;">Target Empty... Go buy something!</div>`;
             } else {
-                grid.innerHTML = state.player.inventory.map((invItem, index) => {
-                    if (invItem.isUsed || invItem.isDeleted) return ''; // Hide used or deleted items
+                const groupedItems = [];
+                state.player.inventory.forEach((invItem, index) => {
+                    if (invItem.isUsed || invItem.isDeleted) return;
 
                     const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId) || { title: 'Unknown', icon: '❓', description: 'Item removed from shop', category: 'Unknown' };
 
-                    // Skip Badges in Inventory Tab (They have their own page now)
-                    if (originalItem.category === 'Badge') return '';
+                    if (originalItem.category === 'Badge') return;
 
-                    // Apply tier-based styling
                     const itemTier = originalItem.itemTier || invItem.snapshot?.tier || '';
+                    const isNoTier = !itemTier || itemTier === 'none' || itemTier === '';
+
+                    if (isNoTier) {
+                        const existingGroup = groupedItems.find(g => g.itemId === invItem.itemId && g.isNoTier);
+                        if (existingGroup) {
+                            existingGroup.indices.push(index);
+                            existingGroup.count++;
+                        } else {
+                            groupedItems.push({
+                                itemId: invItem.itemId,
+                                indices: [index],
+                                count: 1,
+                                originalItem: originalItem,
+                                invItem: invItem,
+                                isNoTier: true,
+                                itemTier: itemTier
+                            });
+                        }
+                    } else {
+                        groupedItems.push({
+                            itemId: invItem.itemId,
+                            indices: [index],
+                            count: 1,
+                            originalItem: originalItem,
+                            invItem: invItem,
+                            isNoTier: false,
+                            itemTier: itemTier
+                        });
+                    }
+                });
+
+                grid.innerHTML = groupedItems.map(group => {
+                    const originalItem = group.originalItem;
+                    const invItem = group.invItem;
+                    const itemTier = group.itemTier;
+
                     let tierClass = '';
                     let cornerIcon = '';
                     if (itemTier === 'gold' || itemTier === 'Legendary') {
@@ -2488,20 +2532,29 @@
                         cornerIcon = '<div class="item-corner-icon">⭐</div>';
                     }
 
+                    let countBadge = '';
+                    if (group.isNoTier && group.count >= 1) {
+                        countBadge = `<div style="position: absolute; top: 15px; right: 15px; border: 3px solid #ff4d4f; color: #ff4d4f; font-weight: bold; padding: 4px 12px; font-size: 1.1rem; border-radius: 4px; background: rgba(255, 255, 255, 0.9); z-index: 5; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);">x ${group.count}</div>`;
+                    }
+
+                    const targetIndex = group.indices[0];
+
                     return `
                         <div class="store-item-card ${tierClass}" style="position: relative;">
                             ${cornerIcon}
+                            ${countBadge}
                             <div class="item-icon-wrapper">${originalItem.icon}</div>
                             <h4>${originalItem.title}</h4>
                             <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
                             ${originalItem.url ? `<a href="${originalItem.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-bottom: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
                             <div style="font-size: 0.75rem; margin-bottom: 15px; opacity: 0.6;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
                             <div style="display: flex; gap: 10px;">
-                                <button class="btn-use" onclick="useItem(${index})" style="flex: 1;">Use Item</button>
-                                <button class="btn-use" onclick="deleteInventoryItem(${index})" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384; flex: 0 0 40px; display: flex; align-items: center; justify-content: center;">🗑️</button>
+                                <button class="btn-use" onclick="useItem(${targetIndex})" style="flex: 1;">Use Item</button>
+                                <button class="btn-use" onclick="deleteInventoryItem(${targetIndex})" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384; flex: 0 0 40px; display: flex; align-items: center; justify-content: center;">🗑️</button>
                             </div>
                         </div>
-                    `}).join('');
+                    `;
+                }).join('');
             }
 
             contentDiv.appendChild(grid);
@@ -2536,7 +2589,7 @@
                 state.player.activities.unshift({
                     id: 'act_' + Date.now(),
                     type: 'SHOP_PURCHASE',
-                    title: `Purchased ${item.title}`,
+                    title: `Purchased ${item.title} `,
                     timestamp: Date.now(),
                     details: {
                         gold: -item.price,
@@ -2547,7 +2600,7 @@
                 });
 
                 saveState();
-                showToast(`Purchased ${item.title}!`, 'success');
+                showToast(`Purchased ${item.title} !`, 'success');
                 renderStorePage(); // Refresh to update gold and buttons
             } else {
                 showToast('Not enough gold!', 'error');
@@ -2564,15 +2617,15 @@
                 modal.className = 'modal-backdrop';
                 modal.style.zIndex = '3000'; // Highest priority
                 modal.innerHTML = `
-                    <div class="modal-content" style="max-width: 400px; text-align: center;">
+                        < div class="modal-content" style = "max-width: 400px; text-align: center;" >
                         <h3 style="margin-bottom: 15px;">Confirm Action</h3>
                         <p id="confirmModalMessage" style="margin-bottom: 25px; color: var(--text-secondary);"></p>
                         <div style="display: flex; gap: 10px; justify-content: center;">
                             <button class="btn" style="background: var(--bg-secondary); color: var(--text-primary);" onclick="closeConfirmModal()">Cancel</button>
                             <button class="btn btn-primary" id="confirmModalBtn">Confirm</button>
                         </div>
-                    </div>
-                `;
+                    </div >
+                        `;
                 document.body.appendChild(modal);
             }
 
