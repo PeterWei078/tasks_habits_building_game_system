@@ -3738,8 +3738,12 @@
                     if (state.player.exp >= expNeeded) {
                         state.player.level++;
                         state.player.exp -= expNeeded;
-                        showToast("LEVEL UP!", `You are now Level ${state.player.level}!`);
-                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                        if (typeof showLevelUpOverlay === 'function') {
+                            showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
+                        } else {
+                            showToast("LEVEL UP!", `You are now Level ${state.player.level}!`);
+                            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                        }
                     }
 
                     // Log Activity
@@ -4628,7 +4632,11 @@
                             if (attr.exp >= attrExpNeeded) {
                                 attr.level++;
                                 attr.exp -= attrExpNeeded;
-                                showToast(`${attributesConfig[reward.attribute].label.split(' ')[0]} Level Up!`, `Now Level ${attr.level}`);
+                                if (typeof showLevelUpOverlay === 'function') {
+                                    showLevelUpOverlay(`${attributesConfig[reward.attribute].label.split(' ')[0]} Level Up!`, `Now Level ${attr.level}`);
+                                } else {
+                                    showToast(`${attributesConfig[reward.attribute].label.split(' ')[0]} Level Up!`, `Now Level ${attr.level}`);
+                                }
                             }
                         }
                     });
@@ -4695,11 +4703,15 @@
 
                 showToast("Quest Completed!", `+${task.rewardExp} EXP, +${task.rewardGold} Gold${levelUp ? ' (LEVEL UP!)' : ''}`);
                 if (levelUp) {
-                    confetti({
-                        particleCount: 150,
-                        spread: 80,
-                        origin: { y: 0.6 }
-                    });
+                    if (typeof showLevelUpOverlay === 'function') {
+                        showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
+                    } else {
+                        confetti({
+                            particleCount: 150,
+                            spread: 80,
+                            origin: { y: 0.6 }
+                        });
+                    }
                 }
 
                 // --- Repeating Tasks Generation Logic ---
