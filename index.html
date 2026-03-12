@@ -4209,7 +4209,7 @@
 
                 // Populate Subtasks
                 if (task.subtasks) {
-                    task.subtasks.forEach(st => addSubtaskInput(st.title, st.completed));
+                    task.subtasks.forEach(st => addSubtaskInput(st.title, st.completed, st.url));
                 }
 
                 // Attribute Rewards
@@ -4407,14 +4407,28 @@
             }
         }
 
-        function addSubtaskInput(value = '', completed = false) {
+        function addSubtaskInput(value = '', completed = false, url = '') {
             const container = document.getElementById('modalSubtasks');
             const div = document.createElement('div');
             div.className = 'subtask-item';
             div.innerHTML = `
-                <input type="checkbox" ${completed ? 'checked' : ''} style="width: 20px; height: 20px;">
-                <input type="text" placeholder="Subtask..." value="${value}" style="flex: 1; padding: 8px;">
-                <button onclick="this.parentElement.remove()" style="border:none; background:none; cursor:pointer;">✕</button>
+                <input type="checkbox" class="subtask-checkbox" ${completed ? 'checked' : ''} style="width: 20px; height: 20px; flex-shrink: 0;">
+                <input type="text" class="subtask-title" placeholder="Subtask..." value="${value}" style="flex: 1; padding: 8px; min-width: 0; border: 1px solid rgba(0,0,0,0.1); border-radius: 4px;">
+                <input type="hidden" class="subtask-url" value="${url || ''}">
+                <button type="button" onclick="
+                    const urlInput = this.parentElement.querySelector('.subtask-url');
+                    const newUrl = prompt('Enter / Edit URL for this subtask:', urlInput.value);
+                    if (newUrl !== null) { 
+                        urlInput.value = newUrl.trim(); 
+                        this.style.opacity = newUrl.trim() ? '1' : '0.4';
+                        this.title = newUrl.trim() ? 'Edit URL: ' + newUrl.trim() : 'Add URL';
+                    }
+                " style="border:none; background:none; cursor:pointer; font-size: 1.2rem; margin-left: 5px; opacity: ${url ? '1' : '0.4'}; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center;" title="${url ? 'Edit URL: ' + url : 'Add URL'}">🔗</button>
+                <button type="button" onclick="
+                    const urlVal = this.parentElement.querySelector('.subtask-url').value;
+                    if(urlVal) { window.open(urlVal, '_blank'); } else { showToast('URL Empty', 'Please add a URL using the 🔗 icon first.'); }
+                " style="border:none; background:rgba(0,0,0,0.05); cursor:pointer; font-size: 0.9rem; padding: 5px 8px; border-radius: 6px; transition: background 0.2s; margin: 0 5px; display: flex; align-items: center; justify-content: center;" title="Open URL in new window" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.05)'">↗</button>
+                <button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; cursor:pointer; font-size: 1.1rem; opacity: 0.7; display: flex; align-items: center; justify-content: center;" onmouseover="this.style.opacity='1'; this.style.color='#ff4d4f'" onmouseout="this.style.opacity='0.7'; this.style.color=''">✕</button>
             `;
             container.appendChild(div);
         }
@@ -4482,11 +4496,13 @@
                 // Subtasks
                 const subtaskDivs = document.querySelectorAll('#modalSubtasks .subtask-item');
                 const subtasks = Array.from(subtaskDivs).map(div => {
-                    const textInput = div.querySelector('input[type="text"]');
-                    const checkbox = div.querySelector('input[type="checkbox"]');
+                    const textInput = div.querySelector('.subtask-title') || div.querySelector('input[type="text"]');
+                    const urlInput = div.querySelector('.subtask-url');
+                    const checkbox = div.querySelector('.subtask-checkbox') || div.querySelector('input[type="checkbox"]');
                     return {
                         id: Date.now() + Math.random(),
                         title: textInput.value.trim(),
+                        url: urlInput ? urlInput.value.trim() : '',
                         completed: checkbox.checked
                     };
                 }).filter(st => st.title);
