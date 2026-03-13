@@ -2162,7 +2162,12 @@
                 return html + `<div style="text-align: center; opacity: 0.5; padding: 50px 0;">目前沒有設定開始與結束日期的未完成任務。</div>`;
             }
 
-            const dates = tlTasks.map(t => [new Date(t.startDate).getTime(), new Date(t.dueDate).getTime()]).flat();
+            const parseLocalDate = (dateStr) => {
+                const parts = dateStr.split('-');
+                return new Date(parts[0], parts[1] - 1, parts[2]); // local midnight
+            };
+
+            const dates = tlTasks.map(t => [parseLocalDate(t.startDate).getTime(), parseLocalDate(t.dueDate).getTime()]).flat();
             let minDate = new Date(Math.min(...dates));
             let maxDate = new Date(Math.max(...dates));
 
@@ -2210,15 +2215,30 @@
             }).join('')}
                         </div>
                         
+                        <!-- Today Indicator -->
+                        ${(() => {
+                    const now = new Date(); // Local time now
+
+                    if (now >= minDate && now <= maxDate) {
+                        // Calculate offset based on exact local time of day
+                        const exactOffset = ((now - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
+                        return `<div style="position: absolute; top: 0; bottom: 0; left: ${exactOffset}px; width: 2px; background: rgba(255, 99, 132, 0.8); z-index: 5; pointer-events: none; box-shadow: 0 0 5px rgba(255, 99, 132, 0.5);"></div>
+                                        <div style="position: absolute; top: 32px; left: ${exactOffset - 24}px; background: rgba(255, 99, 132, 0.9); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; z-index: 15; font-weight: bold; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Today</div>`;
+                    }
+                    return '';
+                })()}
+                        
                         <!-- Bars Container -->
                         <div style="position: relative; margin-top: 20px; display: flex; flex-direction: column; padding: 0 10px;">
             `;
 
-            tlTasks.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+            tlTasks.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
 
             tlTasks.forEach(task => {
-                let startT = new Date(task.startDate);
-                let endT = new Date(task.dueDate);
+                let startT = parseLocalDate(task.startDate);
+                let endT = parseLocalDate(task.dueDate);
+                // endT should cover the whole day (up to 23:59:59) for width calculation purposes
+                endT.setHours(23, 59, 59, 999);
 
                 if (startT < minDate) startT = new Date(minDate);
                 if (endT > maxDate) endT = new Date(maxDate);
