@@ -6848,7 +6848,7 @@
             // Initialize empty days
             let curr = new Date(startDate);
             while (curr <= endDate) {
-                data[curr.toLocaleDateString()] = { exp: 0, categories: new Set(), events: [] };
+                data[curr.toLocaleDateString()] = { exp: 0, count: 0, categories: new Set(), events: [] };
                 curr.setDate(curr.getDate() + 1);
             }
 
@@ -6862,6 +6862,7 @@
                         if (dayData) {
                             const details = act.details || {};
                             if (details.exp) dayData.exp += details.exp;
+                            if (act.type === 'TASK_COMPLETE' || act.action === 'Completed Task') dayData.count++;
 
                             // Format Event String for Tooltip
                             let eventStr = `• ${act.title}`;
@@ -7152,8 +7153,8 @@
 
                     // Tooltip Events
                     cell.onmouseover = (e) => {
-                        const count = dayData ? dayData.count : 0;
-                        const exp = dayData ? dayData.exp : 0;
+                        const count = dayData ? (dayData.count || 0) : 0;
+                        const exp = dayData ? (dayData.exp || 0) : 0;
                         tooltip.innerHTML = `<strong>${cellInfo.dateStr}</strong><br>${count} Tasks<br>${exp} EXP`;
                         tooltip.style.display = 'block';
                         tooltip.style.left = e.pageX + 10 + 'px';
