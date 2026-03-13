@@ -4648,7 +4648,7 @@
                         if (attr) {
                             attr.exp = (attr.exp || 0) + reward.exp;
                             // Attribute Level Up Logic
-                            const attrExpNeeded = attr.level * 100; // Formula: Level * 100
+                            const attrExpNeeded = 50 + (attr.level * 50); // Formula: 50 + Level * 50
                             if (attr.exp >= attrExpNeeded) {
                                 attr.level++;
                                 attr.exp -= attrExpNeeded;
@@ -5058,7 +5058,7 @@
                 // val is now { level, exp }, so map to level
                 const level = val.level || 1;
                 const exp = val.exp || 0;
-                const attrExpNeeded = level * 100;
+                const attrExpNeeded = 50 + (level * 50);
                 const attrExpPercent = Math.min(100, (exp / attrExpNeeded) * 100);
 
                 statsHtml += `
