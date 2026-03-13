@@ -2233,11 +2233,11 @@
                         barColor = primaryProject.color;
                     }
                 }
-                
+
                 let opacityStyle = '';
                 let titlePrefix = '';
                 let progressStyle = '';
-                
+
                 if (task.completed) {
                     opacityStyle = 'opacity: 0.4;';
                     titlePrefix = '✅ ';
@@ -2845,7 +2845,7 @@
             };
             state.player.activities.unshift(log);
             // Keep log size manageable
-            if (state.player.activities.length>50) state.player.activities.pop();
+            if (state.player.activities.length > 50) state.player.activities.pop();
         }
 
         function useItem(inventoryIndex) {
@@ -3063,7 +3063,7 @@
             container.innerHTML = data.map(d => {
                 const heightPercent = (d.value / maxVal) * 100;
                 const displayVal = d.value >= 60 ? (d.value / 60).toFixed(1) + 'h' : d.value + 'm';
-                const color = d.value>0 ? 'var(--accent-color)' : 'rgba(0,0,0,0.05)';
+                const color = d.value > 0 ? 'var(--accent-color)' : 'rgba(0,0,0,0.05)';
 
                 return `
                 <div style = "flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; group">
@@ -7121,8 +7121,8 @@
                     const dayData = cellInfo.data;
 
                     // Color Scale Logic
-                    if (dayData && dayData.exp >= 10) {
-                        const expTier = Math.floor(dayData.exp / 10);
+                    if (dayData && dayData.exp >= 5) {
+                        const expTier = Math.floor(dayData.exp / 5);
                         if (expTier >= 15) cell.classList.add('heat-purple-3');
                         else if (expTier === 14) cell.classList.add('heat-purple-2');
                         else if (expTier === 13) cell.classList.add('heat-purple-1');
