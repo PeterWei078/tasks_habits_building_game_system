@@ -2146,7 +2146,7 @@
         }
 
         function renderTimelineHTML() {
-            const tlTasks = state.tasks.filter(t => t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate) && !t.completed);
+            const tlTasks = state.tasks.filter(t => t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate));
 
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -2233,11 +2233,30 @@
                         barColor = primaryProject.color;
                     }
                 }
+                
+                let opacityStyle = '';
+                let titlePrefix = '';
+                let progressStyle = '';
+                
+                if (task.completed) {
+                    opacityStyle = 'opacity: 0.4;';
+                    titlePrefix = '✅ ';
+                    progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
+                } else if (task.subtasks && task.subtasks.length > 0) {
+                    const completedSubs = task.subtasks.filter(st => st.completed).length;
+                    const totalSubs = task.subtasks.length;
+                    const percent = Math.round((completedSubs / totalSubs) * 100);
+                    if (percent > 0) {
+                        progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: rgba(0,0,0,0.15);"></div>`;
+                        titlePrefix = `[${percent}%] `;
+                    }
+                }
 
                 timelineArea += `
                     <div style="position: relative; height: 32px; margin-bottom: 8px;">
-                        <div style="position: absolute; left: ${leftOffset}px; width: ${width}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s;" title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
-                            ${task.title}
+                        <div style="position: absolute; left: ${leftOffset}px; width: ${width}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
+                            ${progressStyle}
+                            <span style="position: relative; z-index: 1;">${titlePrefix}${task.title}</span>
                         </div>
                     </div>
                 `;
