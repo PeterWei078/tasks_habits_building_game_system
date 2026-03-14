@@ -3393,6 +3393,34 @@
         let isPatchMode = false;
 
         // --- Modal Logic : Projects ---
+        function selectProjectColor(color, element) {
+            document.getElementById('projColor').value = color;
+            document.getElementById('projColorDisplay').style.backgroundColor = color;
+
+            const swatches = document.querySelectorAll('#projColorPalette .color-swatch');
+            swatches.forEach(sw => {
+                sw.style.borderColor = 'transparent';
+                sw.style.transform = 'scale(1)';
+            });
+            if (element) {
+                element.style.borderColor = '#fff';
+                element.style.transform = 'scale(1.1)';
+            }
+        }
+
+        function updateProjectColorPaletteUI(colorVal) {
+            document.getElementById('projColorDisplay').style.backgroundColor = colorVal;
+            const swatches = document.querySelectorAll('#projColorPalette .color-swatch');
+            swatches.forEach(sw => {
+                sw.style.borderColor = 'transparent';
+                sw.style.transform = 'scale(1)';
+                if (sw.getAttribute('data-color').toUpperCase() === colorVal.toUpperCase()) {
+                    sw.style.borderColor = '#fff';
+                    sw.style.transform = 'scale(1.1)';
+                }
+            });
+        }
+
         function openProjectModal(projectId = null, isPatch = false) {
             try {
                 editingProjectId = projectId;
@@ -3430,8 +3458,9 @@
                                         <select id="projGroup"></select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Color</label>
-                                        <input type="color" id="projColor" value="#6B46C1" style="height: 40px; cursor: pointer;">
+                                        <label>Color <span id="projColorDisplay" style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#BDB2FF; margin-left:8px; vertical-align:middle; box-shadow: 0 0 2px rgba(0,0,0,0.5);"></span></label>
+                                        <input type="hidden" id="projColor" value="#BDB2FF">
+                                        <div id="projColorPalette" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;"></div>
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -3486,6 +3515,22 @@
                         </div>
                     `;
                     document.body.appendChild(modal);
+
+                    // Generate Color Palette Swatches inside
+                    const colorPaletteContainer = document.getElementById('projColorPalette');
+                    if (colorPaletteContainer && colorPaletteContainer.children.length === 0) {
+                        const pastelColors = [
+                            '#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF',
+                            '#9BF6FF', '#A0C4FF', '#BDB2FF', '#FFC6FF',
+                            '#F08080', '#F4978E', '#F8AD9D', '#FBC4AB',
+                            '#FFDAB9', '#E2ECE9', '#BEE1E6', '#DFE7FD'
+                        ];
+                        let swatchesHTML = '';
+                        pastelColors.forEach(c => {
+                            swatchesHTML += `<div class="color-swatch" data-color="${c}" style="width:28px; height:28px; border-radius:50%; background-color:${c}; cursor:pointer; border: 2px solid transparent; transition: transform 0.2s;" onclick="selectProjectColor('${c}', this)" onmouseover="this.style.transform='scale(1.1)'" onmouseout="if(document.getElementById('projColor').value !== '${c}') this.style.transform='scale(1)'"></div>`;
+                        });
+                        colorPaletteContainer.innerHTML = swatchesHTML;
+                    }
                 }
 
                 // --- Edit Archive Modal ---
@@ -3527,7 +3572,9 @@
                     titleEl.textContent = isPatchMode ? 'Edit Patch' : 'Edit Project';
                     document.getElementById('projName').value = project.name;
                     document.getElementById('projGroup').value = project.groupId || 'default';
-                    document.getElementById('projColor').value = project.color || '#6B46C1';
+                    const actCol = project.color || '#BDB2FF';
+                    document.getElementById('projColor').value = actCol;
+                    setTimeout(() => updateProjectColorPaletteUI(actCol), 10);
                     document.getElementById('projStart').value = project.startDate || '';
                     document.getElementById('projEnd').value = project.endDate || '';
                     document.getElementById('projRewardExp').value = project.rewardExp || 0;
@@ -3552,7 +3599,8 @@
                     titleEl.textContent = isPatchMode ? 'New Patch' : 'New Project';
                     document.getElementById('projName').value = '';
                     document.getElementById('projGroup').value = 'default';
-                    document.getElementById('projColor').value = '#6B46C1';
+                    document.getElementById('projColor').value = '#BDB2FF';
+                    setTimeout(() => updateProjectColorPaletteUI('#BDB2FF'), 10);
                     document.getElementById('projStart').value = '';
                     document.getElementById('projEnd').value = '';
                     document.getElementById('projRewardExp').value = 0;
