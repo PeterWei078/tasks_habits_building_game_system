@@ -2198,7 +2198,7 @@
             }
 
             let timelineArea = `
-                <div class="custom-timeline-scroll" style="overflow-x: scroll; flex: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); padding-bottom: 5px;">
+                <div class="custom-timeline-scroll" style="overflow-x: scroll; overflow-y: auto; max-height: 520px; flex: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); padding-bottom: 5px;">
                     <div style="width: ${totalWidth}px; min-height: 250px; position: relative;">
                         <!-- Headers -->
                         <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; background: rgba(30,30,40,0.95); z-index: 10; color: #fff;">
@@ -2223,7 +2223,7 @@
                         // Calculate offset based on exact local time of day
                         const exactOffset = ((now - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
                         return `<div style="position: absolute; top: 0; bottom: 0; left: ${exactOffset}px; width: 2px; background: rgba(255, 99, 132, 0.8); z-index: 5; pointer-events: none; box-shadow: 0 0 5px rgba(255, 99, 132, 0.5);"></div>
-                                        <div style="position: absolute; top: 32px; left: ${exactOffset - 24}px; background: rgba(255, 99, 132, 0.9); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; z-index: 15; font-weight: bold; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Today</div>`;
+                                         <div style="position: absolute; top: 32px; left: ${exactOffset - 24}px; background: rgba(255, 99, 132, 0.9); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; z-index: 15; font-weight: bold; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Today</div>`;
                     }
                     return '';
                 })()}
@@ -2234,52 +2234,76 @@
 
             tlTasks.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
 
+            // Packing algorithm: distribute tasks into rows to minimize vertical space and fill gaps
+            const rows = [];
             tlTasks.forEach(task => {
-                let startT = parseLocalDate(task.startDate);
-                let endT = parseLocalDate(task.dueDate);
-                // endT should cover the whole day (up to 23:59:59) for width calculation purposes
-                endT.setHours(23, 59, 59, 999);
+                const s = parseLocalDate(task.startDate).getTime();
+                const e = parseLocalDate(task.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
 
-                if (startT < minDate) startT = new Date(minDate);
-                if (endT > maxDate) endT = new Date(maxDate);
+                let rowIndex = rows.findIndex(row => {
+                    return row.every(rowTask => {
+                        const rs = parseLocalDate(rowTask.startDate).getTime();
+                        const re = parseLocalDate(rowTask.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+                        return Math.max(s, rs) > Math.min(e, re); // No overlap check
+                    });
+                });
 
-                const leftOffset = Math.max(0, (startT - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
-                const width = Math.max(dayWidth, ((endT - startT) / (1000 * 60 * 60 * 24) + 1) * dayWidth);
-
-                let barColor = 'rgba(74, 144, 226, 0.7)';
-                if (task.tags && task.tags.length > 0) {
-                    const primaryProject = state.player.tags.find(t => t.id === task.tags[0]);
-                    if (primaryProject && primaryProject.color) {
-                        barColor = primaryProject.color;
-                    }
+                if (rowIndex !== -1) {
+                    rows[rowIndex].push(task);
+                } else {
+                    rows.push([task]);
                 }
+            });
 
-                let opacityStyle = '';
-                let titlePrefix = '';
-                let progressStyle = '';
+            rows.forEach(row => {
+                timelineArea += `<div style="position: relative; height: 32px; margin-bottom: 8px;">`;
+                row.forEach(task => {
+                    let startT = parseLocalDate(task.startDate);
+                    let endT = parseLocalDate(task.dueDate);
+                    // endT should cover the whole day for width calculation
+                    endT.setHours(23, 59, 59, 999);
 
-                if (task.completed) {
-                    opacityStyle = 'opacity: 0.4;';
-                    titlePrefix = '✅ ';
-                    progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
-                } else if (task.subtasks && task.subtasks.length > 0) {
-                    const completedSubs = task.subtasks.filter(st => st.completed).length;
-                    const totalSubs = task.subtasks.length;
-                    const percent = Math.round((completedSubs / totalSubs) * 100);
-                    if (percent > 0) {
-                        progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: rgba(0,0,0,0.15);"></div>`;
-                        titlePrefix = `[${percent}%] `;
+                    if (startT < minDate) startT = new Date(minDate);
+                    if (endT > maxDate) endT = new Date(maxDate);
+
+                    const leftOffset = Math.max(0, (startT - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
+                    const width = Math.ceil((endT - startT) / (1000 * 60 * 60 * 24)) * dayWidth;
+
+                    let barColor = 'rgba(74, 144, 226, 0.7)';
+                    if (task.tags && task.tags.length > 0) {
+                        const primaryProject = state.player.tags.find(t => t.id === task.tags[0]);
+                        if (primaryProject && primaryProject.color) {
+                            barColor = primaryProject.color;
+                        }
                     }
-                }
 
-                timelineArea += `
-                    <div style="position: relative; height: 32px; margin-bottom: 8px;">
-                        <div style="position: absolute; left: ${leftOffset}px; width: ${width}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
+                    let opacityStyle = '';
+                    let titlePrefix = '';
+                    let progressStyle = '';
+
+                    if (task.completed) {
+                        opacityStyle = 'opacity: 0.4;';
+                        titlePrefix = '✅ ';
+                        progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
+                    } else if (task.subtasks && task.subtasks.length > 0) {
+                        const completedSubs = task.subtasks.filter(st => st.completed).length;
+                        const totalSubs = task.subtasks.length;
+                        const percent = Math.round((completedSubs / totalSubs) * 100);
+                        if (percent > 0) {
+                            progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: rgba(0,0,0,0.15);"></div>`;
+                            titlePrefix = `[${percent}%] `;
+                        }
+                    }
+
+                    // Use width - 2 to add a 2px gap between adjacent bars for better visual distinction
+                    timelineArea += `
+                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
                             ${progressStyle}
                             <span style="position: relative; z-index: 1;">${titlePrefix}${task.title}</span>
                         </div>
-                    </div>
-                `;
+                    `;
+                });
+                timelineArea += `</div>`;
             });
 
             timelineArea += `
