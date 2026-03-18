@@ -597,7 +597,7 @@
             grid-auto-rows: minmax(40px, auto);
         }
 
-        .heatmap-grid.view-quarter {
+        .heatmap-grid.view-wide {
             /* 7 days + 1 header row = 8 rows */
             grid-template-rows: repeat(8, 1fr);
             grid-auto-flow: column;
@@ -626,7 +626,7 @@
             text-decoration: none;
         }
 
-        .heatmap-grid.view-quarter .heatmap-cell {
+        .heatmap-grid.view-wide .heatmap-cell {
             padding-top: 14px;
             /* Space for date label */
             font-size: 0;
@@ -653,86 +653,56 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
-        /* Activity Heatmap 10-Tier Scale */
-        /* Base / 0-9 EXP (Gray) handled by default background-color */
+        /* Activity Heatmap Green Scale (0 - 100+ EXP) */
+        /* Base / 0 EXP (Gray) handled by default background-color */
 
-        /* Yellow (10 - 39 EXP) */
-        .heatmap-cell.heat-yellow-1 {
-            background-color: #ffeda1;
-            color: #594d00;
-        }
-
-        .heatmap-cell.heat-yellow-2 {
-            background-color: #f7d239;
-            color: #594d00;
-        }
-
-        .heatmap-cell.heat-yellow-3 {
-            background-color: #eab400;
-            color: #fff;
-        }
-
-        /* Green (40 - 69 EXP) */
         .heatmap-cell.heat-green-1 {
-            background-color: #bbf7d0;
-            color: #064e3b;
+            background-color: #dcfce7;
+            color: #166534;
         }
 
         .heatmap-cell.heat-green-2 {
-            background-color: #4ade80;
-            color: #fff;
+            background-color: #bbf7d0;
+            color: #166534;
         }
 
         .heatmap-cell.heat-green-3 {
+            background-color: #86efac;
+            color: #14532d;
+        }
+
+        .heatmap-cell.heat-green-4 {
+            background-color: #4ade80;
+            color: #14532d;
+        }
+
+        .heatmap-cell.heat-green-5 {
+            background-color: #22c55e;
+            color: #fff;
+        }
+
+        .heatmap-cell.heat-green-6 {
             background-color: #16a34a;
             color: #fff;
         }
 
-        /* Blue (70 - 99 EXP) */
-        .heatmap-cell.heat-blue-1 {
-            background-color: #bfdbfe;
-            color: #1e3a8a;
-        }
-
-        .heatmap-cell.heat-blue-2 {
-            background-color: #60a5fa;
+        .heatmap-cell.heat-green-7 {
+            background-color: #15803d;
             color: #fff;
         }
 
-        .heatmap-cell.heat-blue-3 {
-            background-color: #2563eb;
+        .heatmap-cell.heat-green-8 {
+            background-color: #166534;
             color: #fff;
         }
 
-        /* Red (100 - 129 EXP) */
-        .heatmap-cell.heat-red-1 {
-            background-color: #fecaca;
-            color: #7f1d1d;
-        }
-
-        .heatmap-cell.heat-red-2 {
-            background-color: #f87171;
+        .heatmap-cell.heat-green-9 {
+            background-color: #14532d;
             color: #fff;
         }
 
-        .heatmap-cell.heat-red-3 {
-            background-color: #dc2626;
-            color: #fff;
-        }
-
-        /* Purple (130+ EXP) */
-        .heatmap-cell.heat-purple-1 {
-            background-color: #e9d5ff;
-            color: #581c87;
-        }
-
-        .heatmap-cell.heat-purple-2 {
-            background-color: #c084fc;
-            color: #fff;
-        }
-
-        .heatmap-cell.heat-purple-3 {
-            background-color: #9333ea;
+        .heatmap-cell.heat-green-10 {
+            background-color: #052e16;
             color: #fff;
         }
 
@@ -753,7 +723,7 @@
             border-radius: 50%;
         }
 
-        .heatmap-grid.view-quarter .activity-dot {
+        .heatmap-grid.view-wide .activity-dot {
             width: 3px;
             height: 3px;
             bottom: 1px;
@@ -6975,7 +6945,7 @@
             return data;
         }
 
-        let activityHeatmapView = 'month'; // 'month' | 'quarter'
+        let activityHeatmapView = 'year'; // 'year' | 'quarter'
         let currentActivityDate = new Date();
 
         function renderActivityPage() {
@@ -7014,8 +6984,8 @@
             btnPrev.style.padding = '5px 10px';
             btnPrev.innerHTML = '←';
             btnPrev.onclick = () => {
-                if (activityHeatmapView === 'month') {
-                    currentActivityDate.setMonth(currentActivityDate.getMonth() - 1);
+                if (activityHeatmapView === 'year') {
+                    currentActivityDate.setFullYear(currentActivityDate.getFullYear() - 1);
                 } else {
                     currentActivityDate.setMonth(currentActivityDate.getMonth() - 3);
                 }
@@ -7032,8 +7002,8 @@
             btnNext.style.padding = '5px 10px';
             btnNext.innerHTML = '→';
             btnNext.onclick = () => {
-                if (activityHeatmapView === 'month') {
-                    currentActivityDate.setMonth(currentActivityDate.getMonth() + 1);
+                if (activityHeatmapView === 'year') {
+                    currentActivityDate.setFullYear(currentActivityDate.getFullYear() + 1);
                 } else {
                     currentActivityDate.setMonth(currentActivityDate.getMonth() + 3);
                 }
@@ -7049,17 +7019,17 @@
             toggleGroup.style.display = 'flex';
             toggleGroup.style.gap = '5px';
 
-            const btnMonth = document.createElement('button');
-            btnMonth.className = `filter-chip ${activityHeatmapView === 'month' ? 'active' : ''}`;
-            btnMonth.textContent = 'Month';
-            btnMonth.onclick = () => { activityHeatmapView = 'month'; currentActivityDate = new Date(); renderActivityPage(); };
+            const btnYear = document.createElement('button');
+            btnYear.className = `filter-chip ${activityHeatmapView === 'year' ? 'active' : ''}`;
+            btnYear.textContent = 'Year';
+            btnYear.onclick = () => { activityHeatmapView = 'year'; currentActivityDate = new Date(); renderActivityPage(); };
 
             const btnQuarter = document.createElement('button');
             btnQuarter.className = `filter-chip ${activityHeatmapView === 'quarter' ? 'active' : ''}`;
             btnQuarter.textContent = 'Quarter';
             btnQuarter.onclick = () => { activityHeatmapView = 'quarter'; currentActivityDate = new Date(); renderActivityPage(); };
 
-            toggleGroup.appendChild(btnMonth);
+            toggleGroup.appendChild(btnYear);
             toggleGroup.appendChild(btnQuarter);
 
             controlsGroup.appendChild(navGroup);
@@ -7070,55 +7040,73 @@
 
             const heatmapContainer = document.createElement('div');
             heatmapContainer.className = 'glass glass-card heatmap-container';
-            // Enable horizontal scroll for quarter view
-            if (activityHeatmapView === 'quarter') {
+            // Enable horizontal scroll for quarter/year view
+            if (activityHeatmapView === 'quarter' || activityHeatmapView === 'year') {
                 heatmapContainer.style.overflowX = 'auto';
             }
 
             const grid = document.createElement('div');
-            grid.className = `heatmap-grid ${activityHeatmapView === 'quarter' ? 'view-quarter' : ''}`;
+            grid.className = `heatmap-grid view-wide`;
 
             // --- Date Logic ---
             let startDate, endDate;
             let cellsToRender = [];
 
-            if (activityHeatmapView === 'month') {
-                // Month View: Just show the selected month strictly? Or last 35 days?
-                // User didn't specify for month, but for consistency let's show the full selected month + padding
+            if (activityHeatmapView === 'year') {
                 const year = currentActivityDate.getFullYear();
-                const month = currentActivityDate.getMonth();
+                
+                displayLabel.textContent = `${year}`;
 
-                displayLabel.textContent = currentActivityDate.toLocaleDateString('default', { month: 'short', year: 'numeric' });
+                startDate = new Date(year, 0, 1);
+                endDate = new Date(year, 11, 31); 
 
-                startDate = new Date(year, month, 1);
-                endDate = new Date(year, month + 1, 0); // Last day of month
-
-                // Align to Monday start
-                // JS getDay(): 0 = Sun, 1 = Mon ... 6 = Sat
-                // We want Mon=0, Sun=6.
-                // Formula: (day + 6) % 7
-                let startDay = (startDate.getDay() + 6) % 7;
-                startDate.setDate(startDate.getDate() - startDay); // Backtrack to Monday
-
-                // We'll just render 35 or 42 cells to fill the grid
-                const totalCells = 35;
-
-                // Set End Date for data fetching
-                const dataEndDate = new Date(startDate);
-                dataEndDate.setDate(startDate.getDate() + totalCells);
-
-                const aggregatedData = generateHeatmapData(startDate, dataEndDate);
+                const aggregatedData = generateHeatmapData(startDate, endDate);
 
                 let iterDate = new Date(startDate);
-                for (let i = 0; i < totalCells; i++) {
-                    const dateStr = iterDate.toLocaleDateString();
+                let startDayOfWeek = (iterDate.getDay() + 6) % 7; // Mon=0
+                iterDate.setDate(iterDate.getDate() - startDayOfWeek); // Backtrack to Monday
+
+                let weekCount = 1;
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                let lastMonthRendered = -1;
+
+                while (iterDate <= endDate || (iterDate.getDay() !== 1)) {
+                    if (weekCount > 55) break;
+
+                    let monthText = '';
+                    let midWeekDate = new Date(iterDate);
+                    midWeekDate.setDate(midWeekDate.getDate() + 3); // Approx Thursday of that week
+                    
+                    if (midWeekDate.getMonth() !== lastMonthRendered && midWeekDate.getFullYear() === year) {
+                        monthText = monthNames[midWeekDate.getMonth()];
+                        lastMonthRendered = midWeekDate.getMonth();
+                    }
+
                     cellsToRender.push({
-                        date: new Date(iterDate),
-                        dateStr: dateStr,
-                        data: aggregatedData[dateStr],
-                        isHeader: false
+                        isHeader: true,
+                        text: monthText
                     });
-                    iterDate.setDate(iterDate.getDate() + 1);
+
+                    for (let d = 0; d < 7; d++) {
+                        if (iterDate >= startDate && iterDate <= endDate) {
+                            const dateStr = iterDate.toLocaleDateString();
+                            cellsToRender.push({
+                                date: new Date(iterDate),
+                                dateStr: dateStr,
+                                data: aggregatedData[dateStr],
+                                isHeader: false,
+                                label: `${iterDate.getMonth() + 1}/${iterDate.getDate()}`
+                            });
+                        } else {
+                            cellsToRender.push({
+                                isHeader: false,
+                                isEmpty: true
+                            });
+                        }
+                        iterDate.setDate(iterDate.getDate() + 1);
+                    }
+                    weekCount++;
+                    if (iterDate > endDate && iterDate.getDay() === 1) break;
                 }
 
             } else {
@@ -7214,23 +7202,17 @@
                     const dayData = cellInfo.data;
 
                     // Color Scale Logic
-                    if (dayData && dayData.exp >= 5) {
-                        const expTier = Math.floor(dayData.exp / 5);
-                        if (expTier >= 15) cell.classList.add('heat-purple-3');
-                        else if (expTier === 14) cell.classList.add('heat-purple-2');
-                        else if (expTier === 13) cell.classList.add('heat-purple-1');
-                        else if (expTier === 12) cell.classList.add('heat-red-3');
-                        else if (expTier === 11) cell.classList.add('heat-red-2');
-                        else if (expTier === 10) cell.classList.add('heat-red-1');
-                        else if (expTier === 9) cell.classList.add('heat-blue-3');
-                        else if (expTier === 8) cell.classList.add('heat-blue-2');
-                        else if (expTier === 7) cell.classList.add('heat-blue-1');
-                        else if (expTier === 6) cell.classList.add('heat-green-3');
-                        else if (expTier === 5) cell.classList.add('heat-green-2');
-                        else if (expTier === 4) cell.classList.add('heat-green-1');
-                        else if (expTier === 3) cell.classList.add('heat-yellow-3');
-                        else if (expTier === 2) cell.classList.add('heat-yellow-2');
-                        else if (expTier === 1) cell.classList.add('heat-yellow-1');
+                    if (dayData && dayData.exp > 0) {
+                        if (dayData.exp >= 100) cell.classList.add('heat-green-10');
+                        else if (dayData.exp >= 90) cell.classList.add('heat-green-9');
+                        else if (dayData.exp >= 80) cell.classList.add('heat-green-8');
+                        else if (dayData.exp >= 70) cell.classList.add('heat-green-7');
+                        else if (dayData.exp >= 60) cell.classList.add('heat-green-6');
+                        else if (dayData.exp >= 50) cell.classList.add('heat-green-5');
+                        else if (dayData.exp >= 40) cell.classList.add('heat-green-4');
+                        else if (dayData.exp >= 30) cell.classList.add('heat-green-3');
+                        else if (dayData.exp >= 20) cell.classList.add('heat-green-2');
+                        else cell.classList.add('heat-green-1');
                     }
 
                     // Date Label (Top-Left)
