@@ -4998,27 +4998,37 @@
 
                 // --- Repeating Tasks Generation Logic ---
                 if (task.repeat && task.repeat !== 'none' && !task.spawnedNext) {
-                    // Determine Next Due Date
-                    let nextDate = new Date();
+                    // Determine Next Dates
+                    let nextDueDate = new Date();
                     if (task.dueDate) {
-                        // Use existing due date as base if available to maintain cadence
-                        nextDate = new Date(task.dueDate);
+                        nextDueDate = new Date(task.dueDate);
+                    }
+                    
+                    let nextStartDate = null;
+                    if (task.startDate) {
+                        nextStartDate = new Date(task.startDate);
                     }
 
                     if (task.repeat === 'daily') {
-                        nextDate.setDate(nextDate.getDate() + 1);
+                        nextDueDate.setDate(nextDueDate.getDate() + 1);
+                        if (nextStartDate) nextStartDate.setDate(nextStartDate.getDate() + 1);
                     } else if (task.repeat === 'weekly') {
-                        nextDate.setDate(nextDate.getDate() + 7);
+                        nextDueDate.setDate(nextDueDate.getDate() + 7);
+                        if (nextStartDate) nextStartDate.setDate(nextStartDate.getDate() + 7);
                     }
 
-                    const nextDateStr = nextDate.toISOString().split('T')[0];
+                    const nextDueDateStr = nextDueDate.toISOString().split('T')[0];
+                    const nextStartDateStr = nextStartDate ? nextStartDate.toISOString().split('T')[0] : null;
 
                     // Clone the task
                     const clonedTask = JSON.parse(JSON.stringify(task));
                     clonedTask.id = Date.now().toString() + Math.random().toString().substring(2, 5); // unique ID
                     clonedTask.completed = false;
                     clonedTask.spawnedNext = false;
-                    clonedTask.dueDate = nextDateStr;
+                    clonedTask.dueDate = nextDueDateStr;
+                    if (nextStartDateStr) {
+                        clonedTask.startDate = nextStartDateStr;
+                    }
                     clonedTask.timeSpent = 0; // reset tracked time
 
                     if (clonedTask.subtasks) {
@@ -5032,7 +5042,7 @@
                     state.tasks.push(clonedTask);
 
                     setTimeout(() => {
-                        showToast("Quest Renewed", `A new repeating instance of "${task.title}" has been added for ${nextDateStr}.`);
+                        showToast("Quest Renewed", `A new repeating instance of "${task.title}" has been added for ${nextDueDateStr}.`);
                     }, 1000); // delay slight to not overlap with completion toast
                 }
 
