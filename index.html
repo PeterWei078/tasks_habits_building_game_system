@@ -1271,6 +1271,13 @@
                             <option value="weekly">Weekly</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Timeline Color</label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="color" id="modalColor" style="width: 40px; height: 35px; border: none; padding: 0; background: transparent; cursor: pointer;" value="#4A90E2">
+                            <span style="font-size: 0.8rem; color: #666; font-style: italic;">(For uncategorized tasks)</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -2249,7 +2256,7 @@
                     const leftOffset = Math.max(0, (startT - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
                     const width = Math.ceil((endT - startT) / (1000 * 60 * 60 * 24)) * dayWidth;
 
-                    let barColor = 'rgba(74, 144, 226, 0.7)';
+                    let barColor = task.color ? task.color : 'rgba(74, 144, 226, 0.7)';
                     if (task.tags && task.tags.length > 0) {
                         const primaryProject = state.player.tags.find(t => t.id === task.tags[0]);
                         if (primaryProject && primaryProject.color) {
@@ -4487,6 +4494,7 @@
                 document.getElementById('modalRepeat').value = task.repeat || 'none';
                 document.getElementById('modalStartDate').value = task.startDate || '';
                 document.getElementById('modalDueDate').value = task.dueDate || '';
+                document.getElementById('modalColor').value = task.color || '#4A90E2';
                 document.getElementById('modalExp').value = task.rewardExp || 25;
                 document.getElementById('modalGold').value = task.rewardGold || 10;
                 document.getElementById('modalTimeSpent').value = Math.round((task.timeSpent || 0) / 60);
@@ -4509,6 +4517,7 @@
                 document.getElementById('modalRepeat').value = 'none';
                 document.getElementById('modalStartDate').value = '';
                 document.getElementById('modalDueDate').value = '';
+                document.getElementById('modalColor').value = '#4A90E2';
                 document.getElementById('modalExp').value = 25;
                 document.getElementById('modalGold').value = 10;
                 document.getElementById('modalTimeSpent').value = 0;
@@ -4712,6 +4721,7 @@
                 const repeat = document.getElementById('modalRepeat').value;
                 const startDate = document.getElementById('modalStartDate').value;
                 const dueDate = document.getElementById('modalDueDate').value;
+                const color = document.getElementById('modalColor').value;
 
                 // Gather Attribute Rewards
                 const attrRewardsList = document.getElementById('modalAttributeRewardsList');
@@ -4797,7 +4807,7 @@
                             ...state.tasks[taskIndex],
                             title, description: desc, image: img, photo: photoData,
                             attribute: primaryAttribute, attributeRewards, skillRewards,
-                            groupId: group, tags, subtasks, repeat, startDate, dueDate, rewardExp: exp, rewardGold: gold,
+                            groupId: group, tags, subtasks, repeat, startDate, dueDate, color: color, rewardExp: exp, rewardGold: gold,
                             timeSpent: timeSpentSec // Update time
                         };
                         showToast('Quest Updated', `Changes saved: ${title}`);
@@ -4821,6 +4831,7 @@
                         repeat: repeat,
                         startDate: startDate,
                         dueDate: dueDate,
+                        color: color,
                         rewardExp: exp,
                         rewardGold: gold,
                         timeSpent: timeSpentSec, // Set time
