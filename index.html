@@ -2054,18 +2054,18 @@
                 <button onclick="openPageInfoModal('focus', '專注 (Focus)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
             `;
 
-            // Split Layout
+            // Layout Stack
             const focusLayout = document.createElement('div');
-            focusLayout.style.display = 'grid';
-            focusLayout.style.gridTemplateColumns = '300px 1fr';
+            focusLayout.style.display = 'flex';
+            focusLayout.style.flexDirection = 'column';
             focusLayout.style.gap = '20px';
-            focusLayout.style.alignItems = 'start';
 
-            // Left Col: Task & Timer
+            // Bottom Row: Task & Timer
             const leftCol = document.createElement('div');
-            leftCol.style.display = 'flex';
-            leftCol.style.flexDirection = 'column';
+            leftCol.style.display = 'grid';
+            leftCol.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
             leftCol.style.gap = '20px';
+            leftCol.style.alignItems = 'start';
 
             // Task Selector
             const taskSelector = document.createElement('div');
@@ -2116,15 +2116,15 @@
             leftCol.appendChild(taskSelector);
             leftCol.appendChild(timerCard);
 
-            // Right Col: Timeline
+            // Top Row: Timeline
             const rightCol = document.createElement('div');
             rightCol.className = 'glass glass-card';
             rightCol.style.padding = '20px';
             rightCol.style.overflowX = 'hidden';
             rightCol.innerHTML = renderTimelineHTML();
 
-            focusLayout.appendChild(leftCol);
-            focusLayout.appendChild(rightCol);
+            focusLayout.appendChild(rightCol); // Timeline on top
+            focusLayout.appendChild(leftCol); // Timer on bottom
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(focusLayout);
