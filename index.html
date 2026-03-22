@@ -2045,9 +2045,11 @@
 
         function timelineDragStart(e, taskId, dayWidth) {
             window.isTimelineDragging = true;
+            const container = e.target.closest('.custom-timeline-scroll');
             e.dataTransfer.setData('text/plain', JSON.stringify({
                 taskId: taskId,
                 startX: e.clientX,
+                startScroll: container ? container.scrollLeft : 0,
                 dayWidth: dayWidth
             }));
             e.dataTransfer.effectAllowed = 'move';
@@ -2063,7 +2065,15 @@
                 const dataStr = e.dataTransfer.getData('text/plain');
                 if (!dataStr) return;
                 const data = JSON.parse(dataStr);
-                const deltaX = e.clientX - data.startX;
+                
+                const container = e.target.closest('.custom-timeline-scroll');
+                const endScroll = container ? container.scrollLeft : 0;
+                
+                // Account for mouse movement on screen PLUS any horizontal scroll container offset
+                const currentAbsX = e.clientX + endScroll;
+                const startAbsX = data.startX + data.startScroll;
+                
+                const deltaX = currentAbsX - startAbsX;
                 const daysToShift = Math.round(deltaX / data.dayWidth);
                 
                 if (daysToShift !== 0) {
@@ -2238,7 +2248,7 @@
             }
 
             let timelineArea = `
-                <div class="custom-timeline-scroll" style="overflow-x: scroll; overflow-y: auto; max-height: 520px; flex: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); padding-bottom: 5px;" ondragover="event.preventDefault();" ondrop="timelineDrop(event)">
+                <div class="custom-timeline-scroll" style="overflow-x: scroll; overflow-y: auto; max-height: 520px; flex: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); padding-bottom: 5px;" ondragenter="event.preventDefault();" ondragover="event.preventDefault();" ondrop="timelineDrop(event)">
                     <div style="width: ${totalWidth}px; min-height: 250px; position: relative;">
                         <!-- Headers -->
                         <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; background: rgba(30,30,40,0.95); z-index: 10; color: #fff;">
@@ -2283,7 +2293,8 @@
                 let rowIndex = rows.findIndex(row => {
                     return row.every(rowTask => {
                         const rs = parseLocalDate(rowTask.startDate).getTime();
-                        const re = parseLocalDate(rowTask.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+                        // Add 1 extra day (24 * 60 * 60 * 1000 * 2) so minimum gap between tasks is enforced
+                        const re = parseLocalDate(rowTask.dueDate).getTime() + (24 * 60 * 60 * 1000 * 2 - 1);
                         return Math.max(s, rs) > Math.min(e, re); // No overlap check
                     });
                 });
@@ -2337,9 +2348,9 @@
 
                     // Use width - 2 to add a 2px gap between adjacent bars for better visual distinction
                     timelineArea += `
-                        <div draggable="true" ondragstart="timelineDragStart(event, '${task.id}', ${dayWidth})" ondragend="timelineDragEnd(event)" style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: move; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px) scale(1.02)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.filter='brightness(1)';">
-                            ${progressStyle}
-                            <span style="position: relative; z-index: 1;">${titlePrefix}${task.title}</span>
+                        <div draggable="true" ondragstart="timelineDragStart(event, '${task.id}', ${dayWidth})" ondragend="timelineDragEnd(event)" style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: move; user-select: none; -webkit-user-select: none; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title.replace(/"/g, '&quot;')} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px) scale(1.02)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.filter='brightness(1)';">
+                            ${progressStyle && progressStyle.length > 0 ? progressStyle.replace('div style="', 'div style="pointer-events: none; ') : ''}
+                            <span style="position: relative; z-index: 1; pointer-events: none;">${titlePrefix}${task.title}</span>
                         </div>
                     `;
                 });
