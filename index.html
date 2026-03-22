@@ -2041,69 +2041,6 @@
         let selectedFocusTaskId = null;
 
         let focusTimelineScale = 'month';
-        window.isTimelineDragging = false;
-
-        function timelineDragStart(e, taskId, dayWidth) {
-            window.isTimelineDragging = true;
-            const container = e.target.closest('.custom-timeline-scroll');
-            e.dataTransfer.setData('text/plain', JSON.stringify({
-                taskId: taskId,
-                startX: e.clientX,
-                startScroll: container ? container.scrollLeft : 0,
-                dayWidth: dayWidth
-            }));
-            e.dataTransfer.effectAllowed = 'move';
-        }
-
-        function timelineDragEnd(e) {
-            setTimeout(() => { window.isTimelineDragging = false; }, 100);
-        }
-
-        function timelineDrop(e) {
-            e.preventDefault();
-            try {
-                const dataStr = e.dataTransfer.getData('text/plain');
-                if (!dataStr) return;
-                const data = JSON.parse(dataStr);
-                
-                const container = e.target.closest('.custom-timeline-scroll');
-                const endScroll = container ? container.scrollLeft : 0;
-                
-                // Account for mouse movement on screen PLUS any horizontal scroll container offset
-                const currentAbsX = e.clientX + endScroll;
-                const startAbsX = data.startX + data.startScroll;
-                
-                const deltaX = currentAbsX - startAbsX;
-                const daysToShift = Math.round(deltaX / data.dayWidth);
-                
-                if (daysToShift !== 0) {
-                    const task = state.tasks.find(t => t.id === data.taskId);
-                    if (task && task.startDate) {
-                        const parseDate = (dStr) => {
-                            const p = dStr.split('-');
-                            return new Date(p[0], p[1] - 1, p[2]);
-                        };
-                        const formatDate = (dateObj) => {
-                            return dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
-                        };
-                        
-                        let start = parseDate(task.startDate);
-                        start.setDate(start.getDate() + daysToShift);
-                        task.startDate = formatDate(start);
-                        
-                        if (task.dueDate) {
-                            let due = parseDate(task.dueDate);
-                            due.setDate(due.getDate() + daysToShift);
-                            task.dueDate = formatDate(due);
-                        }
-                        
-                        saveState();
-                        render(); // Re-render everything with new dates
-                        showToast('Timeline Updated', `Moved task "${task.title}" by ${daysToShift} day(s).`);
-                    }
-                }
-            } catch(e) { console.error('Timeline Drag Error:', e); }
-        }
 
         function renderFocusPage() {
             contentDiv.innerHTML = ''; // Prevent duplication
@@ -2248,7 +2185,7 @@
             }
 
             let timelineArea = `
-                <div class="custom-timeline-scroll" style="overflow-x: scroll; overflow-y: auto; max-height: 520px; flex: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); padding-bottom: 5px;" ondragenter="event.preventDefault();" ondragover="event.preventDefault();" ondrop="timelineDrop(event)">
+                <div class="custom-timeline-scroll" style="overflow-x: scroll; overflow-y: auto; max-height: 520px; flex: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); padding-bottom: 5px;">
                     <div style="width: ${totalWidth}px; min-height: 250px; position: relative;">
                         <!-- Headers -->
                         <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; background: rgba(30,30,40,0.95); z-index: 10; color: #fff;">
@@ -2293,8 +2230,7 @@
                 let rowIndex = rows.findIndex(row => {
                     return row.every(rowTask => {
                         const rs = parseLocalDate(rowTask.startDate).getTime();
-                        // Add 1 extra day (24 * 60 * 60 * 1000 * 2) so minimum gap between tasks is enforced
-                        const re = parseLocalDate(rowTask.dueDate).getTime() + (24 * 60 * 60 * 1000 * 2 - 1);
+                        const re = parseLocalDate(rowTask.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
                         return Math.max(s, rs) > Math.min(e, re); // No overlap check
                     });
                 });
@@ -2348,9 +2284,9 @@
 
                     // Use width - 2 to add a 2px gap between adjacent bars for better visual distinction
                     timelineArea += `
-                        <div draggable="true" ondragstart="timelineDragStart(event, '${task.id}', ${dayWidth})" ondragend="timelineDragEnd(event)" style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: move; user-select: none; -webkit-user-select: none; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title.replace(/"/g, '&quot;')} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px) scale(1.02)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.filter='brightness(1)';">
-                            ${progressStyle && progressStyle.length > 0 ? progressStyle.replace('div style="', 'div style="pointer-events: none; ') : ''}
-                            <span style="position: relative; z-index: 1; pointer-events: none;">${titlePrefix}${task.title}</span>
+                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
+                            ${progressStyle}
+                            <span style="position: relative; z-index: 1;">${titlePrefix}${task.title}</span>
                         </div>
                     `;
                 });
@@ -4471,7 +4407,6 @@
 
         // --- Modal Logic ---
         function openTaskModal(taskId = null, prefillTag = null) {
-            if (window.isTimelineDragging) return;
             const modal = document.getElementById('taskModal');
             const titleEl = modal.querySelector('.modal-header h2');
             // FIXED selector: button is nested in form-section, not direct child
