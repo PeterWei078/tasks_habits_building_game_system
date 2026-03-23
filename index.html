@@ -2142,6 +2142,16 @@
             contentDiv.appendChild(focusLayout);
 
             updateTimerProgress();
+
+            // Auto-scroll timeline to center the "Today" line
+            setTimeout(() => {
+                const todayLine = document.getElementById('today-timeline-line');
+                const scrollContainer = focusLayout.querySelector('.custom-timeline-scroll');
+                if (todayLine && scrollContainer) {
+                    const targetScrollLeft = todayLine.offsetLeft - (scrollContainer.clientWidth / 2);
+                    scrollContainer.scrollLeft = targetScrollLeft;
+                }
+            }, 0);
         }
 
         function renderTimelineHTML() {
@@ -2221,7 +2231,7 @@
                     if (now >= minDate && now <= maxDate) {
                         // Calculate offset based on exact local time of day
                         const exactOffset = ((now - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
-                        return `<div style="position: absolute; top: 0; bottom: 0; left: ${exactOffset}px; width: 2px; background: rgba(255, 99, 132, 0.8); z-index: 5; pointer-events: none; box-shadow: 0 0 5px rgba(255, 99, 132, 0.5);"></div>
+                        return `<div id="today-timeline-line" style="position: absolute; top: 0; bottom: 0; left: ${exactOffset}px; width: 2px; background: rgba(255, 99, 132, 0.8); z-index: 5; pointer-events: none; box-shadow: 0 0 5px rgba(255, 99, 132, 0.5);"></div>
                                          <div style="position: absolute; top: 32px; left: ${exactOffset - 24}px; background: rgba(255, 99, 132, 0.9); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; z-index: 15; font-weight: bold; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Today</div>`;
                     }
                     return '';
@@ -2234,7 +2244,7 @@
             tlTasks.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
 
             // Packing algorithm: distribute tasks into rows to minimize vertical space and fill gaps
-            const rows = [];
+            let rows = [];
             tlTasks.forEach(task => {
                 const s = parseLocalDate(task.startDate).getTime();
                 const e = parseLocalDate(task.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
@@ -2253,6 +2263,9 @@
                     rows.push([task]);
                 }
             });
+
+            // Limit to at most 11 rows to prevent vertical scrolling
+            rows = rows.slice(0, 11);
 
             rows.forEach(row => {
                 timelineArea += `<div style="position: relative; height: 32px; margin-bottom: 8px;">`;
