@@ -4262,36 +4262,74 @@
             });
 
 
-            // Add Task Button (Replaces inline form)
-            // Ensure state configuration exists
-            if (typeof state.hideCompletedTasks === 'undefined') state.hideCompletedTasks = false;
+            // Add Task Button & Daily Task Layout (Split View)
+            const topLayout = document.createElement('div');
+            topLayout.style.display = 'flex';
+            topLayout.style.gap = '20px';
+            topLayout.style.marginBottom = '20px';
 
+            // Left side: Daily Task
+            const dailyTaskContainer = document.createElement('div');
+            dailyTaskContainer.className = 'glass glass-card';
+            dailyTaskContainer.style.flex = '1';
+            dailyTaskContainer.style.border = '2px solid rgba(255, 107, 107, 0.6)'; // Highlight border
+            dailyTaskContainer.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)';
+            dailyTaskContainer.style.boxShadow = '0 0 15px rgba(255, 107, 107, 0.2)';
+            dailyTaskContainer.style.position = 'relative';
+            dailyTaskContainer.style.display = 'flex';
+            dailyTaskContainer.style.flexDirection = 'column';
+            dailyTaskContainer.style.justifyContent = 'center';
+            dailyTaskContainer.style.padding = '15px';
+            dailyTaskContainer.style.minHeight = '120px';
+
+            const dailyTaskLabel = document.createElement('div');
+            dailyTaskLabel.style.position = 'absolute';
+            dailyTaskLabel.style.top = '-12px';
+            dailyTaskLabel.style.left = '15px';
+            dailyTaskLabel.style.background = '#FF6B6B';
+            dailyTaskLabel.style.color = '#FFF';
+            dailyTaskLabel.style.padding = '2px 10px';
+            dailyTaskLabel.style.borderRadius = '12px';
+            dailyTaskLabel.style.fontSize = '0.75rem';
+            dailyTaskLabel.style.fontWeight = 'bold';
+            dailyTaskLabel.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+            dailyTaskLabel.textContent = 'Daily Focus';
+            dailyTaskContainer.appendChild(dailyTaskLabel);
+
+            // Right side: Action Card
             const actionCard = document.createElement('div');
             actionCard.className = 'glass glass-card';
+            actionCard.style.flex = '1';
             actionCard.style.display = 'flex';
-            actionCard.style.justifyContent = 'space-between';
-            actionCard.style.alignItems = 'center';
+            actionCard.style.flexDirection = 'column';
+            actionCard.style.justifyContent = 'center';
+            actionCard.style.gap = '15px';
             actionCard.innerHTML = `
-                <div>
-                    <h3 style="margin: 0;">Create New Task</h3>
-                    <p style="opacity: 0.6; font-size: 0.9rem;">Define your goals and rewards</p>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.1rem;">Create New Task</h3>
+                        <p style="opacity: 0.6; font-size: 0.8rem; margin-top: 2px;">Define your goals and rewards</p>
+                    </div>
                 </div>
-                <div style="flex: 1; margin: 0 20px; text-align: center; color: var(--accent-color); font-weight: 600; font-size: 0.9rem; background: rgba(107, 70, 193, 0.1); padding: 8px 15px; border-radius: 8px; border: 1px dashed var(--accent-color);">
-                    💡 完成Task時建議到“<span style="text-decoration: underline; cursor: pointer;" onclick="currentTab = 'reflections'; render();">感想(Reflections)</span>”頁面填寫感想。
+                <div style="color: var(--accent-color); font-weight: 600; font-size: 0.8rem; background: rgba(107, 70, 193, 0.1); padding: 5px 10px; border-radius: 8px; border: 1px dashed var(--accent-color); text-align: center;">
+                    💡 完成Task時建議到<span style="text-decoration: underline; cursor: pointer;" onclick="currentTab = 'reflections'; render();">感想區</span>填寫。
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem; margin-right: 10px;">
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.8rem; margin-right: auto;">
                         <input type="checkbox" ${state.hideCompletedTasks ? 'checked' : ''} onchange="toggleHideCompletedTasks(this.checked)" style="width: auto;">
-                        隱藏已完成 (Hide Completed)
+                        隱藏已完成
                     </label>
-                    <select id="taskSortSelect" style="padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: inherit; cursor: pointer;" onchange="currentTaskSort = this.value; render();">
-                        <option value="default" ${currentTaskSort === 'default' ? 'selected' : ''} style="color: black;">預設 (A-Z)</option>
-                        <option value="dueDate" ${currentTaskSort === 'dueDate' ? 'selected' : ''} style="color: black;">截止日期 (Due Date)</option>
+                    <select id="taskSortSelect" style="padding: 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: inherit; cursor: pointer; font-size: 0.8rem;" onchange="currentTaskSort = this.value; render();">
+                        <option value="default" ${currentTaskSort === 'default' ? 'selected' : ''} style="color: black;">預設排序</option>
+                        <option value="dueDate" ${currentTaskSort === 'dueDate' ? 'selected' : ''} style="color: black;">依截止日</option>
                     </select>
-                    <button class="btn" onclick="openManagementModal()" style="background: rgba(255,255,255,0.5);">⚙️ Manage Lists</button>
-                    <button class="btn btn-primary" onclick="openTaskModal()">+ New Task</button>
+                    <button class="btn" onclick="openManagementModal()" style="background: rgba(255,255,255,0.5); font-size: 0.8rem; padding: 4px 8px;">⚙️ Manage</button>
+                    <button class="btn btn-primary" onclick="openTaskModal()" style="font-size: 0.8rem; padding: 4px 10px;">+ New</button>
                 </div>
             `;
+
+            topLayout.appendChild(dailyTaskContainer);
+            topLayout.appendChild(actionCard);
 
             const listCardHeader = document.createElement('div');
             listCardHeader.style.display = 'flex';
@@ -4315,49 +4353,17 @@
             contentDiv.appendChild(title);
             contentDiv.appendChild(groupFilterContainer);
             contentDiv.appendChild(tagFilterContainer);
-            contentDiv.appendChild(actionCard);
+            contentDiv.appendChild(topLayout);
             contentDiv.appendChild(listCard);
 
-            // Filter Logic
-            const filteredTasks = state.tasks.filter(t => {
-                if (state.hideCompletedTasks && t.completed) return false;
-                const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
-
-                let tagMatch = true;
-                if (currentTagFilter === 'uncategorized') {
-                    tagMatch = !t.tags || t.tags.length === 0;
-                } else if (currentTagFilter) {
-                    tagMatch = t.tags && t.tags.includes(currentTagFilter);
-                }
-
-                return groupMatch && tagMatch;
-            });
-
-            // Sort Logic
-            if (currentTaskSort === 'dueDate') {
-                filteredTasks.sort((a, b) => {
-                    // Put tasks with no due date at the end
-                    if (!a.dueDate && !b.dueDate) return a.title.localeCompare(b.title);
-                    if (!a.dueDate) return 1;
-                    if (!b.dueDate) return -1;
-                    // Sort by date ascending, then title
-                    if (a.dueDate === b.dueDate) return a.title.localeCompare(b.title);
-                    return new Date(a.dueDate) - new Date(b.dueDate);
-                });
-            } else {
-                // Default: Sort Alphabetically
-                filteredTasks.sort((a, b) => a.title.localeCompare(b.title));
-            }
-
-            if (filteredTasks.length === 0) {
-                listContainer.innerHTML = `<div style="text-align:center; opacity:0.6; padding: 20px;">此分組或標籤下暫無任務。</div>`;
-                return;
-            }
-
-            filteredTasks.forEach(task => {
+            // Function to generate Task DOM element
+            function createTaskElement(task) {
                 const item = document.createElement('div');
                 item.className = 'task-item';
-                const attrConfig = attributesConfig[task.attribute];
+                // Adjust margin/padding inside the daily task container to look good, or just use standard
+                item.style.marginBottom = '0';
+                
+                const attrConfig = attributesConfig[task.attribute] || { badgeClass: '', label: 'Unknown' };
 
                 // Render Tags
                 const tagsHtml = task.tags ? task.tags.map(tagId => {
@@ -4411,11 +4417,11 @@
                             ${dueDateHtml}
                             ${tagsHtml}
                             <div style="font-size: 0.8rem; opacity: 0.7;">
-                                Rewards: EXP +${task.rewardExp}, Gold +${task.rewardGold}
+                                Rewards: EXP +${task.rewardExp || 0}, Gold +${task.rewardGold || 0}
                             </div>
                             <div class="badge-container" style="display: flex; gap: 4px; flex-wrap: wrap; margin-left: 5px;">
                                  ${(task.attributeRewards || []).map(r => `
-                                     <span class="badge ${attributesConfig[r.attribute].badgeClass}" style="font-size: 0.7rem;">${attributesConfig[r.attribute].label.split(' ')[1]} +${r.exp}</span>
+                                     <span class="badge ${(attributesConfig[r.attribute] && attributesConfig[r.attribute].badgeClass) ? attributesConfig[r.attribute].badgeClass : ''}" style="font-size: 0.7rem;">${(attributesConfig[r.attribute] && attributesConfig[r.attribute].label) ? attributesConfig[r.attribute].label.split(' ')[1] : ''} +${r.exp}</span>
                                  `).join('')}
                                  ${(task.skillRewards || []).map(r => `
                                      <span class="badge" style="font-size: 0.7rem; background: var(--accent-color);">${r.icon} ${r.name} +${r.exp}</span>
@@ -4424,9 +4430,62 @@
                         </div>
                     </div>
                 </div>
-                ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5;" onclick="deleteTask('${task.id}')">🗑️</button>`}
+                ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5; margin-left:10px;" onclick="deleteTask('${task.id}')">🗑️</button>`}
             `;
-                listContainer.appendChild(item);
+                return item;
+            }
+
+            // Identify the Daily Task
+            const dailyTaskName = "🔥當日小任務";
+            const dailyTask = state.tasks.find(t => t.title.includes(dailyTaskName));
+
+            if (dailyTask) {
+                dailyTaskContainer.appendChild(createTaskElement(dailyTask));
+            } else {
+                dailyTaskContainer.innerHTML += `<div style="text-align:center; opacity:0.6; padding: 20px;">尚無設定 ${dailyTaskName}。<br>您可以建立一個任務標題包含 "${dailyTaskName}" 的新任務，便會固定顯示於此。</div>`;
+            }
+
+            // Filter Logic
+            const filteredTasks = state.tasks.filter(t => {
+                // Filter out the daily task from the general list so it's not duplicated
+                if (t.title.includes(dailyTaskName)) return false;
+                
+                if (state.hideCompletedTasks && t.completed) return false;
+                const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
+
+                let tagMatch = true;
+                if (currentTagFilter === 'uncategorized') {
+                    tagMatch = !t.tags || t.tags.length === 0;
+                } else if (currentTagFilter) {
+                    tagMatch = t.tags && t.tags.includes(currentTagFilter);
+                }
+
+                return groupMatch && tagMatch;
+            });
+
+            // Sort Logic
+            if (currentTaskSort === 'dueDate') {
+                filteredTasks.sort((a, b) => {
+                    // Put tasks with no due date at the end
+                    if (!a.dueDate && !b.dueDate) return a.title.localeCompare(b.title);
+                    if (!a.dueDate) return 1;
+                    if (!b.dueDate) return -1;
+                    // Sort by date ascending, then title
+                    if (a.dueDate === b.dueDate) return a.title.localeCompare(b.title);
+                    return new Date(a.dueDate) - new Date(b.dueDate);
+                });
+            } else {
+                // Default: Sort Alphabetically
+                filteredTasks.sort((a, b) => a.title.localeCompare(b.title));
+            }
+
+            if (filteredTasks.length === 0) {
+                listContainer.innerHTML = `<div style="text-align:center; opacity:0.6; padding: 20px;">此分組或標籤下暫無一般任務。</div>`;
+                return;
+            }
+
+            filteredTasks.forEach(task => {
+                listContainer.appendChild(createTaskElement(task));
             });
         }
 
