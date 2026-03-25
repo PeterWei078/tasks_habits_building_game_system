@@ -2079,26 +2079,51 @@
             leftCol.style.gap = '20px';
             leftCol.style.alignItems = 'start';
 
-            // Task Selector
-            const taskSelector = document.createElement('div');
-            taskSelector.className = 'glass glass-card';
-            taskSelector.style.padding = '15px';
+            // Reminder Board (Left)
+            const reminderCard = document.createElement('div');
+            reminderCard.className = 'glass glass-card';
+            reminderCard.style.padding = '20px 15px';
+            reminderCard.style.display = 'flex';
+            reminderCard.style.flexDirection = 'column';
 
-            const incompleteTasks = state.tasks.filter(t => !t.completed);
-            taskSelector.innerHTML = `
-                <h3 style="margin-bottom: 10px; font-size: 1rem;">Select Task to Focus On</h3>
-                <select id="focusTaskSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: inherit;" onchange="selectedFocusTaskId = this.value === 'general' ? null : this.value">
-                    <option value="general" ${selectedFocusTaskId === null ? 'selected' : ''}>🎯 General Focus (No specific task)</option>
-                    ${incompleteTasks.map(t => `<option value="${t.id}" ${selectedFocusTaskId == t.id ? 'selected' : ''}>${t.title}</option>`).join('')}
-                </select>
+            const savedReminder = state.focusReminder || '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。';
+
+            // Prevent focus loss when clicking toolbar buttons
+            const preventFocus = 'onmousedown="event.preventDefault()"';
+
+            reminderCard.innerHTML = `
+                <h3 style="margin-bottom: 15px; font-size: 1.1rem;">💥重要提醒</h3>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 6px; flex-wrap: wrap;">
+                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('fontSize', false, '3')" title="一般大小">A</button>
+                    <button class="btn" style="padding: 2px 8px; font-size: 0.9rem; background: rgba(0,0,0,0.2); font-weight: bold;" ${preventFocus} onclick="document.execCommand('fontSize', false, '5')" title="放大字體">A+</button>
+                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2); font-weight: bold;" ${preventFocus} onclick="document.execCommand('bold', false, null)" title="粗體">B</button>
+                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2); color: #FF6B6B;" ${preventFocus} onclick="document.execCommand('foreColor', false, '#FF6B6B')" title="紅色字體">A</button>
+                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('hiliteColor', false, '#FFFF00')" title="黃色螢光筆">🖍️</button>
+                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('removeFormat', false, null)" title="清除格式">🚫</button>
+                </div>
+                <div id="reminderBoardContent" contenteditable="true" style="flex: 1; outline: none; padding: 10px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; min-height: 250px; line-height: 1.6;" onblur="state.focusReminder = this.innerHTML; saveState();" oninput="state.focusReminder = this.innerHTML; saveState();">
+                    ${savedReminder}
+                </div>
             `;
 
-            // Timer Display
+            // Timer & Task Selector (Merged, Right)
+            const incompleteTasks = state.tasks.filter(t => !t.completed);
+            
             const timerCard = document.createElement('div');
             timerCard.className = 'glass glass-card';
             timerCard.style.textAlign = 'center';
             timerCard.style.padding = '20px 15px';
             timerCard.innerHTML = `
+                <!-- Select Task -->
+                <div style="text-align: left; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <h3 style="margin-bottom: 10px; font-size: 1rem;">Select Task to Focus On</h3>
+                    <select id="focusTaskSelect" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: inherit;" onchange="selectedFocusTaskId = this.value === 'general' ? null : this.value">
+                        <option value="general" ${selectedFocusTaskId === null ? 'selected' : ''} style="color: black;">🎯 General Focus (No specific task)</option>
+                        ${incompleteTasks.map(t => `<option value="${t.id}" ${selectedFocusTaskId == t.id ? 'selected' : ''} style="color: black;">${t.title}</option>`).join('')}
+                    </select>
+                </div>
+
+                <!-- Timer Controls -->
                 <div style="display: flex; justify-content: flex-end; margin-bottom: 5px;">
                     <button class="btn" onclick="openTimerSettingsModal()" style="background: rgba(255,255,255,0.2); padding: 4px 8px; font-size: 0.8rem;">⚙️ Settings</button>
                 </div>
@@ -2125,7 +2150,7 @@
                 </div>
             `;
 
-            leftCol.appendChild(taskSelector);
+            leftCol.appendChild(reminderCard);
             leftCol.appendChild(timerCard);
 
             // Top Row: Timeline
