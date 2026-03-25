@@ -4462,32 +4462,20 @@
 
             // Identify the Daily Task
             const dailyTaskName = "🔥當日小任務";
-            let activeDailyTask = state.tasks.find(t => t.title.includes(dailyTaskName) && !t.completed);
+            const dailyTask = state.tasks.find(t => t.title.includes(dailyTaskName) && !t.completed);
 
-            if (activeDailyTask) {
-                dailyTaskContainer.appendChild(createTaskElement(activeDailyTask));
+            if (dailyTask) {
+                dailyTaskContainer.appendChild(createTaskElement(dailyTask));
             } else {
-                dailyTaskContainer.innerHTML += `
-                    <div style="text-align:center; padding: 20px;">
-                        <span style="font-size: 2rem;">🎉</span><br>
-                        <strong style="opacity:0.9;">今日的 ${dailyTaskName} 已完成！</strong><br>
-                        <span style="opacity:0.6; font-size: 0.85rem;">（若有設定重複，新任務即將出現）</span>
-                    </div>
-                `;
+                dailyTaskContainer.innerHTML += `<div style="text-align:center; opacity:0.6; padding: 20px;">尚無設定 ${dailyTaskName}。<br>您可以建立一個任務標題包含 "${dailyTaskName}" 的新任務，便會固定顯示於此。</div>`;
             }
 
             // Filter Logic
             const filteredTasks = state.tasks.filter(t => {
-                // Filter out ONLY the active daily task from the general list so it's not duplicated
-                if (activeDailyTask && t.id === activeDailyTask.id) return false;
+                // Filter out the daily task from the general list so it's not duplicated
+                if (t.title.includes(dailyTaskName)) return false;
                 
-                // If it is the original daily task name but already completed, allow it to show in the Quest List (moves to bottom)
-                if (t.title.includes(dailyTaskName) && t.completed) {
-                    // But hide if user toggled 'hide completed tasks' globally
-                    if (state.hideCompletedTasks) return false;
-                } else if (state.hideCompletedTasks && t.completed) {
-                    return false;
-                }
+                if (state.hideCompletedTasks && t.completed) return false;
                 const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
 
                 let tagMatch = true;
@@ -5129,20 +5117,12 @@
                 }
 
                 // --- Repeating Tasks Generation Logic ---
-                const isDailyFocus = task.title && task.title.includes("🔥當日小任務");
-                
-                let canSpawn = false;
-                if (isDailyFocus) {
-                    // Prevent infinite spawns by checking if an active one already exists
-                    const hasActiveDaily = state.tasks.some(t => t !== task && t.title.includes("🔥當日小任務") && !t.completed);
-                    if (!hasActiveDaily) canSpawn = true;
-                } else if (task.repeat && task.repeat !== 'none' && !task.spawnedNext) {
-                    canSpawn = true;
+                let effectiveRepeat = task.repeat;
+                if (task.title && task.title.includes("🔥當日小任務") && (!effectiveRepeat || effectiveRepeat === 'none')) {
+                    effectiveRepeat = 'daily';
                 }
 
-                if (canSpawn) {
-                    const repeatType = (task.repeat && task.repeat !== 'none') ? task.repeat : 'daily';
-                    
+                if (effectiveRepeat && effectiveRepeat !== 'none' && !task.spawnedNext) {
                     // Determine Next Dates
                     let nextDueDate = new Date();
                     if (task.dueDate) {
@@ -5154,10 +5134,10 @@
                         nextStartDate = new Date(task.startDate);
                     }
 
-                    if (repeatType === 'daily') {
+                    if (effectiveRepeat === 'daily') {
                         nextDueDate.setDate(nextDueDate.getDate() + 1);
                         if (nextStartDate) nextStartDate.setDate(nextStartDate.getDate() + 1);
-                    } else if (repeatType === 'weekly') {
+                    } else if (effectiveRepeat === 'weekly') {
                         nextDueDate.setDate(nextDueDate.getDate() + 7);
                         if (nextStartDate) nextStartDate.setDate(nextStartDate.getDate() + 7);
                     }
@@ -5168,6 +5148,7 @@
                     // Clone the task
                     const clonedTask = JSON.parse(JSON.stringify(task));
                     clonedTask.id = Date.now().toString() + Math.random().toString().substring(2, 5); // unique ID
+                    clonedTask.repeat = effectiveRepeat; // Ensure the new one persists the repeat setting
                     clonedTask.completed = false;
                     clonedTask.spawnedNext = false;
                     clonedTask.dueDate = nextDueDateStr;
