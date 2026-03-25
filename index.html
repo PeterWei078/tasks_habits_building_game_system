@@ -4462,26 +4462,32 @@
 
             // Identify the Daily Task
             const dailyTaskName = "🔥當日小任務";
-            let dailyTask = state.tasks.find(t => t.title.includes(dailyTaskName) && !t.completed);
-            if (!dailyTask) {
-                const matchingTasks = state.tasks.filter(t => t.title.includes(dailyTaskName));
-                if (matchingTasks.length > 0) {
-                    dailyTask = matchingTasks[matchingTasks.length - 1]; // Show the most recently added one
-                }
-            }
+            let activeDailyTask = state.tasks.find(t => t.title.includes(dailyTaskName) && !t.completed);
 
-            if (dailyTask) {
-                dailyTaskContainer.appendChild(createTaskElement(dailyTask));
+            if (activeDailyTask) {
+                dailyTaskContainer.appendChild(createTaskElement(activeDailyTask));
             } else {
-                dailyTaskContainer.innerHTML += `<div style="text-align:center; opacity:0.6; padding: 20px;">尚無設定 ${dailyTaskName}。<br>您可以建立一個任務標題包含 "${dailyTaskName}" 的新任務，便會固定顯示於此。</div>`;
+                dailyTaskContainer.innerHTML += `
+                    <div style="text-align:center; padding: 20px;">
+                        <span style="font-size: 2rem;">🎉</span><br>
+                        <strong style="opacity:0.9;">今日的 ${dailyTaskName} 已完成！</strong><br>
+                        <span style="opacity:0.6; font-size: 0.85rem;">（若有設定重複，新任務即將出現）</span>
+                    </div>
+                `;
             }
 
             // Filter Logic
             const filteredTasks = state.tasks.filter(t => {
-                // Filter out the daily task from the general list so it's not duplicated
-                if (t.title.includes(dailyTaskName)) return false;
+                // Filter out ONLY the active daily task from the general list so it's not duplicated
+                if (activeDailyTask && t.id === activeDailyTask.id) return false;
                 
-                if (state.hideCompletedTasks && t.completed) return false;
+                // If it is the original daily task name but already completed, allow it to show in the Quest List (moves to bottom)
+                if (t.title.includes(dailyTaskName) && t.completed) {
+                    // But hide if user toggled 'hide completed tasks' globally
+                    if (state.hideCompletedTasks) return false;
+                } else if (state.hideCompletedTasks && t.completed) {
+                    return false;
+                }
                 const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
 
                 let tagMatch = true;

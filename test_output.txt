@@ -1,0 +1,230 @@
+function toggleTask(id) {
+            // Use loose comparison for ID or string conversion to be safe
+            const task = state.tasks.find(t => t.id == id);
+            if (!task) return;
+
+            task.completed = !task.completed; // Toggle State
+
+            if (task.completed) {
+                // --- Completion Logic (Rewards) ---
+
+                // Attribute Rewards (Multi-Attribute)
+                if (task.attributeRewards && Array.isArray(task.attributeRewards)) {
+                    task.attributeRewards.forEach(reward => {
+                        const attr = state.player.attributes[reward.attribute];
+                        if (attr) {
+                            attr.exp = (attr.exp || 0) + reward.exp;
+                            // Attribute Level Up Logic
+                            const attrExpNeeded = 50 + (attr.level * 50); // Formula: 50 + Level * 50
+                            if (attr.exp >= attrExpNeeded) {
+                                attr.level++;
+                                attr.exp -= attrExpNeeded;
+                                if (typeof showLevelUpOverlay === 'function') {
+                                    showLevelUpOverlay(`${attributesConfig[reward.attribute].label.split(' ')[0]} Level Up!`, `Now Level ${attr.level}`);
+                                } else {
+                                    showToast(`${attributesConfig[reward.attribute].label.split(' ')[0]} Level Up!`, `Now Level ${attr.level}`);
+                                }
+                            }
+                        }
+                    });
+                } else if (task.attribute && state.player.attributes[task.attribute]) {
+                    // Fallback for old data
+                }
+
+                // Skill Rewards
+                if (task.skillRewards && Array.isArray(task.skillRewards)) {
+                    task.skillRewards.forEach(reward => {
+                        const skill = state.player.skills.find(s => s.id === reward.id);
+                        if (skill) {
+                            skill.exp = (skill.exp || 0) + reward.exp;
+                            const currentLevel = skill.level || 1;
+                            const newLevel = Math.floor(skill.exp / 100) + 1;
+
+                            if (newLevel > currentLevel) {
+                                skill.level = newLevel;
+                                if (typeof showLevelUpOverlay === 'function') {
+                                    showLevelUpOverlay(`${skill.icon} ${skill.name}`, `升級至 Lv.${skill.level}!`);
+                                } else {
+                                    showToast(`${skill.icon} ${skill.name} Level Up!`, `Now Level ${skill.level}`);
+                                }
+                            } else {
+                                showToast(`${skill.icon} ${skill.name} EXP 獲得`, `+${reward.exp} EXP`);
+                            }
+                        }
+                    });
+                }
+
+                state.player.exp += task.rewardExp;
+                state.player.gold += task.rewardGold;
+
+                // Log Activity
+                const group = state.player.groups.find(g => g.id === (task.groupId || 'default'));
+                const projectTags = task.tags ? task.tags.map(tid => state.player.tags.find(t => t.id === tid)).filter(Boolean) : [];
+
+                // Simple log for completion
+                state.player.activities.unshift({
+                    id: 'act_' + Date.now(),
+                    taskId: task.id,
+                    type: 'TASK_COMPLETE',
+                    title: task.title,
+                    timestamp: Date.now(),
+                    details: {
+                        exp: task.rewardExp,
+                        gold: task.rewardGold,
+                        attributeRewards: task.attributeRewards,
+                        skillRewards: task.skillRewards,
+                        groupName: group ? group.name : 'Unknown',
+                        projects: projectTags.map(p => ({ name: p.name, color: p.color })),
+                        timeSpent: task.timeSpent || 0 // Added for Focus Charts
+                    }
+                });
+
+                // Check Level Up (Simple logic: Level * 100 EXP needed)
+                const expNeeded = state.player.level * 100;
+                let levelUp = false;
+                if (state.player.exp >= expNeeded) {
+                    state.player.level++;
+                    state.player.exp -= expNeeded;
+                    levelUp = true;
+                }
+
+                showToast("Quest Completed!", `+${task.rewardExp} EXP, +${task.rewardGold} Gold${levelUp ? ' (LEVEL UP!)' : ''}`);
+                if (levelUp) {
+                    if (typeof showLevelUpOverlay === 'function') {
+                        showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
+                    } else {
+                        confetti({
+                            particleCount: 150,
+                            spread: 80,
+                            origin: { y: 0.6 }
+                        });
+                    }
+                }
+
+                // --- Repeating Tasks Generation Logic ---
+                const isDailyFocus = task.title && task.title.includes("🔥當日小任務");
+                
+                let canSpawn = false;
+                if (isDailyFocus) {
+                    // Prevent infinite spawns by checking if an active one already exists
+                    const hasActiveDaily = state.tasks.some(t => t !== task && t.title.includes("🔥當日小任務") && !t.completed);
+                    if (!hasActiveDaily) canSpawn = true;
+                } else if (task.repeat && task.repeat !== 'none' && !task.spawnedNext) {
+                    canSpawn = true;
+                }
+
+                if (canSpawn) {
+                    const repeatType = (task.repeat && task.repeat !== 'none') ? task.repeat : 'daily';
+                    
+                    // Determine Next Dates
+                    let nextDueDate = new Date();
+                    if (task.dueDate) {
+                        nextDueDate = new Date(task.dueDate);
+                    }
+                    
+                    let nextStartDate = null;
+                    if (task.startDate) {
+                        nextStartDate = new Date(task.startDate);
+                    }
+
+                    if (repeatType === 'daily') {
+                        nextDueDate.setDate(nextDueDate.getDate() + 1);
+                        if (nextStartDate) nextStartDate.setDate(nextStartDate.getDate() + 1);
+                    } else if (repeatType === 'weekly') {
+                        nextDueDate.setDate(nextDueDate.getDate() + 7);
+                        if (nextStartDate) nextStartDate.setDate(nextStartDate.getDate() + 7);
+                    }
+
+                    const nextDueDateStr = nextDueDate.toISOString().split('T')[0];
+                    const nextStartDateStr = nextStartDate ? nextStartDate.toISOString().split('T')[0] : null;
+
+                    // Clone the task
+                    const clonedTask = JSON.parse(JSON.stringify(task));
+                    clonedTask.id = Date.now().toString() + Math.random().toString().substring(2, 5); // unique ID
+                    clonedTask.completed = false;
+                    clonedTask.spawnedNext = false;
+                    clonedTask.dueDate = nextDueDateStr;
+                    if (nextStartDateStr) {
+                        clonedTask.startDate = nextStartDateStr;
+                    }
+                    clonedTask.timeSpent = 0; // reset tracked time
+
+                    if (clonedTask.subtasks) {
+                        clonedTask.subtasks.forEach(st => st.completed = false);
+                    }
+
+                    // Mark original as spawned to prevent infinite loops if toggled
+                    task.spawnedNext = true;
+
+                    // Add to state
+                    state.tasks.push(clonedTask);
+
+                    setTimeout(() => {
+                        showToast("Quest Renewed", `A new repeating instance of "${task.title}" has been added for ${nextDueDateStr}.`);
+                    }, 1000); // delay slight to not overlap with completion toast
+                }
+
+            } else {
+                // --- Uncheck Logic (Revert Rewards?) ---
+                // Currently, we usually DO NOT revert rewards in gamified apps to avoid "farming" by toggling.
+                // Or we can revert if it was just done?
+                // For simplicity and user friendliness, let's NOT revert rewards, but stopping it from generating more is handled by the check above? 
+                // Wait, if I toggle on/off/on, I get double awards?
+                // YES, the current logic gives awards EVERY time it enters "completed" state.
+                // This is a potential exploit.
+
+                // FIX: Deduct rewards if untoggling? 
+                // Or tracking "rewarded" state separate from "completed"?
+                // Let's implement simple deduction to balance it out.
+
+                state.player.exp = Math.max(0, state.player.exp - task.rewardExp);
+                state.player.gold = Math.max(0, state.player.gold - task.rewardGold);
+
+                // Remove from Activity Log to fix heatmap sync
+                if (state.player.activities) {
+                    // Try to find the exact completion log via taskId
+                    const actIndex = state.player.activities.findIndex(a => a.type === 'TASK_COMPLETE' && a.taskId == task.id);
+                    if (actIndex !== -1) {
+                        state.player.activities.splice(actIndex, 1);
+                    } else {
+                        // Fallback matching by title for older logs
+                        const fallbackIndex = state.player.activities.findIndex(a => a.type === 'TASK_COMPLETE' && a.title === task.title);
+                        if (fallbackIndex !== -1) {
+                            state.player.activities.splice(fallbackIndex, 1);
+                        }
+                    }
+                }
+
+                // Revert Attribute EXP
+                if (task.attributeRewards) {
+                    task.attributeRewards.forEach(reward => {
+                        const attr = state.player.attributes[reward.attribute];
+                        if (attr) {
+                            attr.exp = Math.max(0, attr.exp - reward.exp);
+                            // Handling level down is complex, let's ignore level down for now to keep it simple,
+                            // or just let exp go negative/zero at current level.
+                        }
+                    });
+                }
+
+                // Revert Skill EXP
+                if (task.skillRewards) {
+                    task.skillRewards.forEach(reward => {
+                        const skill = state.player.skills.find(s => s.id === reward.id);
+                        if (skill) {
+                            skill.exp = Math.max(0, skill.exp - reward.exp);
+                            skill.level = Math.floor(skill.exp / 100) + 1;
+                        }
+                    });
+                }
+
+                showToast("Quest Reset", "Rewards reverted.");
+            }
+
+            saveState();
+            render();
+        }
+
+
+
+        
