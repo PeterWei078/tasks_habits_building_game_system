@@ -4464,7 +4464,10 @@
             const dailyTaskName = "🔥當日小任務";
             let dailyTask = state.tasks.find(t => t.title.includes(dailyTaskName) && !t.completed);
             if (!dailyTask) {
-                dailyTask = state.tasks.find(t => t.title.includes(dailyTaskName));
+                const matchingTasks = state.tasks.filter(t => t.title.includes(dailyTaskName));
+                if (matchingTasks.length > 0) {
+                    dailyTask = matchingTasks[matchingTasks.length - 1]; // Show the most recently added one
+                }
             }
 
             if (dailyTask) {
@@ -5121,7 +5124,17 @@
 
                 // --- Repeating Tasks Generation Logic ---
                 const isDailyFocus = task.title && task.title.includes("🔥當日小任務");
-                if (((task.repeat && task.repeat !== 'none') || isDailyFocus) && !task.spawnedNext) {
+                
+                let canSpawn = false;
+                if (isDailyFocus) {
+                    // Prevent infinite spawns by checking if an active one already exists
+                    const hasActiveDaily = state.tasks.some(t => t !== task && t.title.includes("🔥當日小任務") && !t.completed);
+                    if (!hasActiveDaily) canSpawn = true;
+                } else if (task.repeat && task.repeat !== 'none' && !task.spawnedNext) {
+                    canSpawn = true;
+                }
+
+                if (canSpawn) {
                     const repeatType = (task.repeat && task.repeat !== 'none') ? task.repeat : 'daily';
                     
                     // Determine Next Dates
