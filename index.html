@@ -1652,12 +1652,16 @@
 
     <!-- Task Modal -->
     <div id="taskModal" class="modal-backdrop">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h2>New Task</h2>
-                <button class="close-btn" onclick="closeTaskModal()">Close</button>
-            </div>
-            <div class="modal-body" style="padding: 10px; overflow-y: auto; max-height: 80vh;">
+        <!-- New Flex Wrapper for Side-by-Side Panels -->
+        <div style="display: flex; gap: 20px; width: 95%; max-width: 1200px; justify-content: center; align-items: stretch; max-height: 90vh;">
+            
+            <!-- Left Side: Task Edit Form -->
+            <div class="modal-content" style="flex: 1; max-width: 600px; display: flex; flex-direction: column; margin: 0;">
+                <div class="modal-header">
+                    <h2>New Task</h2>
+                    <button class="close-btn" onclick="closeTaskModal()">Close</button>
+                </div>
+                <div class="modal-body" style="padding: 10px; overflow-y: auto; flex: 1;">
                 <div class="form-group">
                     <label>Title</label>
                     <input type="text" id="modalTitle" placeholder="Task Title">
@@ -1665,20 +1669,6 @@
                 <div class="form-group">
                     <label>Description</label>
                     <textarea id="modalDesc" rows="3" placeholder="Details about the task..."></textarea>
-                </div>
-                <div class="form-group" style="margin-top: 15px;">
-                    <label>Task Memo</label>
-                    <!-- Rich Text Toolbar -->
-                    <div style="display: flex; gap: 8px; background: rgba(0,0,0,0.05); padding: 6px; border-radius: 6px 6px 0 0; border: 1px solid rgba(0,0,0,0.1); border-bottom: none;">
-                        <button type="button" class="btn" style="padding: 2px 8px; font-weight: bold; background: white; border: 1px solid #ddd; border-radius: 4px; color: black; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="document.execCommand('bold', false, null)" title="Bold">B</button>
-                        <button type="button" class="btn" style="padding: 2px 8px; font-style: italic; background: white; border: 1px solid #ddd; border-radius: 4px; color: black; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="document.execCommand('italic', false, null)" title="Italic">I</button>
-                        <button type="button" class="btn" style="padding: 2px 8px; text-decoration: underline; background: white; border: 1px solid #ddd; border-radius: 4px; color: black; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="document.execCommand('underline', false, null)" title="Underline">U</button>
-                        <div style="width: 1px; background: rgba(0,0,0,0.1); margin: 0 5px;"></div>
-                        <button type="button" class="btn" style="padding: 2px 8px; background: #FEFCBF; color: #744210; font-weight: bold; border: 1px solid #D69E2E; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="document.execCommand('hiliteColor', false, '#FEFCBF')" title="Highlight">Highlight</button>
-                        <button type="button" class="btn" style="padding: 2px 8px; background: white; color: black; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="document.execCommand('hiliteColor', false, 'transparent')" title="Remove Highlight">Remove</button>
-                    </div>
-                    <!-- Editor -->
-                    <div id="inlineMemoEditor" contenteditable="true" style="outline: none; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 0 0 6px 6px; min-height: 100px; max-height: 250px; overflow-y: auto; line-height: 1.5; font-size: 0.95rem; background: rgba(255,255,255,0.7);"></div>
                 </div>
                 <div class="form-group">
                     <label>Image URL (Optional)</label>
@@ -1765,6 +1755,32 @@
                 </div>
             </div>
         </div>
+
+        <!-- Right Side: Inline Memo Panel -->
+        <div class="modal-content" style="flex: 1; max-width: 500px; display: flex; flex-direction: column; margin: 0; background: rgba(255,255,255,0.95);">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 10px; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; padding: 10px; flex: 1; overflow-y: hidden;">
+                <!-- Rich Text Toolbar -->
+                <div style="display: flex; gap: 8px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 8px; flex-wrap: wrap;">
+                    <button type="button" class="btn" style="padding: 4px 10px; font-weight: bold; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('bold', false, null)" title="Bold">B</button>
+                    <button type="button" class="btn" style="padding: 4px 10px; font-style: italic; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('italic', false, null)" title="Italic">I</button>
+                    <button type="button" class="btn" style="padding: 4px 10px; text-decoration: underline; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('underline', false, null)" title="Underline">U</button>
+                    <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 5px;"></div>
+                    <button type="button" class="btn" style="padding: 4px 10px; background: #FEFCBF; color: #744210; font-weight: bold; border: 1px solid #D69E2E; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, '#FEFCBF')" title="Highlight">Highlight</button>
+                    <button type="button" class="btn" style="padding: 4px 10px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, 'transparent')" title="Remove Highlight">Remove</button>
+                </div>
+                <!-- Editor -->
+                <div id="inlineTaskMemoEditor" contenteditable="true" style="flex: 1; outline: none; padding: 15px; border: 1px dashed rgba(0,0,0,0.2); border-radius: 8px; line-height: 1.6; font-size: 1rem; background: rgba(255,255,255,0.5); overflow-y: auto;">
+                </div>
+                <div style="color: var(--accent-color); font-weight: 600; font-size: 0.85rem; text-align: center; margin-top: 5px;">
+                    💡 當點擊左側「Save Changes / Create Task」時會一併儲存 Memo 內容。
+                </div>
+            </div>
+        </div>
+
+        </div> <!-- End Flex Wrapper -->
     </div>
 
     <script>
@@ -4598,7 +4614,7 @@
 
                 document.getElementById('modalTitle').value = task.title;
                 document.getElementById('modalDesc').value = task.description || '';
-                document.getElementById('inlineMemoEditor').innerHTML = task.memo || '';
+                document.getElementById('inlineTaskMemoEditor').innerHTML = task.memo || '';
                 document.getElementById('modalImage').value = task.image || '';
                 if (task.photo) {
                     document.getElementById('modalPhotoPreview').src = task.photo;
@@ -4646,7 +4662,7 @@
 
                 document.getElementById('modalTitle').value = '';
                 document.getElementById('modalDesc').value = '';
-                document.getElementById('inlineMemoEditor').innerHTML = '';
+                document.getElementById('inlineTaskMemoEditor').innerHTML = '';
                 document.getElementById('modalImage').value = '';
                 document.getElementById('modalPhotoPreview').src = '';
                 document.getElementById('modalPhotoPreview').style.display = 'none';
@@ -4893,7 +4909,6 @@
                 }
 
                 const desc = document.getElementById('modalDesc').value;
-                const memoHtml = document.getElementById('inlineMemoEditor').innerHTML;
                 const img = document.getElementById('modalImage').value;
                 const group = document.getElementById('modalGroup').value;
                 const repeat = document.getElementById('modalRepeat').value;
@@ -4981,9 +4996,10 @@
                     // Use loose equality to match string IDs from HTML with potential numeric IDs in state
                     const taskIndex = state.tasks.findIndex(t => t.id == editingTaskId);
                     if (taskIndex !== -1) {
+                        const inlineMemo = document.getElementById('inlineTaskMemoEditor').innerHTML;
                         state.tasks[taskIndex] = {
                             ...state.tasks[taskIndex],
-                            title, description: desc, memo: memoHtml, image: img, photo: photoData,
+                            title, description: desc, image: img, photo: photoData, memo: inlineMemo,
                             attribute: primaryAttribute, attributeRewards, skillRewards,
                             groupId: group, tags, subtasks, repeat, startDate, dueDate, color: color, rewardExp: exp, rewardGold: gold,
                             timeSpent: timeSpentSec // Update time
@@ -4994,13 +5010,14 @@
                     }
                 } else {
                     // Create New
+                    const inlineMemo = document.getElementById('inlineTaskMemoEditor').innerHTML;
                     const newTask = {
                         id: Date.now(),
                         title: title,
                         description: desc,
-                        memo: memoHtml,
                         image: img,
                         photo: photoData,
+                        memo: inlineMemo,
                         attribute: primaryAttribute,
                         attributeRewards: attributeRewards,
                         skillRewards: skillRewards,
