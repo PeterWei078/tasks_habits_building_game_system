@@ -1171,11 +1171,18 @@
 
     <!-- Create Task Modal -->
     <div id="taskModal" class="modal-backdrop">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>New Task</h2>
-                <button class="close-btn" onclick="closeTaskModal()">Cancel</button>
-            </div>
+        <!-- New Flex Wrapper for Side-by-Side Panels -->
+        <div style="display: flex; gap: 20px; width: 95%; max-width: 1200px; justify-content: center; align-items: stretch; max-height: 90vh; pointer-events: none;">
+            
+            <!-- Left Side: Task Edit Form (pointer-events: all) -->
+            <div class="modal-content" style="flex: 1; max-width: 600px; display: flex; flex-direction: column; margin: 0; pointer-events: all;">
+                <div class="modal-header" style="flex-shrink: 0;">
+                    <h2>New Task</h2>
+                    <button class="close-btn" onclick="closeTaskModal()">Cancel</button>
+                </div>
+                
+                <!-- Scrollable Body for Left Panel -->
+                <div style="overflow-y: auto; padding: 10px; flex: 1;">
 
             <!-- Title & Desc -->
             <div class="form-section">
@@ -1313,8 +1320,34 @@
 
                 <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px;"
                     onclick="saveTaskFromModal()">Create Task</button>
+                </div> <!-- End left panel scroll body -->
+            </div> <!-- End Left Side modal-content -->
+
+            <!-- Right Side: Inline Memo Panel -->
+            <div class="modal-content" style="flex: 1; max-width: 500px; display: flex; flex-direction: column; margin: 0; background: rgba(255,255,255,0.95); pointer-events: all;">
+                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 10px; margin-bottom: 15px; flex-shrink: 0;">
+                    <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
+                </div>
+                <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; padding: 10px; flex: 1; overflow-y: hidden;">
+                    <!-- Rich Text Toolbar -->
+                    <div style="display: flex; gap: 8px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 8px; flex-wrap: wrap;">
+                        <button type="button" class="btn" style="padding: 4px 10px; font-weight: bold; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('bold', false, null)" title="Bold">B</button>
+                        <button type="button" class="btn" style="padding: 4px 10px; font-style: italic; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('italic', false, null)" title="Italic">I</button>
+                        <button type="button" class="btn" style="padding: 4px 10px; text-decoration: underline; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('underline', false, null)" title="Underline">U</button>
+                        <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 5px;"></div>
+                        <button type="button" class="btn" style="padding: 4px 10px; background: #FEFCBF; color: #744210; font-weight: bold; border: 1px solid #D69E2E; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, '#FEFCBF')" title="Highlight">Highlight</button>
+                        <button type="button" class="btn" style="padding: 4px 10px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, 'transparent')" title="Remove Highlight">Remove</button>
+                    </div>
+                    <!-- Editor -->
+                    <div id="inlineTaskMemoEditor" contenteditable="true" style="flex: 1; outline: none; padding: 15px; border: 1px dashed rgba(0,0,0,0.2); border-radius: 8px; line-height: 1.6; font-size: 1rem; background: rgba(255,255,255,0.5); overflow-y: auto;">
+                    </div>
+                    <div style="color: var(--accent-color); font-weight: 600; font-size: 0.85rem; text-align: center; margin-top: 5px;">
+                        💡 當點擊左側儲存按鈕時會一併更新 Memo 內容。
+                    </div>
+                </div>
             </div>
-        </div>
+            
+        </div> <!-- End Flex Wrapper -->
 
     </div>
 
@@ -1650,138 +1683,7 @@
         </div>
     </div>
 
-    <!-- Task Modal -->
-    <div id="taskModal" class="modal-backdrop">
-        <!-- New Flex Wrapper for Side-by-Side Panels -->
-        <div style="display: flex; gap: 20px; width: 95%; max-width: 1200px; justify-content: center; align-items: stretch; max-height: 90vh;">
-            
-            <!-- Left Side: Task Edit Form -->
-            <div class="modal-content" style="flex: 1; max-width: 600px; display: flex; flex-direction: column; margin: 0;">
-                <div class="modal-header">
-                    <h2>New Task</h2>
-                    <button class="close-btn" onclick="closeTaskModal()">Close</button>
-                </div>
-                <div class="modal-body" style="padding: 10px; overflow-y: auto; flex: 1;">
-                <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" id="modalTitle" placeholder="Task Title">
-                </div>
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="modalDesc" rows="3" placeholder="Details about the task..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Image URL (Optional)</label>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="text" id="modalImage" placeholder="https://example.com/image.jpg" style="flex: 1; margin-bottom: 0;">
-                        <button type="button" onclick="
-                            var u2 = document.getElementById('modalImage').value;
-                            if(u2) { window.open(u2, '_blank'); } else { alert('Please enter a URL first.'); }
-                        " style="border: 1px solid rgba(74, 144, 226, 0.4); background: rgba(74, 144, 226, 0.15); cursor:pointer; font-size: 1.2rem; padding: 0; width: 46px; height: 46px; border-radius: 8px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #4A90E2;" title="Open URL in new window" onmouseover="this.style.background='rgba(74, 144, 226, 0.3)'" onmouseout="this.style.background='rgba(74, 144, 226, 0.15)'">↗</button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Upload Photo (Optional)</label>
-                    <input type="file" id="modalPhotoFile" accept="image/*" onchange="previewPhoto(event)">
-                    <input type="hidden" id="modalPhotoBase64">
-                    <img id="modalPhotoPreview" src="" alt="Photo Preview"
-                        style="max-width: 100%; max-height: 150px; margin-top: 10px; display: none; border-radius: 8px;">
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Group</label>
-                        <select id="modalGroup"></select>
-                    </div>
-                    <div class="form-group">
-                        <label>Due Date (Optional)</label>
-                        <input type="date" id="modalDueDate">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Repeat</label>
-                    <select id="modalRepeat">
-                        <option value="none">None</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                    </select>
-                </div>
-
-                <div class="form-section">
-                    <h4>Subtasks</h4>
-                    <div id="modalSubtasks"></div>
-                    <button class="btn" onclick="addSubtaskInput()">+ Add Subtask</button>
-                </div>
-
-                <div class="form-section">
-                    <h4>Attribute Rewards</h4>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <select id="modalAuthAttribute" style="flex: 1;"></select>
-                        <input type="number" id="modalAuthExp" value="10" min="1" style="width: 80px;">
-                        <button class="btn" onclick="addAttributeReward()">Add</button>
-                    </div>
-                    <div id="modalAttributeRewardsList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-                </div>
-
-                <div class="form-section">
-                    <h4>Skill Rewards</h4>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <select id="modalSkillSelect" style="flex: 1;"></select>
-                        <input type="number" id="modalSkillExp" value="50" min="1" style="width: 80px;">
-                        <button class="btn" onclick="addSkillReward()">Add</button>
-                    </div>
-                    <div id="modalSkillRewardsList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Base EXP Reward</label>
-                        <input type="number" id="modalExp" value="25" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>Gold Reward</label>
-                        <input type="number" id="modalGold" value="10" min="0">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Time Spent (Minutes)</label>
-                    <input type="number" id="modalTimeSpent" value="0" min="0">
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
-                    <button type="button" class="btn btn-primary" onclick="saveTaskFromModal()">Save Task</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Side: Inline Memo Panel -->
-        <div class="modal-content" style="flex: 1; max-width: 500px; display: flex; flex-direction: column; margin: 0; background: rgba(255,255,255,0.95);">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 10px; margin-bottom: 15px;">
-                <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
-            </div>
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; padding: 10px; flex: 1; overflow-y: hidden;">
-                <!-- Rich Text Toolbar -->
-                <div style="display: flex; gap: 8px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 8px; flex-wrap: wrap;">
-                    <button type="button" class="btn" style="padding: 4px 10px; font-weight: bold; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('bold', false, null)" title="Bold">B</button>
-                    <button type="button" class="btn" style="padding: 4px 10px; font-style: italic; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('italic', false, null)" title="Italic">I</button>
-                    <button type="button" class="btn" style="padding: 4px 10px; text-decoration: underline; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('underline', false, null)" title="Underline">U</button>
-                    <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 5px;"></div>
-                    <button type="button" class="btn" style="padding: 4px 10px; background: #FEFCBF; color: #744210; font-weight: bold; border: 1px solid #D69E2E; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, '#FEFCBF')" title="Highlight">Highlight</button>
-                    <button type="button" class="btn" style="padding: 4px 10px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, 'transparent')" title="Remove Highlight">Remove</button>
-                </div>
-                <!-- Editor -->
-                <div id="inlineTaskMemoEditor" contenteditable="true" style="flex: 1; outline: none; padding: 15px; border: 1px dashed rgba(0,0,0,0.2); border-radius: 8px; line-height: 1.6; font-size: 1rem; background: rgba(255,255,255,0.5); overflow-y: auto;">
-                </div>
-                <div style="color: var(--accent-color); font-weight: 600; font-size: 0.85rem; text-align: center; margin-top: 5px;">
-                    💡 當點擊左側「Save Changes / Create Task」時會一併儲存 Memo 內容。
-                </div>
-            </div>
-        </div>
-
-        </div> <!-- End Flex Wrapper -->
-    </div>
+    <!-- (Removed duplicate dead taskModal block) -->
 
     <script>
         // --- State Management ---
