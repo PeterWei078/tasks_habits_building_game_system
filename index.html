@@ -1171,8 +1171,8 @@
 
     <!-- Create Task Modal -->
     <div id="taskModal" class="modal-backdrop">
-        <div id="taskModalFlexContainer" style="display: flex; gap: 20px; align-items: stretch; justify-content: center; width: 95%; max-width: 1300px; max-height: 90vh; pointer-events: none;">
-        <div class="modal-content" style="max-width: 600px; width: 100%; margin: 0; pointer-events: auto; flex: 1;">
+        <div id="taskModalFlexContainer" onclick="if (event.target.id === 'taskModalFlexContainer') closeTaskModal();" style="display: flex; gap: 20px; align-items: stretch; justify-content: center; width: 95%; max-width: 1300px; max-height: 90vh;">
+        <div class="modal-content" style="max-width: 600px; width: 100%; margin: 0; flex: 1;">
             <div class="modal-header">
                 <h2>New Task</h2>
                 <button class="close-btn" onclick="closeTaskModal()">Cancel</button>
@@ -1318,7 +1318,7 @@
         </div>
 
         <!-- Right Panel: Task Memo (Only for Edit Mode) -->
-        <div class="modal-content" id="editTaskMemoSection" style="max-width: 600px; width: 100%; margin: 0; pointer-events: auto; flex: 1; display: none; flex-direction: column;">
+        <div class="modal-content" id="editTaskMemoSection" style="max-width: 600px; width: 100%; margin: 0; flex: 1; display: none; flex-direction: column;">
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
             </div>
