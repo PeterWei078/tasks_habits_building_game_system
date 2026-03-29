@@ -4707,6 +4707,43 @@
                 if (duplicateBtn) duplicateBtn.style.display = 'none';
             }
 
+            // Create Complete Button if Editing
+            let completeBtn = document.getElementById('btnCompleteTask');
+            if (taskId) {
+                const task = state.tasks.find(t => t.id == taskId);
+                const isCompleted = task ? task.completed : false;
+
+                if (!completeBtn) {
+                    completeBtn = document.createElement('button');
+                    completeBtn.id = 'btnCompleteTask';
+                    completeBtn.type = 'button';
+                    completeBtn.className = 'btn';
+                    completeBtn.style.background = isCompleted ? 'rgba(237, 137, 54, 0.2)' : 'rgba(72, 187, 120, 0.2)';
+                    completeBtn.style.color = isCompleted ? '#ED8936' : '#48BB78';
+                    completeBtn.style.marginLeft = '10px';
+                    completeBtn.textContent = isCompleted ? '❌ Uncomplete' : '✅ Complete';
+                    completeBtn.onclick = async (e) => {
+                        if (e) e.preventDefault();
+                        await saveTaskFromModal();
+                        toggleTask(taskId);
+                    };
+                    saveBtn.parentNode.appendChild(completeBtn); // Append after deleteBtn
+                } else {
+                    completeBtn.style.background = isCompleted ? 'rgba(237, 137, 54, 0.2)' : 'rgba(72, 187, 120, 0.2)';
+                    completeBtn.style.color = isCompleted ? '#ED8936' : '#48BB78';
+                    completeBtn.textContent = isCompleted ? '❌ Uncomplete' : '✅ Complete';
+                    completeBtn.onclick = async (e) => {
+                        if (e) e.preventDefault();
+                        await saveTaskFromModal();
+                        toggleTask(taskId);
+                    };
+                    completeBtn.style.display = 'inline-block';
+                    saveBtn.parentNode.appendChild(completeBtn); // Ensure it's correctly appended to parent
+                }
+            } else {
+                if (completeBtn) completeBtn.style.display = 'none';
+            }
+
             modal.classList.add('show');
         }
 
