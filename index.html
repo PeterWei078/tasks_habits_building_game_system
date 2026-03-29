@@ -1171,7 +1171,8 @@
 
     <!-- Create Task Modal -->
     <div id="taskModal" class="modal-backdrop">
-        <div class="modal-content">
+        <div id="taskModalFlexContainer" style="display: flex; gap: 20px; align-items: stretch; justify-content: center; width: 95%; max-width: 1300px; max-height: 90vh; pointer-events: none;">
+        <div class="modal-content" style="max-width: 600px; width: 100%; margin: 0; pointer-events: auto; flex: 1;">
             <div class="modal-header">
                 <h2>New Task</h2>
                 <button class="close-btn" onclick="closeTaskModal()">Cancel</button>
@@ -1316,6 +1317,26 @@
             </div>
         </div>
 
+        <!-- Right Panel: Task Memo (Only for Edit Mode) -->
+        <div class="modal-content" id="editTaskMemoSection" style="max-width: 600px; width: 100%; margin: 0; pointer-events: auto; flex: 1; display: none; flex-direction: column;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
+            </div>
+            <!-- Rich Text Toolbar -->
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 8px; margin-bottom: 15px;">
+                <button type="button" class="btn" style="padding: 4px 10px; font-weight: bold; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('bold', false, null)" title="Bold">B</button>
+                <button type="button" class="btn" style="padding: 4px 10px; font-style: italic; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('italic', false, null)" title="Italic">I</button>
+                <button type="button" class="btn" style="padding: 4px 10px; text-decoration: underline; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('underline', false, null)" title="Underline">U</button>
+                <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 5px;"></div>
+                <button type="button" class="btn" style="padding: 4px 10px; background: #FEFCBF; color: #744210; font-weight: bold; border: 1px solid #D69E2E; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, '#FEFCBF')" title="Highlight">Highlight</button>
+                <button type="button" class="btn" style="padding: 4px 10px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, 'transparent')" title="Remove Highlight">Remove</button>
+            </div>
+            <!-- Editor -->
+            <div id="inlineTaskMemoEditor" contenteditable="true" style="flex: 1; outline: none; padding: 15px; border: 1px dashed rgba(255,255,255,0.4); border-radius: 8px; min-height: 250px; line-height: 1.6; font-size: 1rem; background: rgba(255,255,255,0.05); overflow-y: auto;">
+            </div>
+        </div>
+
+        </div> <!-- End taskModalFlexContainer -->
     </div>
 
     <!-- Timer Settings Modal -->
@@ -4623,11 +4644,20 @@
                 document.getElementById('modalGold').value = task.rewardGold || 10;
                 document.getElementById('modalTimeSpent').value = Math.round((task.timeSpent || 0) / 60);
 
+                const memoSection = document.getElementById('editTaskMemoSection');
+                if (memoSection) {
+                    memoSection.style.display = 'flex';
+                    document.getElementById('inlineTaskMemoEditor').innerHTML = task.memo || '';
+                }
+
             } else {
                 // Create Mode
                 editingTaskId = null;
                 titleEl.textContent = 'New Task';
                 saveBtn.textContent = 'Create Task';
+
+                const memoSection = document.getElementById('editTaskMemoSection');
+                if (memoSection) memoSection.style.display = 'none';
 
                 document.getElementById('modalTitle').value = '';
                 document.getElementById('modalDesc').value = '';
@@ -4967,6 +4997,7 @@
                         state.tasks[taskIndex] = {
                             ...state.tasks[taskIndex],
                             title, description: desc, image: img, photo: photoData,
+                            memo: document.getElementById('inlineTaskMemoEditor').innerHTML,
                             attribute: primaryAttribute, attributeRewards, skillRewards,
                             groupId: group, tags, subtasks, repeat, startDate, dueDate, color: color, rewardExp: exp, rewardGold: gold,
                             timeSpent: timeSpentSec // Update time
