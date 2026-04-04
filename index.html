@@ -4417,19 +4417,20 @@
                     return tagInfo ? `<span style="font-size: 0.75rem; color: #4a5568; background: ${tagInfo.color}; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 5px; display: inline-block; font-weight: 500;">#${tagInfo.name.split(' ')[0]}</span>` : '';
                 }).join('') : '';
                 const todayStr = new Date().toISOString().split('T')[0];
+                const isDueToday = task.dueDate === todayStr;
                 let dueDateHtml = '';
                 if (task.startDate && task.dueDate) {
                     const isOverdue = task.dueDate < todayStr;
-                    const color = isOverdue ? '#E53E3E' : '#3182CE';
-                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : 'rgba(49,130,206,0.1)';
-                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : 'rgba(49,130,206,0.3)';
-                    dueDateHtml = `<span style="font-size: 0.75rem; color: ${color}; background: ${bg}; padding: 2px 6px; border-radius: 4px; margin-right: 5px; border: 1px solid ${border};">📅 ${task.startDate} ~ ${task.dueDate}</span>`;
+                    const color = isOverdue ? '#E53E3E' : isDueToday ? '#C05621' : '#3182CE';
+                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : isDueToday ? 'rgba(246,173,85,0.2)' : 'rgba(49,130,206,0.1)';
+                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : isDueToday ? 'rgba(221,107,32,0.5)' : 'rgba(49,130,206,0.3)';
+                    dueDateHtml = `<span style="font-size: 0.75rem; color: ${color}; background: ${bg}; padding: 2px 6px; border-radius: 4px; margin-right: 5px; border: 1px solid ${border};">${isDueToday ? '⏰' : '📅'} ${task.startDate} ~ ${task.dueDate}</span>`;
                 } else if (task.dueDate) {
                     const isOverdue = task.dueDate < todayStr;
-                    const color = isOverdue ? '#E53E3E' : '#3182CE';
-                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : 'rgba(49,130,206,0.1)';
-                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : 'rgba(49,130,206,0.3)';
-                    dueDateHtml = `<span style="font-size: 0.75rem; color: ${color}; background: ${bg}; padding: 2px 6px; border-radius: 4px; margin-right: 5px; border: 1px solid ${border};">📅 到期: ${task.dueDate}</span>`;
+                    const color = isOverdue ? '#E53E3E' : isDueToday ? '#C05621' : '#3182CE';
+                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : isDueToday ? 'rgba(246,173,85,0.2)' : 'rgba(49,130,206,0.1)';
+                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : isDueToday ? 'rgba(221,107,32,0.5)' : 'rgba(49,130,206,0.3)';
+                    dueDateHtml = `<span style="font-size: 0.75rem; color: ${color}; background: ${bg}; padding: 2px 6px; border-radius: 4px; margin-right: 5px; border: 1px solid ${border};">${isDueToday ? '⏰' : '📅'} 到期: ${task.dueDate}</span>`;
                 }
 
                 // Subtasks Progress
@@ -4493,6 +4494,13 @@
                     ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5; font-size: 1.1rem; transition: transform 0.2s;" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Delete Task" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗑️</button>`}
                 </div>
             `;
+                // Highlight tasks due today with an amber tint (distinct from Daily Focus red and overdue red badge)
+                if (isDueToday && !task.completed) {
+                    item.style.background = 'linear-gradient(135deg, rgba(246,173,85,0.22) 0%, rgba(255,255,255,0.18) 100%)';
+                    item.style.borderLeft = '3px solid rgba(221,107,32,0.65)';
+                    item.style.boxShadow = '0 2px 12px rgba(221,107,32,0.12)';
+                }
+
                 return item;
             }
 
