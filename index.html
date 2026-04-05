@@ -4416,7 +4416,8 @@
                     const tagInfo = state.player.tags.find(t => t.id === tagId);
                     return tagInfo ? `<span style="font-size: 0.75rem; color: #4a5568; background: ${tagInfo.color}; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 5px; display: inline-block; font-weight: 500;">#${tagInfo.name.split(' ')[0]}</span>` : '';
                 }).join('') : '';
-                const todayStr = new Date().toISOString().split('T')[0];
+                const _now = new Date();
+                const todayStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
                 const isDueToday = task.dueDate === todayStr;
                 let dueDateHtml = '';
                 if (task.startDate && task.dueDate) {
