@@ -2074,6 +2074,7 @@
         let selectedFocusTaskId = null;
 
         let focusTimelineScale = 'month';
+        let projectTimelineScale = 'month';
 
         function renderFocusPage() {
             contentDiv.innerHTML = ''; // Prevent duplication
@@ -2368,6 +2369,171 @@
                         </div>
                     </div>
                 </div>
+            `;
+
+            return html + timelineArea;
+        }
+
+        function renderProjectTimelineHTML() {
+            const tlProjects = state.player.tags.filter(p => p.startDate && p.endDate && new Date(p.startDate) <= new Date(p.endDate) && !isProjectCompleted(p));
+
+            let html = `
+                <div class="glass glass-card" style="padding: 15px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 style="margin: 0; font-size: 1.1rem;">專案時間軸 (Project Timeline)</h3>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="btn ${projectTimelineScale === 'month' ? 'btn-primary' : ''}" onclick="projectTimelineScale='month'; renderProjectsPage();" style="padding: 5px 12px; font-size: 0.8rem;">月 (Month)</button>
+                            <button class="btn ${projectTimelineScale === 'season' ? 'btn-primary' : ''}" onclick="projectTimelineScale='season'; renderProjectsPage();" style="padding: 5px 12px; font-size: 0.8rem;">季 (Season)</button>
+                        </div>
+                    </div>
+            `;
+
+            if (tlProjects.length === 0) {
+                return html + `<div style="text-align: center; opacity: 0.5; padding: 50px 0;">目前沒有設定開始與結束日期的未完成專案。</div></div>`;
+            }
+
+            const parseLocalDate = (dateStr) => {
+                const parts = dateStr.split('-');
+                return new Date(parts[0], parts[1] - 1, parts[2]); // local midnight
+            };
+
+            const dates = tlProjects.map(p => [parseLocalDate(p.startDate).getTime(), parseLocalDate(p.endDate).getTime()]).flat();
+            let minDate = new Date(Math.min(...dates));
+            let maxDate = new Date(Math.max(...dates));
+
+            minDate.setDate(minDate.getDate() - 3);
+            maxDate.setDate(maxDate.getDate() + 3);
+
+            const totalDays = Math.max(1, Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)));
+            const dayWidth = projectTimelineScale === 'season' ? 10 : 30; // 季 (Season) view zooms out
+            const totalWidth = totalDays * dayWidth;
+
+            let headerCells = '';
+            for (let i = 0; i < totalDays; i++) {
+                let d = new Date(minDate);
+                d.setDate(d.getDate() + i);
+
+                let label = d.getDate();
+                let isStartOfMonth = false;
+                if (d.getDate() === 1) {
+                    label = (d.getMonth() + 1) + '/' + d.getDate();
+                    isStartOfMonth = true;
+                }
+
+                let isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                let bgStyle = isWeekend ? 'background: rgba(255,255,255,0.03);' : '';
+                let textStyle = isStartOfMonth ? 'font-weight: bold; color: #fff;' : 'color: rgba(255,255,255,0.8);';
+
+                headerCells += `<div style="width: ${dayWidth}px; min-width: ${dayWidth}px; text-align: center; font-size: 0.75rem; border-left: 1px solid rgba(255,255,255,0.05); padding: 8px 0; ${bgStyle}"><span style="${textStyle}">${projectTimelineScale === 'season' && !isStartOfMonth ? '' : label}</span></div>`;
+            }
+
+            let timelineArea = `
+                <div class="custom-timeline-scroll" style="overflow-x: scroll; overflow-y: auto; max-height: 400px; flex: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.05); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); padding-bottom: 5px;">
+                    <div style="width: ${totalWidth}px; min-height: 150px; position: relative;">
+                        <!-- Headers -->
+                        <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; background: rgba(30,30,40,0.95); z-index: 10; color: #fff;">
+                            ${headerCells}
+                        </div>
+                        
+                        <!-- Grid Lines -->
+                        <div style="position: absolute; top: 35px; bottom: 0; left: 0; right: 0; display: flex; pointer-events: none;">
+                            ${Array(totalDays).fill(0).map((_, i) => {
+                let d = new Date(minDate); d.setDate(d.getDate() + i);
+                let isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                let bgStyle = isWeekend ? 'background: rgba(255,255,255,0.03);' : '';
+                return `<div style="width: ${dayWidth}px; min-width: ${dayWidth}px; border-left: 1px dashed rgba(255,255,255,0.05); ${bgStyle}"></div>`;
+            }).join('')}
+                        </div>
+                        
+                        <!-- Today Indicator -->
+                        ${(() => {
+                    const now = new Date(); // Local time now
+
+                    if (now >= minDate && now <= maxDate) {
+                        const exactOffset = ((now - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
+                        return `<div id="today-project-timeline-line" style="position: absolute; top: 0; bottom: 0; left: ${exactOffset}px; width: 2px; background: rgba(255, 99, 132, 0.8); z-index: 5; pointer-events: none; box-shadow: 0 0 5px rgba(255, 99, 132, 0.5);"></div>
+                                         <div style="position: absolute; top: 32px; left: ${exactOffset - 24}px; background: rgba(255, 99, 132, 0.9); color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; z-index: 15; font-weight: bold; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Today</div>`;
+                    }
+                    return '';
+                })()}
+                        
+                        <!-- Bars Container -->
+                        <div style="position: relative; margin-top: 20px; display: flex; flex-direction: column; padding: 0 10px;">
+            `;
+
+            tlProjects.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
+
+            let rows = [];
+            tlProjects.forEach(task => {
+                const s = parseLocalDate(task.startDate).getTime();
+                const e = parseLocalDate(task.endDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+
+                let rowIndex = rows.findIndex(row => {
+                    return row.every(rowTask => {
+                        const rs = parseLocalDate(rowTask.startDate).getTime();
+                        const re = parseLocalDate(rowTask.endDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+                        return Math.max(s, rs) > Math.min(e, re); // No overlap check
+                    });
+                });
+
+                if (rowIndex !== -1) {
+                    rows[rowIndex].push(task);
+                } else {
+                    rows.push([task]);
+                }
+            });
+
+            rows.forEach(row => {
+                timelineArea += `<div style="position: relative; height: 32px; margin-bottom: 8px;">`;
+                row.forEach(task => {
+                    let startT = parseLocalDate(task.startDate);
+                    let endT = parseLocalDate(task.endDate);
+                    // endT should cover the whole day for width calculation
+                    endT.setHours(23, 59, 59, 999);
+
+                    if (startT < minDate) startT = new Date(minDate);
+                    if (endT > maxDate) endT = new Date(maxDate);
+
+                    const leftOffset = Math.max(0, (startT - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
+                    const width = Math.ceil((endT - startT) / (1000 * 60 * 60 * 24)) * dayWidth;
+
+                    let barColor = task.color ? task.color : 'rgba(74, 144, 226, 0.7)';
+
+                    let opacityStyle = '';
+                    let titlePrefix = '';
+                    let progressStyle = '';
+                    
+                    if (isProjectCompleted(task)) {
+                        opacityStyle = 'opacity: 0.4;';
+                        titlePrefix = '✅ ';
+                        progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
+                    } else {
+                        // get total tasks and completed tasks for project progress
+                        const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(task.id));
+                        if(projectTasks.length > 0) {
+                            const completedTasks = projectTasks.filter(t => t.completed).length;
+                            const percent = Math.round((completedTasks / projectTasks.length) * 100);
+                            if (percent > 0) {
+                                progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: rgba(0,0,0,0.15);"></div>`;
+                                titlePrefix = `[${percent}%] `;
+                            }
+                        }
+                    }
+
+                    timelineArea += `
+                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; color: rgba(0,0,0,0.8); ${opacityStyle}" title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="openProjectModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
+                            ${progressStyle}
+                            <span style="position: relative; z-index: 1;">${titlePrefix}${task.name}</span>
+                        </div>
+                    `;
+                });
+                timelineArea += `</div>`;
+            });
+
+            timelineArea += `
+                        </div>
+                    </div>
+                </div></div>
             `;
 
             return html + timelineArea;
@@ -3373,6 +3539,10 @@
             };
             actionCard.onclick = () => openProjectModal();
 
+            // Timeline Container
+            const timelineContainer = document.createElement('div');
+            timelineContainer.innerHTML = renderProjectTimelineHTML();
+
             // Projects Container
             const projectsContainer = document.createElement('div');
 
@@ -3406,8 +3576,19 @@
             }
 
             contentDiv.appendChild(title);
+            contentDiv.appendChild(timelineContainer);
             contentDiv.appendChild(actionCard);
             contentDiv.appendChild(projectsContainer);
+
+            // Auto-scroll timeline to center the "Today" line
+            setTimeout(() => {
+                const todayLine = document.getElementById('today-project-timeline-line');
+                const scrollContainer = timelineContainer.querySelector('.custom-timeline-scroll');
+                if (todayLine && scrollContainer) {
+                    const targetScrollLeft = todayLine.offsetLeft - (scrollContainer.clientWidth / 2);
+                    scrollContainer.scrollLeft = targetScrollLeft;
+                }
+            }, 0);
         }
 
         // Function to handle toggle
