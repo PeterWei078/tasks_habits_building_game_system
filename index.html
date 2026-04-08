@@ -2398,11 +2398,30 @@
             };
 
             const dates = tlProjects.map(p => [parseLocalDate(p.startDate).getTime(), parseLocalDate(p.endDate).getTime()]).flat();
-            let minDate = new Date(Math.min(...dates));
-            let maxDate = new Date(Math.max(...dates));
+            
+            const now = new Date();
+            // Include 'now' to ensure current time is always visible
+            let minDate = new Date(Math.min(...dates, now.getTime()));
+            let maxDate = new Date(Math.max(...dates, now.getTime()));
 
-            minDate.setDate(minDate.getDate() - 3);
-            maxDate.setDate(maxDate.getDate() + 3);
+            // Force minimum spans to prevent the timeline from looking abruptly cut off
+            if (projectTimelineScale === 'season') {
+                // Season view: Force at least Now - 3 months to Now + 9 months (1 year continuous)
+                const minSeasonDate = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                const maxSeasonDate = new Date(now.getFullYear(), now.getMonth() + 9, 0);
+                if (minDate > minSeasonDate) minDate = minSeasonDate;
+                if (maxDate < maxSeasonDate) maxDate = maxSeasonDate;
+            } else {
+                // Month view: Force at least Now - 1 month to Now + 2 months
+                const minMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const maxMonthDate = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+                if (minDate > minMonthDate) minDate = minMonthDate;
+                if (maxDate < maxMonthDate) maxDate = maxMonthDate;
+            }
+
+            // Align strictly to the start and end of months for clean boundaries
+            minDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+            maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
             const totalDays = Math.max(1, Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)));
             const dayWidth = projectTimelineScale === 'season' ? 10 : 30; // 季 (Season) view zooms out
