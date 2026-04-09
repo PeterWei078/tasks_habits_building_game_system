@@ -4619,12 +4619,13 @@
                 const _now = new Date();
                 const todayStr = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
                 const isDueToday = task.dueDate === todayStr;
+                const isActionableToday = (task.startDate && task.dueDate && todayStr >= task.startDate && todayStr <= task.dueDate) || task.dueDate === todayStr;
                 let dueDateHtml = '';
                 if (task.startDate && task.dueDate) {
                     const isOverdue = task.dueDate < todayStr;
-                    const color = isOverdue ? '#E53E3E' : isDueToday ? '#C05621' : '#3182CE';
-                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : isDueToday ? 'rgba(246,173,85,0.2)' : 'rgba(49,130,206,0.1)';
-                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : isDueToday ? 'rgba(221,107,32,0.5)' : 'rgba(49,130,206,0.3)';
+                    const color = isOverdue ? '#E53E3E' : isActionableToday ? '#C05621' : '#3182CE';
+                    const bg = isOverdue ? 'rgba(229,62,62,0.1)' : isActionableToday ? 'rgba(246,173,85,0.2)' : 'rgba(49,130,206,0.1)';
+                    const border = isOverdue ? 'rgba(229,62,62,0.3)' : isActionableToday ? 'rgba(221,107,32,0.5)' : 'rgba(49,130,206,0.3)';
                     dueDateHtml = `<span style="font-size: 0.75rem; color: ${color}; background: ${bg}; padding: 2px 6px; border-radius: 4px; margin-right: 5px; border: 1px solid ${border};">${isDueToday ? '⏰' : '📅'} ${task.startDate} ~ ${task.dueDate}</span>`;
                 } else if (task.dueDate) {
                     const isOverdue = task.dueDate < todayStr;
@@ -4695,8 +4696,8 @@
                     ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5; font-size: 1.1rem; transition: transform 0.2s;" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Delete Task" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗑️</button>`}
                 </div>
             `;
-                // Highlight tasks due today with an amber tint (distinct from Daily Focus red and overdue red badge)
-                if (isDueToday && !task.completed) {
+                // Highlight tasks active today (due today, or today falls between start and due date) with an amber tint
+                if (isActionableToday && !task.completed) {
                     item.style.background = 'linear-gradient(135deg, rgba(246,173,85,0.22) 0%, rgba(255,255,255,0.18) 100%)';
                     item.style.borderLeft = '3px solid rgba(221,107,32,0.65)';
                     item.style.boxShadow = '0 2px 12px rgba(221,107,32,0.12)';
