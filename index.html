@@ -1302,8 +1302,8 @@
                     <div class="form-group">
                         <label>Reward (EXP/Gold)</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="number" id="modalExp" value="25" style="width: 80px;" placeholder="EXP">
-                            <input type="number" id="modalGold" value="10" style="width: 80px;" placeholder="Gold">
+                            <input type="number" id="modalExp" value="0" style="width: 80px;" placeholder="EXP">
+                            <input type="number" id="modalGold" value="0" style="width: 80px;" placeholder="Gold">
                         </div>
                     </div>
                     <div class="form-group">
@@ -1755,11 +1755,11 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Base EXP Reward</label>
-                        <input type="number" id="modalExp" value="25" min="0">
+                        <input type="number" id="modalExp" value="0" min="0">
                     </div>
                     <div class="form-group">
                         <label>Gold Reward</label>
-                        <input type="number" id="modalGold" value="10" min="0">
+                        <input type="number" id="modalGold" value="0" min="0">
                     </div>
                 </div>
                 <div class="form-group">
@@ -4845,8 +4845,8 @@
                 document.getElementById('modalStartDate').value = task.startDate || '';
                 document.getElementById('modalDueDate').value = task.dueDate || '';
                 document.getElementById('modalColor').value = task.color || '#4A90E2';
-                document.getElementById('modalExp').value = task.rewardExp || 25;
-                document.getElementById('modalGold').value = task.rewardGold || 10;
+                document.getElementById('modalExp').value = task.rewardExp ?? 0;
+                document.getElementById('modalGold').value = task.rewardGold ?? 0;
                 document.getElementById('modalTimeSpent').value = Math.round((task.timeSpent || 0) / 60);
 
                 const memoSection = document.getElementById('editTaskMemoSection');
@@ -4877,8 +4877,8 @@
                 document.getElementById('modalStartDate').value = '';
                 document.getElementById('modalDueDate').value = '';
                 document.getElementById('modalColor').value = '#4A90E2';
-                document.getElementById('modalExp').value = 25;
-                document.getElementById('modalGold').value = 10;
+                document.getElementById('modalExp').value = 0;
+                document.getElementById('modalGold').value = 0;
                 document.getElementById('modalTimeSpent').value = 0;
 
                 document.getElementById('modalPhotoFile').value = '';
@@ -5139,8 +5139,8 @@
                     // Warn but allow?
                 }
 
-                const exp = parseInt(document.getElementById('modalExp').value) || 25;
-                const gold = parseInt(document.getElementById('modalGold').value) || 10;
+                const exp = parseInt(document.getElementById('modalExp').value) || 0;
+                const gold = parseInt(document.getElementById('modalGold').value) || 0;
 
                 // Determine primary attribute for backward compatibility / display
                 const primaryAttribute = attributeRewards.length > 0 ? attributeRewards[0].attribute : 'strength';
