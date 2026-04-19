@@ -2815,10 +2815,7 @@
             header.innerHTML = `
                 <div class="shop-nav-bar">
                     <div style="font-weight: bold; font-size: 1.1rem; color: var(--accent-color);">🏅 Badge Store & Collection</div>
-                    <div class="gold-display">
-                        <span>💰</span> <span id="gold-count-anim">${state.player.gold}</span>
-                    </div>
-                    <div style="display: flex; gap: 5px;">
+                    <div style="display: flex; gap: 5px; margin-left: auto;">
                          <button onclick="openManagementModal('store')" title="Manage Badges" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">⚙️</button>
                     </div>
                 </div>
@@ -2830,14 +2827,12 @@
             const grid = document.createElement('div');
             grid.className = 'shop-grid';
 
-            const badges = state.player.shopItems.filter(item => item.category === 'Badge').sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
+            const badges = state.player.shopItems.filter(item => item.category === 'Badge' && !state.player.inventory.some(i => i.itemId === item.id)).sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
 
             if (badges.length === 0) {
-                grid.innerHTML = `<div style = "grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;"> No badges available.</div> `;
+                grid.innerHTML = `<div style = "grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;"> 所有成就徽章皆已獲得！請前往「成就」頁面查看。</div> `;
             } else {
                 grid.innerHTML = badges.map(item => {
-                    const isOwned = state.player.inventory.some(i => i.itemId === item.id);
-
                     // Determine Class and Icon
                     let tierClass = '';
                     let cornerIcon = '';
@@ -2862,9 +2857,8 @@
                          <p class="desc">${item.description}</p>
                          ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-bottom: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
                          <div style="font-size: 0.8rem; opacity: 0.7; margin: 5px 0; text-align: center;">${item.badgeCategory || 'General'}</div>
-                         <div style="font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; color: ${isOwned ? '#48BB78' : 'inherit'};">Price: 💰 ${item.price}</div>
-                         <button class="btn-buy" onclick="event.stopPropagation(); buyBadge('${item.id}')" ${isOwned ? 'disabled' : (state.player.gold < item.price ? 'disabled' : '')} style="${isOwned ? 'background: #48BB78; color: white; opacity: 1; cursor: default;' : (state.player.gold < item.price ? 'opacity: 0.5;' : 'background: var(--accent-color);')}">
-                             ${isOwned ? '🏆 Owned' : (state.player.gold < item.price ? 'Need Gold' : 'Purchase')}
+                         <button class="btn-buy" onclick="event.stopPropagation(); buyBadge('${item.id}')" style="background: var(--accent-color);">
+                             獲得
                          </button>
                      </div>
                 `}).join('');
@@ -2887,17 +2881,11 @@
             const item = state.player.shopItems.find(i => i.id === itemId);
             if (!item) return;
 
-            if (state.player.gold < item.price) {
-                showToast('Not enough gold!', 'error');
-                return;
-            }
-
             if (state.player.inventory.some(i => i.itemId === item.id)) {
                 showToast('You already own this badge!', 'info');
                 return;
             }
 
-            state.player.gold -= item.price;
             state.player.inventory.push({
                 itemId: item.id,
                 purchaseDate: Date.now(),
@@ -2915,10 +2903,10 @@
             state.player.activities.unshift({
                 id: 'act_' + Date.now(),
                 type: 'BADGE_CLAIM',
-                title: `Purchased Badge: ${item.title} `,
+                title: `Obtained Badge: ${item.title} `,
                 timestamp: Date.now(),
                 details: {
-                    gold: -item.price,
+                    gold: 0,
                     exp: 0,
                     icon: item.icon,
                     badgeCategory: item.badgeCategory
@@ -2926,7 +2914,7 @@
             });
 
             saveState();
-            showToast(`Purchased ${item.title} !`, 'success');
+            showToast(`Obtained ${item.title} !`, 'success');
             renderBadgesPage();
         }
 
