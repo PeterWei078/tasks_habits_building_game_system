@@ -4799,9 +4799,9 @@
             // Populate Tags/Projects & Patches
             const tagsContainer = document.getElementById('modalTags');
 
-            // Combine Tags and Patches for Selection
+            // Combine Tags and Patches for Selection (exclude completed projects)
             const allLinkableItems = [
-                ...state.player.tags.map(t => ({ ...t, isPatch: false })),
+                ...state.player.tags.filter(t => !isProjectCompleted(t)).map(t => ({ ...t, isPatch: false })),
                 ...state.player.patches.map(p => ({ ...p, isPatch: true }))
             ];
 
@@ -5179,8 +5179,15 @@
                     }
                 }
 
-                // Tags
-                const tags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
+                // Tags (preserve hidden completed-project tags from edit mode)
+                const visibleTags = Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value);
+                const hiddenCompletedTags = editingTaskId
+                    ? (state.tasks.find(t => t.id == editingTaskId)?.tags || []).filter(tagId => {
+                        const proj = state.player.tags.find(p => p.id === tagId);
+                        return proj && isProjectCompleted(proj);
+                    })
+                    : [];
+                const tags = [...new Set([...visibleTags, ...hiddenCompletedTags])];
 
                 // Subtasks
                 const subtaskDivs = document.querySelectorAll('#modalSubtasks .subtask-item');
