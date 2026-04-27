@@ -4063,9 +4063,7 @@
                                 ${(t.attributeRewards || []).map(r => `
                                     <span class="badge ${attributesConfig[r.attribute].badgeClass}" style="font-size: 0.65rem; padding: 1px 4px;">${attributesConfig[r.attribute].label.split(' ')[1]} +${r.exp}</span>
                                 `).join('')}
-                                ${(t.skillRewards || []).map(r => `
-                                    <span class="badge" style="font-size: 0.65rem; padding: 1px 4px; background: var(--accent-color);">${r.icon} ${r.name} +${r.exp}</span>
-                                `).join('')}
+                                ${(t.skillRewards || []).map(r => { const sc = getSkillBadgeColor(r.id); return `<span class="badge" style="font-size: 0.65rem; padding: 1px 4px; background: ${sc.bg}; color: ${sc.color};">${r.icon} ${r.name} +${r.exp}</span>`; }).join('')}
                             </div>
                         </div>
                     </div>
@@ -4675,9 +4673,7 @@
                                  ${(task.attributeRewards || []).map(r => `
                                      <span class="badge ${(attributesConfig[r.attribute] && attributesConfig[r.attribute].badgeClass) ? attributesConfig[r.attribute].badgeClass : ''}" style="font-size: 0.7rem;">${(attributesConfig[r.attribute] && attributesConfig[r.attribute].label) ? attributesConfig[r.attribute].label.split(' ')[1] : ''} +${r.exp}</span>
                                  `).join('')}
-                                 ${(task.skillRewards || []).map(r => `
-                                     <span class="badge" style="font-size: 0.7rem; background: var(--accent-color);">${r.icon} ${r.name} +${r.exp}</span>
-                                 `).join('')}
+                                 ${(task.skillRewards || []).map(r => { const sc = getSkillBadgeColor(r.id); return `<span class="badge" style="font-size: 0.7rem; background: ${sc.bg}; color: ${sc.color};">${r.icon} ${r.name} +${r.exp}</span>`; }).join('')}
                             </div>
                         </div>
                     </div>
@@ -5038,6 +5034,30 @@
             container.appendChild(div);
         }
 
+        const SKILL_BADGE_COLORS = [
+            { bg: '#C6F6D5', color: '#276749' },  // green
+            { bg: '#BEE3F8', color: '#2A69AC' },  // blue
+            { bg: '#FED7D7', color: '#9B2C2C' },  // red
+            { bg: '#FEEBC8', color: '#7B341E' },  // orange
+            { bg: '#E9D8FD', color: '#553C9A' },  // purple
+            { bg: '#FEF3C7', color: '#92400E' },  // amber
+            { bg: '#FCE7F3', color: '#9D174D' },  // pink
+            { bg: '#E0F2FE', color: '#0C4A6E' },  // sky
+            { bg: '#D1FAE5', color: '#065F46' },  // teal
+            { bg: '#FFF3E0', color: '#E65100' },  // deep orange
+            { bg: '#F3E8FF', color: '#6B21A8' },  // violet
+            { bg: '#ECFDF5', color: '#047857' },  // emerald
+        ];
+        function getSkillBadgeColor(skillId) {
+            let hash = 0;
+            const s = String(skillId || '');
+            for (let i = 0; i < s.length; i++) {
+                hash = ((hash << 5) - hash) + s.charCodeAt(i);
+                hash |= 0;
+            }
+            return SKILL_BADGE_COLORS[Math.abs(hash) % SKILL_BADGE_COLORS.length];
+        }
+
         function addSkillReward() {
             const skillSelect = document.getElementById('modalSkillSelect');
             const expInput = document.getElementById('modalSkillExp');
@@ -5068,8 +5088,9 @@
             div.dataset.exp = exp;
             div.dataset.name = name;
             div.dataset.icon = icon;
-            div.style.background = 'var(--accent-color)';
-            div.style.color = 'white';
+            const skillColor = getSkillBadgeColor(skillId);
+            div.style.background = skillColor.bg;
+            div.style.color = skillColor.color;
             div.style.display = 'flex';
             div.style.alignItems = 'center';
             div.style.gap = '5px';
