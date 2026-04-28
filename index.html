@@ -1878,11 +1878,27 @@
                             const userDocRef = doc(window.firebaseDb, "users", user.uid);
                             const docSnap = await getDoc(userDocRef);
                             
-                            if (docSnap.exists() && docSnap.data().state) {
-                                // Load from cloud
-                                state = JSON.parse(docSnap.data().state);
+                            let cloudStateStr = null;
+                            if (docSnap.exists() && docSnap.data().totalChunks) {
+                                // Load chunks
+                                const totalChunks = docSnap.data().totalChunks;
+                                let fullStr = "";
+                                for (let i = 0; i < totalChunks; i++) {
+                                    const chunkSnap = await getDoc(doc(window.firebaseDb, `users/${user.uid}/dataChunks/${i}`));
+                                    if (chunkSnap.exists()) {
+                                        fullStr += chunkSnap.data().chunk;
+                                    }
+                                }
+                                cloudStateStr = fullStr;
+                            } else if (docSnap.exists() && docSnap.data().state) {
+                                // Legacy single document load
+                                cloudStateStr = docSnap.data().state;
+                            }
+
+                            if (cloudStateStr) {
+                                state = JSON.parse(cloudStateStr);
                                 console.log("State loaded from Firebase");
-                                render(); // Re-render with cloud data
+                                render();
                             } else {
                                 // First time login, migrate local storage data if exists
                                 const localData = localStorage.getItem('sl_data');
@@ -1890,8 +1906,14 @@
                                     const parsedLocal = JSON.parse(localData);
                                     if (parsedLocal && parsedLocal.tasks) {
                                         console.log("Migrating local data to Firebase...");
-                                        await setDoc(userDocRef, { state: localData });
                                         state = parsedLocal;
+                                        // Save to firebase using chunking
+                                        const chunkSize = 800000;
+                                        const totalChunks = Math.ceil(localData.length / chunkSize);
+                                        await setDoc(userDocRef, { totalChunks: totalChunks, updatedAt: new Date().toISOString() });
+                                        for (let i = 0; i < totalChunks; i++) {
+                                            await setDoc(doc(window.firebaseDb, `users/${user.uid}/dataChunks/${i}`), { chunk: localData.slice(i * chunkSize, (i + 1) * chunkSize) });
+                                        }
                                         alert("已成功將您的本機資料同步至雲端！");
                                         render();
                                     } else {
@@ -1903,7 +1925,7 @@
                             }
                         } catch (error) {
                             console.error("Error fetching data from Firestore:", error);
-                            alert("讀取雲端資料失敗，將使用本機資料。");
+                            alert("讀取雲端資料失敗，原因：" + error.message + "\n將使用本機資料。");
                         }
 
                     } else {
@@ -2146,9 +2168,28 @@
                 
                 if (window.firebaseSetDoc && window.firebaseUserUid && !window.isFirebaseSyncing) {
                     window.isFirebaseSyncing = true;
-                    window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, "users", window.firebaseUserUid), { state: stateString })
-                        .catch(e => console.error("Firebase save error", e))
-                        .finally(() => { window.isFirebaseSyncing = false; });
+                    const uid = window.firebaseUserUid;
+                    const db = window.firebaseDb;
+                    const doc = window.firebaseDoc;
+                    const setDoc = window.firebaseSetDoc;
+
+                    const chunkSize = 800000; // ~800KB chunks
+                    const totalChunks = Math.ceil(stateString.length / chunkSize);
+
+                    (async () => {
+                        try {
+                            // Save metadata
+                            await setDoc(doc(db, "users", uid), { totalChunks: totalChunks, updatedAt: new Date().toISOString() });
+                            // Save chunks
+                            for (let i = 0; i < totalChunks; i++) {
+                                await setDoc(doc(db, `users/${uid}/dataChunks/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
+                            }
+                        } catch (e) {
+                            console.error("Firebase save error", e);
+                        } finally {
+                            window.isFirebaseSyncing = false;
+                        }
+                    })();
                 }
                 return true;
             } catch (e) {
