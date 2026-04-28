@@ -930,6 +930,22 @@
             .shop-grid {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             }
+
+            .task-content {
+                flex-wrap: wrap;
+            }
+
+            .task-photo-container {
+                width: 100%;
+                margin-left: 0 !important;
+                margin-top: 12px;
+            }
+
+            .task-photo {
+                max-width: 100% !important;
+                width: 100%;
+                height: 150px !important;
+            }
         }
 
         /* Shop Styles (Redesigned) */
@@ -4737,8 +4753,30 @@
             });
 
             // Tag Filters
+            const tagFilterWrapper = document.createElement('details');
+            tagFilterWrapper.style.marginBottom = '20px';
+            tagFilterWrapper.style.background = 'rgba(255, 255, 255, 0.05)';
+            tagFilterWrapper.style.padding = '10px 15px';
+            tagFilterWrapper.style.borderRadius = '12px';
+            tagFilterWrapper.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+            if (currentTagFilter !== null) {
+                tagFilterWrapper.open = true;
+            }
+
+            const tagSummary = document.createElement('summary');
+            tagSummary.style.cursor = 'pointer';
+            tagSummary.style.fontWeight = 'bold';
+            tagSummary.style.fontSize = '1.05rem';
+            tagSummary.style.color = 'var(--text-primary)';
+            tagSummary.style.outline = 'none';
+            tagSummary.style.userSelect = 'none';
+            tagSummary.innerHTML = `🏷️ 篩選專案任務 (Filter by Project) ${currentTagFilter ? '<span style="color:var(--accent-color);font-size:0.9rem;margin-left:5px;">(Active Filter)</span>' : ''}`;
+            tagFilterWrapper.appendChild(tagSummary);
+
             const tagFilterContainer = document.createElement('div');
             tagFilterContainer.className = 'tag-filter-bar';
+            tagFilterContainer.style.marginTop = '15px';
+            tagFilterWrapper.appendChild(tagFilterContainer);
 
             // "All" Tag Option
             const allTagChip = document.createElement('div');
@@ -4868,7 +4906,7 @@
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(groupFilterContainer);
-            contentDiv.appendChild(tagFilterContainer);
+            contentDiv.appendChild(tagFilterWrapper);
             contentDiv.appendChild(topLayout);
             contentDiv.appendChild(listCard);
 
@@ -4927,7 +4965,7 @@
                 const isDailyFocus = task.title && task.title.includes("🔥當日小任務");
                 let photoHtml = '';
                 if (task.photo) {
-                    photoHtml = `<div style="margin-left: 15px; flex-shrink: 0;"><img src="${task.photo}" style="max-width: 240px; max-height: 180px; border-radius: 8px; border: 2px solid var(--accent-color, rgba(255,255,255,0.5)); object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onclick="event.stopPropagation(); window.open(this.src)"></div>`;
+                    photoHtml = `<div class="task-photo-container" style="margin-left: 15px; flex-shrink: 0;"><img class="task-photo" src="${task.photo}" style="max-width: 240px; max-height: 180px; border-radius: 8px; border: 2px solid var(--accent-color, rgba(255,255,255,0.5)); object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onclick="event.stopPropagation(); window.open(this.src)"></div>`;
                 }
 
                 item.innerHTML = `
