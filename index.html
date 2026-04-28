@@ -2162,46 +2162,53 @@
         saveState(); // Save the patched state immediately
 
         function saveState() {
+            const stateString = JSON.stringify(state);
+            let isLocalSaveSuccess = true;
+
+            // 1. Try saving to LocalStorage
             try {
-                const stateString = JSON.stringify(state);
                 localStorage.setItem('sl_data', stateString);
-                
-                if (window.firebaseSetDoc && window.firebaseUserUid && !window.isFirebaseSyncing) {
-                    window.isFirebaseSyncing = true;
-                    const uid = window.firebaseUserUid;
-                    const db = window.firebaseDb;
-                    const doc = window.firebaseDoc;
-                    const setDoc = window.firebaseSetDoc;
-
-                    const chunkSize = 800000; // ~800KB chunks
-                    const totalChunks = Math.ceil(stateString.length / chunkSize);
-
-                    (async () => {
-                        try {
-                            // Save metadata
-                            await setDoc(doc(db, "users", uid), { totalChunks: totalChunks, updatedAt: new Date().toISOString() });
-                            // Save chunks
-                            for (let i = 0; i < totalChunks; i++) {
-                                await setDoc(doc(db, `users/${uid}/dataChunks/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
-                            }
-                        } catch (e) {
-                            console.error("Firebase save error", e);
-                        } finally {
-                            window.isFirebaseSyncing = false;
-                        }
-                    })();
-                }
-                return true;
             } catch (e) {
+                isLocalSaveSuccess = false;
                 if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-                    alert("⚠️ Storage Limit Reached!\n\nYour browser's storage is full. Please delete some projects, tasks, or images to save new changes.");
                     console.error("Storage limit reached:", e);
+                    // Only alert once per session to avoid annoying the user
+                    if (!window.hasAlertedStorageLimit) {
+                        alert("⚠️ 本機儲存空間已滿 (超過 5MB)！\n\n因為您有太多圖片，無法再備份到本機。不過別擔心，系統仍會持續將您的資料同步到 Firebase 雲端！建議您未來可清除部分舊照片。");
+                        window.hasAlertedStorageLimit = true;
+                    }
                 } else {
-                    console.error("Error saving state:", e);
-                    alert("Error saving data. Please check console.");
+                    console.error("Error saving state locally:", e);
                 }
-                return false;
             }
+            
+            // 2. Always try syncing to Firebase
+            if (window.firebaseSetDoc && window.firebaseUserUid && !window.isFirebaseSyncing) {
+                window.isFirebaseSyncing = true;
+                const uid = window.firebaseUserUid;
+                const db = window.firebaseDb;
+                const doc = window.firebaseDoc;
+                const setDoc = window.firebaseSetDoc;
+
+                const chunkSize = 800000; // ~800KB chunks
+                const totalChunks = Math.ceil(stateString.length / chunkSize);
+
+                (async () => {
+                    try {
+                        // Save metadata
+                        await setDoc(doc(db, "users", uid), { totalChunks: totalChunks, updatedAt: new Date().toISOString() });
+                        // Save chunks
+                        for (let i = 0; i < totalChunks; i++) {
+                            await setDoc(doc(db, `users/${uid}/dataChunks/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
+                        }
+                    } catch (e) {
+                        console.error("Firebase save error", e);
+                    } finally {
+                        window.isFirebaseSyncing = false;
+                    }
+                })();
+            }
+            return isLocalSaveSuccess;
         }
 
         // Helper to check if a project/tag should be considered "completed" and hidden if toggled
