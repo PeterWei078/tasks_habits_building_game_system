@@ -1090,6 +1090,20 @@
         <!-- Sidebar -->
         <aside class="sidebar glass">
             <div class="logo">SOLO LEVELING</div>
+            
+            <!-- Auth Section -->
+            <div id="auth-section" style="margin-bottom: 20px; padding: 0 10px; display: flex; flex-direction: column; gap: 8px;">
+                <div id="user-info" style="display: none; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                        <img id="user-photo" src="" style="width: 24px; height: 24px; border-radius: 50%;">
+                        <span id="user-name" style="font-size: 0.85rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);"></span>
+                    </div>
+                    <button onclick="window.firebaseSignOut()" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1rem; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; transition: background 0.2s;" title="登出 (Sign Out)" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='none'">🚪</button>
+                </div>
+                <button id="login-btn" onclick="window.firebaseSignIn()" class="btn btn-primary" style="width: 100%; font-size: 0.9rem; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span>🌐</span> <span id="login-btn-text">使用 Google 登入同步</span>
+                </button>
+            </div>
             <ul class="nav-menu" style="overflow-y: auto; flex: 1;">
                 <!-- Core -->
                 <li class="nav-category">核心 (Core)</li>
@@ -1785,6 +1799,135 @@
     </div>
 
     <script>
+        // --- Firebase Integration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyC8pe-tksaHNX7OlF88uAeJHNuy7jg97-Q",
+            authDomain: "gen-lang-client-0940823709.firebaseapp.com",
+            projectId: "gen-lang-client-0940823709",
+            storageBucket: "gen-lang-client-0940823709.firebasestorage.app",
+            messagingSenderId: "6652935122",
+            appId: "1:6652935122:web:1307b7cb1f828b77de260b"
+        };
+
+        window.firebaseUserUid = null;
+        window.isFirebaseSyncing = false;
+
+        async function initFirebase() {
+            try {
+                const loginBtn = document.getElementById('login-btn');
+                const loginBtnText = document.getElementById('login-btn-text');
+                if (loginBtnText) loginBtnText.innerText = "載入中...";
+                if (loginBtn) loginBtn.disabled = true;
+
+                const appModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js");
+                const authModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js");
+                const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+                
+                const auth = authModule.getAuth;
+                const db = firestoreModule.getFirestore;
+                const doc = firestoreModule.doc;
+                const setDoc = firestoreModule.setDoc;
+                const getDoc = firestoreModule.getDoc;
+                const signInWithPopup = authModule.signInWithPopup;
+                const GoogleAuthProvider = authModule.GoogleAuthProvider;
+                const signOut = authModule.signOut;
+                const onAuthStateChanged = authModule.onAuthStateChanged;
+
+                const app = appModule.initializeApp(firebaseConfig);
+                const authInstance = auth(app);
+                window.firebaseDb = db(app);
+                window.firebaseDoc = doc;
+                window.firebaseSetDoc = setDoc;
+
+                window.firebaseSignIn = () => {
+                    if (loginBtnText) loginBtnText.innerText = "登入中...";
+                    const provider = new GoogleAuthProvider();
+                    signInWithPopup(authInstance, provider).catch(e => {
+                        console.error(e);
+                        if (loginBtnText) loginBtnText.innerText = "使用 Google 登入同步";
+                        alert("登入失敗: " + e.message);
+                    });
+                };
+
+                window.firebaseSignOut = () => {
+                    signOut(authInstance).then(() => {
+                        window.location.reload();
+                    });
+                };
+
+                onAuthStateChanged(authInstance, async (user) => {
+                    const userInfo = document.getElementById('user-info');
+                    const userName = document.getElementById('user-name');
+                    const userPhoto = document.getElementById('user-photo');
+
+                    if (user) {
+                        // Logged in
+                        window.firebaseUserUid = user.uid;
+                        if (loginBtn) loginBtn.style.display = 'none';
+                        if (userInfo) userInfo.style.display = 'flex';
+                        if (userName) userName.innerText = user.displayName || user.email;
+                        if (userPhoto && user.photoURL) {
+                            userPhoto.src = user.photoURL;
+                            userPhoto.style.display = 'block';
+                        } else if (userPhoto) {
+                            userPhoto.style.display = 'none';
+                        }
+
+                        // Fetch data from Firestore
+                        try {
+                            const userDocRef = doc(window.firebaseDb, "users", user.uid);
+                            const docSnap = await getDoc(userDocRef);
+                            
+                            if (docSnap.exists() && docSnap.data().state) {
+                                // Load from cloud
+                                state = JSON.parse(docSnap.data().state);
+                                console.log("State loaded from Firebase");
+                                render(); // Re-render with cloud data
+                            } else {
+                                // First time login, migrate local storage data if exists
+                                const localData = localStorage.getItem('sl_data');
+                                if (localData) {
+                                    const parsedLocal = JSON.parse(localData);
+                                    if (parsedLocal && parsedLocal.tasks) {
+                                        console.log("Migrating local data to Firebase...");
+                                        await setDoc(userDocRef, { state: localData });
+                                        state = parsedLocal;
+                                        alert("已成功將您的本機資料同步至雲端！");
+                                        render();
+                                    } else {
+                                        await setDoc(userDocRef, { state: JSON.stringify(state) });
+                                    }
+                                } else {
+                                    await setDoc(userDocRef, { state: JSON.stringify(state) });
+                                }
+                            }
+                        } catch (error) {
+                            console.error("Error fetching data from Firestore:", error);
+                            alert("讀取雲端資料失敗，將使用本機資料。");
+                        }
+
+                    } else {
+                        // Logged out
+                        window.firebaseUserUid = null;
+                        if (loginBtn) {
+                            loginBtn.style.display = 'flex';
+                            loginBtn.disabled = false;
+                        }
+                        if (loginBtnText) loginBtnText.innerText = "使用 Google 登入同步";
+                        if (userInfo) userInfo.style.display = 'none';
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase Init Error:", error);
+                const loginBtnText = document.getElementById('login-btn-text');
+                if (loginBtnText) loginBtnText.innerText = "載入 Firebase 失敗";
+            }
+        }
+        
+        // Start initialization
+        initFirebase();
+
         // --- State Management ---
         const defaultState = {
             player: {
@@ -1998,7 +2141,15 @@
 
         function saveState() {
             try {
-                localStorage.setItem('sl_data', JSON.stringify(state));
+                const stateString = JSON.stringify(state);
+                localStorage.setItem('sl_data', stateString);
+                
+                if (window.firebaseSetDoc && window.firebaseUserUid && !window.isFirebaseSyncing) {
+                    window.isFirebaseSyncing = true;
+                    window.firebaseSetDoc(window.firebaseDoc(window.firebaseDb, "users", window.firebaseUserUid), { state: stateString })
+                        .catch(e => console.error("Firebase save error", e))
+                        .finally(() => { window.isFirebaseSyncing = false; });
+                }
                 return true;
             } catch (e) {
                 if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
