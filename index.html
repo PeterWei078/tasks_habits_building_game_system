@@ -5151,12 +5151,9 @@
             ];
 
             tagsContainer.innerHTML = allLinkableItems.map(t => `
-                <label style="display: flex; align-items: center; gap: 5px; font-size: 0.9rem; background: rgba(0,0,0,0.1); padding: 5px 8px; border-radius: 6px; cursor: pointer;">
-                    <input type="checkbox" name="modalTag" value="${t.id}" ${prefillTag === t.id ? 'checked' : ''}>
-                    <span style="display:inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${t.color};"></span>
-                    ${t.name} ${t.isPatch ? '<span style="font-size: 0.7rem; background:#E2E8F0; color:#4A5568; padding: 1px 4px; border-radius:3px;">(Patch)</span>' : ''}
-                </label>
-            `).join('');
+                <input type="checkbox" name="modalTag" value="${t.id}" ${prefillTag === t.id ? 'checked' : ''} style="display:none">
+            `).join('') + `<div id="modalProjectChipsArea" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; width:100%;"></div>`;
+            renderModalProjectChips();
 
             if (taskId) {
                 // Edit Mode
@@ -5203,6 +5200,7 @@
                 document.querySelectorAll('input[name="modalTag"]').forEach(cb => {
                     cb.checked = task.tags && task.tags.includes(cb.value);
                 });
+                renderModalProjectChips();
 
                 document.getElementById('modalGroup').value = task.groupId || 'default';
                 document.getElementById('modalRepeat').value = task.repeat || 'none';
@@ -5493,6 +5491,75 @@
             `;
             container.appendChild(div);
         }
+
+        function renderModalProjectChips() {
+            const area = document.getElementById('modalProjectChipsArea');
+            if (!area) return;
+            const allLinkableItems = [
+                ...state.player.tags.filter(t => !isProjectCompleted(t)).map(t => ({ ...t, isPatch: false })),
+                ...state.player.patches.map(p => ({ ...p, isPatch: true }))
+            ];
+            const checkedIds = new Set(Array.from(document.querySelectorAll('input[name="modalTag"]:checked')).map(cb => cb.value));
+            const checkedItems = allLinkableItems.filter(t => checkedIds.has(t.id));
+            const uncheckedItems = allLinkableItems.filter(t => !checkedIds.has(t.id));
+
+            let html = checkedItems.map(t => `
+                <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.85rem; background:rgba(0,0,0,0.18); padding:4px 10px; border-radius:20px;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${t.color}; flex-shrink:0;"></span>
+                    ${t.name}${t.isPatch ? ' <span style="font-size:0.7rem; background:#E2E8F0; color:#4A5568; padding:1px 4px; border-radius:3px;">(Patch)</span>' : ''}
+                    <button type="button" onclick="toggleModalProjectTag('${t.id}')" style="background:none; border:none; cursor:pointer; opacity:0.55; font-size:1rem; line-height:1; padding:0 2px; margin-left:2px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">×</button>
+                </span>
+            `).join('');
+
+            if (uncheckedItems.length > 0) {
+                const ddItems = uncheckedItems.map(t => `
+                    <label style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:0.85rem;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                        <input type="checkbox" onchange="toggleModalProjectTagAdd('${t.id}', this)" style="accent-color:var(--accent-color);">
+                        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${t.color}; flex-shrink:0;"></span>
+                        <span>${t.name}${t.isPatch ? ' <span style="font-size:0.7rem; background:#E2E8F0; color:#4A5568; padding:1px 4px; border-radius:3px;">(Patch)</span>' : ''}</span>
+                    </label>
+                `).join('');
+                html += `
+                    <div style="position:relative; display:inline-block;">
+                        <button type="button" id="projectTagAddBtn" onclick="toggleModalProjectDropdown(event)"
+                                style="background:rgba(0,0,0,0.1); border:1px dashed rgba(255,255,255,0.3); border-radius:20px; padding:4px 12px; font-size:0.82rem; cursor:pointer; color:inherit; opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
+                            + Add Project
+                        </button>
+                        <div id="projectTagDropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:200; background:var(--card-bg,rgba(30,20,60,0.95)); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:6px; min-width:210px; max-height:220px; overflow-y:auto; box-shadow:0 6px 24px rgba(0,0,0,0.4);">
+                            ${ddItems}
+                        </div>
+                    </div>
+                `;
+            }
+            area.innerHTML = html;
+        }
+
+        window.toggleModalProjectTag = function(id) {
+            const cb = document.querySelector(`input[name="modalTag"][value="${id}"]`);
+            if (cb) { cb.checked = false; renderModalProjectChips(); }
+        };
+
+        window.toggleModalProjectTagAdd = function(id, checkEl) {
+            const cb = document.querySelector(`input[name="modalTag"][value="${id}"]`);
+            if (cb) { cb.checked = true; }
+            const dd = document.getElementById('projectTagDropdown');
+            if (dd) dd.style.display = 'none';
+            renderModalProjectChips();
+        };
+
+        window.toggleModalProjectDropdown = function(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('projectTagDropdown');
+            if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        };
+
+        document.addEventListener('click', function(e) {
+            const dd = document.getElementById('projectTagDropdown');
+            const btn = document.getElementById('projectTagAddBtn');
+            if (dd && dd.style.display !== 'none' && !dd.contains(e.target) && e.target !== btn) {
+                dd.style.display = 'none';
+            }
+        });
 
         async function saveTaskFromModal() {
             try {
