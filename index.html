@@ -1300,9 +1300,12 @@
                 </div>
                 <div class="form-group">
                     <label
-                        style="display:block; margin-bottom:5px; font-size:0.9rem; color:var(--text-secondary);">Photo
-                        (Upload)</label>
-                    <input type="file" id="modalPhotoFile" accept="image/*" style="padding: 10px;">
+                        style="display:block; margin-bottom:5px; font-size:0.9rem; color:var(--text-secondary);">Photo</label>
+                    <input type="file" id="modalPhotoFile" accept="image/*" style="padding: 10px;" onchange="previewTaskModalPhoto(event)">
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button type="button" onclick="openPhotoLibraryModal('task')" style="flex:1; padding:8px; background:rgba(74,144,226,0.1); border:1px dashed rgba(74,144,226,0.4); border-radius:8px; cursor:pointer; color:#4A90E2; font-size:0.85rem; font-weight:500;">📚 Choose from Library</button>
+                        <button type="button" id="modalPhotoClearBtn" onclick="clearTaskModalPhoto()" style="padding:8px 12px; background:rgba(229,62,62,0.08); border:1px solid rgba(229,62,62,0.25); border-radius:8px; cursor:pointer; color:#E53E3E; font-size:0.85rem; display:none; white-space:nowrap;">✕ Remove</button>
+                    </div>
                     <img id="modalPhotoPreview"
                         style="max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 10px; display: none;">
                     <input type="hidden" id="modalPhotoBase64">
@@ -2099,6 +2102,7 @@
                 patches: [], // Patch/Inbox projects
                 reflections: [], // New Reflections Data
                 theme: 'default', // UI Background Color Theme
+                photoLibrary: [], // [{id, name, data (base64), addedAt}]
                 pageInfos: {
                     'tasks': "Welcome to **Tasks**!\n\nHere you can track your daily, urgent, and long-term quests. Complete them to earn EXP and Gold.",
                     'focus': "Welcome to **Focus Mode**!\n\nUse the Pomodoro timer to concentrate on your tasks uninterrupted.",
@@ -2233,6 +2237,32 @@
         if (!state.player.achievements) state.player.achievements = [];
         if (!state.player.reflections) state.player.reflections = []; // Initialize reflections
         if (!state.player.skills) state.player.skills = []; // Initialize skills
+        if (!state.player.photoLibrary) {
+            state.player.photoLibrary = [];
+            const libDataSet = new Set();
+            (state.tasks || []).forEach(task => {
+                if (task.photo && !libDataSet.has(task.photo)) {
+                    libDataSet.add(task.photo);
+                    state.player.photoLibrary.push({
+                        id: 'lib_t_' + task.id,
+                        name: (task.title || 'Task Photo').substring(0, 30),
+                        data: task.photo,
+                        addedAt: new Date().toISOString()
+                    });
+                }
+            });
+            [...(state.player.tags || []), ...(state.player.patches || [])].forEach(proj => {
+                if (proj.photos && proj.photos[0] && !libDataSet.has(proj.photos[0])) {
+                    libDataSet.add(proj.photos[0]);
+                    state.player.photoLibrary.push({
+                        id: 'lib_p_' + proj.id,
+                        name: (proj.name || 'Project Photo').substring(0, 30),
+                        data: proj.photos[0],
+                        addedAt: new Date().toISOString()
+                    });
+                }
+            });
+        }
         if (typeof state.player.gold === 'undefined') state.player.gold = 0;
         if (!state.player.theme) {
             state.player.theme = defaultState.player.theme;
@@ -4064,9 +4094,10 @@
                                 <div class="form-group">
                                     <label>Cover Photo</label>
                                     <div id="projPhotosContainer" style="margin-bottom: 10px;"></div>
-                                    <div style="display: flex; gap: 5px; align-items: center;">
-                                        <input type="file" id="projPhotoInput" accept="image/*" style="flex: 1;">
+                                    <div style="display: flex; gap: 5px; align-items: center; flex-wrap: wrap;">
+                                        <input type="file" id="projPhotoInput" accept="image/*" style="flex: 1; min-width: 0;">
                                         <button class="btn" onclick="addProjectPhoto()">Upload</button>
+                                        <button class="btn" onclick="openPhotoLibraryModal('project')" style="background:rgba(74,144,226,0.15); border:1px solid rgba(74,144,226,0.4); color:#4A90E2; white-space:nowrap;">📚 Library</button>
                                     </div>
                                 </div>
 
@@ -5139,10 +5170,14 @@
                     document.getElementById('modalPhotoPreview').src = task.photo;
                     document.getElementById('modalPhotoPreview').style.display = 'block';
                     document.getElementById('modalPhotoBase64').value = task.photo;
+                    const cb = document.getElementById('modalPhotoClearBtn');
+                    if (cb) cb.style.display = '';
                 } else {
                     document.getElementById('modalPhotoPreview').src = '';
                     document.getElementById('modalPhotoPreview').style.display = 'none';
                     document.getElementById('modalPhotoBase64').value = '';
+                    const cb = document.getElementById('modalPhotoClearBtn');
+                    if (cb) cb.style.display = 'none';
                 }
                 document.getElementById('modalPhotoFile').value = ''; // Clear file input
 
@@ -5196,7 +5231,8 @@
                 document.getElementById('modalPhotoPreview').style.display = 'none';
                 document.getElementById('modalPhotoBase64').value = '';
                 document.getElementById('modalPhotoFile').value = '';
-
+                const newCb = document.getElementById('modalPhotoClearBtn');
+                if (newCb) newCb.style.display = 'none';
 
                 document.getElementById('modalRepeat').value = 'none';
                 document.getElementById('modalStartDate').value = '';
@@ -5651,6 +5687,120 @@
                 };
                 reader.readAsDataURL(file);
             });
+        }
+
+        // --- Photo Library ---
+        let photoLibraryContext = null; // 'task' | 'project' | 'manage'
+
+        function openPhotoLibraryModal(context) {
+            photoLibraryContext = context;
+            const hint = document.getElementById('libSelectHint');
+            if (hint) hint.style.display = (context === 'task' || context === 'project') ? 'block' : 'none';
+            renderPhotoLibraryGrid();
+            document.getElementById('photoLibraryModal').style.display = 'flex';
+        }
+
+        function closePhotoLibraryModal() {
+            document.getElementById('photoLibraryModal').style.display = 'none';
+            photoLibraryContext = null;
+        }
+
+        function renderPhotoLibraryGrid() {
+            const library = state.player.photoLibrary || [];
+            const grid = document.getElementById('photoLibraryGrid');
+            const empty = document.getElementById('photoLibraryEmpty');
+            const isSelecting = photoLibraryContext === 'task' || photoLibraryContext === 'project';
+
+            if (library.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            grid.innerHTML = library.map(photo => `
+                <div style="position:relative; border-radius:10px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s; cursor:${isSelecting ? 'pointer' : 'default'}; border:2px solid transparent; background:rgba(0,0,0,0.05);"
+                     onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.18)'; this.style.borderColor='var(--accent-color,#4A90E2)';"
+                     onmouseout="this.style.transform=''; this.style.boxShadow=''; this.style.borderColor='transparent';"
+                     onclick="${isSelecting ? `selectPhotoFromLibrary('${photo.id}')` : ''}">
+                    <img src="${photo.data}" alt="${photo.name}" loading="lazy"
+                         style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
+                    <div style="padding:5px 7px; font-size:0.72rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(255,255,255,0.92); color:#333;">
+                        ${photo.name}
+                    </div>
+                    ${isSelecting ? `<div style="position:absolute; top:4px; left:4px; background:rgba(74,144,226,0.9); color:white; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:700; pointer-events:none;">USE</div>` : ''}
+                    <button onclick="event.stopPropagation(); deleteFromPhotoLibrary('${photo.id}')"
+                        style="position:absolute; top:4px; right:4px; background:rgba(229,62,62,0.85); color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; line-height:1; transition:background 0.15s;"
+                        onmouseover="this.style.background='rgba(229,62,62,1)'" onmouseout="this.style.background='rgba(229,62,62,0.85)'"
+                        title="Remove from library">✕</button>
+                </div>
+            `).join('');
+        }
+
+        async function uploadToPhotoLibrary() {
+            const input = document.getElementById('libPhotoUploadInput');
+            const nameInput = document.getElementById('libPhotoNameInput');
+            const file = input.files[0];
+            if (!file) { showToast('No File', 'Please select an image first.'); return; }
+            try {
+                const data = await compressImage(file);
+                const name = nameInput.value.trim() || file.name.replace(/\.[^.]+$/, '');
+                if (!state.player.photoLibrary) state.player.photoLibrary = [];
+                state.player.photoLibrary.push({ id: 'lib_' + Date.now(), name, data, addedAt: new Date().toISOString() });
+                saveState();
+                input.value = '';
+                nameInput.value = '';
+                renderPhotoLibraryGrid();
+                showToast('Photo Added', `"${name}" saved to library.`);
+            } catch (e) {
+                showToast('Upload Failed', 'Could not process the image.');
+            }
+        }
+
+        function deleteFromPhotoLibrary(id) {
+            if (!confirm('Remove this photo from the library?')) return;
+            state.player.photoLibrary = (state.player.photoLibrary || []).filter(p => p.id !== id);
+            saveState();
+            renderPhotoLibraryGrid();
+            showToast('Removed', 'Photo deleted from library.');
+        }
+
+        function selectPhotoFromLibrary(id) {
+            const photo = (state.player.photoLibrary || []).find(p => p.id === id);
+            if (!photo) return;
+            if (photoLibraryContext === 'task') {
+                document.getElementById('modalPhotoBase64').value = photo.data;
+                document.getElementById('modalPhotoPreview').src = photo.data;
+                document.getElementById('modalPhotoPreview').style.display = 'block';
+                document.getElementById('modalPhotoFile').value = '';
+                const clearBtn = document.getElementById('modalPhotoClearBtn');
+                if (clearBtn) clearBtn.style.display = '';
+            } else if (photoLibraryContext === 'project') {
+                renderProjectPhotos([photo.data]);
+            }
+            closePhotoLibraryModal();
+            showToast('Photo Applied', `"${photo.name}" set as photo.`);
+        }
+
+        function clearTaskModalPhoto() {
+            document.getElementById('modalPhotoBase64').value = '';
+            document.getElementById('modalPhotoPreview').src = '';
+            document.getElementById('modalPhotoPreview').style.display = 'none';
+            document.getElementById('modalPhotoFile').value = '';
+            const clearBtn = document.getElementById('modalPhotoClearBtn');
+            if (clearBtn) clearBtn.style.display = 'none';
+        }
+
+        function previewTaskModalPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                document.getElementById('modalPhotoPreview').src = e.target.result;
+                document.getElementById('modalPhotoPreview').style.display = 'block';
+                const clearBtn = document.getElementById('modalPhotoClearBtn');
+                if (clearBtn) clearBtn.style.display = '';
+            };
+            reader.readAsDataURL(file);
         }
 
         // --- Helper: Linkify ---
@@ -6160,6 +6310,9 @@
                         </div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <button class="btn" style="background: rgba(74, 144, 226, 0.12); color: #4A90E2; border: 1px solid rgba(74, 144, 226, 0.35);" onclick="openPhotoLibraryModal('manage')">
+                            📸 Manage Photo Library
+                        </button>
                         <button class="btn" style="background: rgba(229, 62, 62, 0.1); color: #E53E3E; border: 1px solid rgba(229, 62, 62, 0.3);" onclick="clearEntityImages('project')">
                             🗑️ Clear Project Photos
                         </button>
@@ -8549,6 +8702,35 @@
                 <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
                     <button type="button" class="btn btn-primary" onclick="saveTaskMemo()">Save Memo</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Library Modal -->
+    <div id="photoLibraryModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box; backdrop-filter:blur(4px);">
+        <div style="background:var(--card-bg,rgba(255,255,255,0.97)); backdrop-filter:blur(20px); border-radius:20px; padding:25px; max-width:720px; width:100%; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.35); position:relative;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="margin:0; font-size:1.4rem;">📸 Photo Library</h2>
+                <button onclick="closePhotoLibraryModal()" style="background:none; border:none; font-size:1.6rem; cursor:pointer; opacity:0.6; line-height:1; padding:0; color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">✕</button>
+            </div>
+            <!-- Upload Section -->
+            <div style="background:rgba(0,0,0,0.05); border-radius:12px; padding:15px; margin-bottom:18px;">
+                <div style="font-size:0.82rem; color:var(--text-secondary,#888); margin-bottom:8px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Upload to Library</div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="file" id="libPhotoUploadInput" accept="image/*" style="flex:2; min-width:0;">
+                    <input type="text" id="libPhotoNameInput" placeholder="Name (optional)" style="flex:1; min-width:100px; padding:8px 10px; border-radius:8px; border:1px solid rgba(0,0,0,0.15); font-size:0.9rem; background:rgba(255,255,255,0.7);">
+                    <button class="btn btn-primary" onclick="uploadToPhotoLibrary()" style="white-space:nowrap; padding:8px 16px;">+ Add</button>
+                </div>
+            </div>
+            <!-- Context hint -->
+            <div id="libSelectHint" style="display:none; background:rgba(74,144,226,0.1); border:1px solid rgba(74,144,226,0.35); border-radius:8px; padding:9px 14px; margin-bottom:14px; font-size:0.85rem; color:#4A90E2; font-weight:500;">
+                點選圖片即可套用 &nbsp;·&nbsp; Click a photo to apply it
+            </div>
+            <!-- Photo Grid -->
+            <div id="photoLibraryGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:12px;"></div>
+            <div id="photoLibraryEmpty" style="text-align:center; padding:45px 20px; color:var(--text-secondary,#999); display:none;">
+                <div style="font-size:3rem; margin-bottom:12px;">📷</div>
+                <div style="font-size:0.95rem;">Library is empty.<br>Upload photos above to get started.</div>
             </div>
         </div>
     </div>
