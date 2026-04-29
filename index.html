@@ -293,6 +293,209 @@
             z-index: 2;
         }
 
+        /* ===== Badge Emblem Collection UI ===== */
+        .badge-collection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+            padding-bottom: 50px;
+        }
+
+        .badge-emblem-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 20px 14px 16px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge-emblem-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            border-radius: 20px 20px 0 0;
+            background: linear-gradient(90deg, var(--accent-color), #B794F4);
+            opacity: 0.8;
+        }
+
+        .badge-emblem-card:hover {
+            transform: translateY(-7px) scale(1.03);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .badge-emblem-card:hover .badge-emblem-icon { transform: scale(1.15) rotate(-5deg); }
+
+        /* Tier card accents */
+        .badge-emblem-card.badge-tier-gold   { border-color: rgba(212,175,55,0.5); box-shadow: 0 0 20px rgba(212,175,55,0.2); }
+        .badge-emblem-card.badge-tier-silver { border-color: rgba(160,174,192,0.45); }
+        .badge-emblem-card.badge-tier-bronze { border-color: rgba(205,127,50,0.45); }
+
+        .badge-emblem-card.badge-tier-gold::before   { background: linear-gradient(90deg, #F6E05E, #D69E2E); }
+        .badge-emblem-card.badge-tier-silver::before { background: linear-gradient(90deg, #E2E8F0, #A0AEC0); }
+        .badge-emblem-card.badge-tier-bronze::before { background: linear-gradient(90deg, #FBD38D, #ED8936); }
+
+        /* Tier stars row */
+        .badge-tier-stars {
+            font-size: 0.8rem;
+            letter-spacing: 4px;
+            min-height: 18px;
+            margin-bottom: 10px;
+            line-height: 1;
+        }
+        .badge-emblem-card.badge-tier-gold   .badge-tier-stars { color: #D4AF37; text-shadow: 0 0 8px rgba(212,175,55,0.7); }
+        .badge-emblem-card.badge-tier-silver .badge-tier-stars { color: #A0AEC0; }
+        .badge-emblem-card.badge-tier-bronze .badge-tier-stars { color: #CD7F32; }
+
+        /* Circular emblem */
+        .badge-emblem {
+            position: relative;
+            width: 104px;
+            height: 104px;
+            margin-bottom: 14px;
+            flex-shrink: 0;
+        }
+
+        .badge-ring-outer {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 4px solid var(--accent-color);
+            background: radial-gradient(circle at 35% 30%, rgba(107,70,193,0.18), rgba(107,70,193,0.04));
+        }
+        .badge-emblem-card.badge-tier-gold   .badge-ring-outer {
+            border-color: #D4AF37;
+            background: radial-gradient(circle at 35% 30%, rgba(212,175,55,0.32), rgba(180,140,20,0.1));
+            box-shadow: 0 0 16px rgba(212,175,55,0.55), inset 0 1px 0 rgba(255,240,150,0.4);
+        }
+        .badge-emblem-card.badge-tier-silver .badge-ring-outer {
+            border-color: #A0AEC0;
+            background: radial-gradient(circle at 35% 30%, rgba(192,192,192,0.25), rgba(128,128,128,0.07));
+            box-shadow: 0 0 10px rgba(160,174,192,0.35);
+        }
+        .badge-emblem-card.badge-tier-bronze .badge-ring-outer {
+            border-color: #CD7F32;
+            background: radial-gradient(circle at 35% 30%, rgba(205,127,50,0.26), rgba(139,90,43,0.08));
+            box-shadow: 0 0 10px rgba(205,127,50,0.35);
+        }
+
+        /* Cardinal-point bolt dots */
+        .badge-bolt {
+            position: absolute;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            border: 2px solid rgba(255,255,255,0.9);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            z-index: 2;
+        }
+        .badge-emblem-card.badge-tier-gold   .badge-bolt { background: #D4AF37; }
+        .badge-emblem-card.badge-tier-silver .badge-bolt { background: #A0AEC0; }
+        .badge-emblem-card.badge-tier-bronze .badge-bolt { background: #CD7F32; }
+        .badge-bolt.b-top    { top: -4px; left: 50%; transform: translateX(-50%); }
+        .badge-bolt.b-right  { right: -4px; top: 50%; transform: translateY(-50%); }
+        .badge-bolt.b-bottom { bottom: -4px; left: 50%; transform: translateX(-50%); }
+        .badge-bolt.b-left   { left: -4px; top: 50%; transform: translateY(-50%); }
+
+        /* Inner dashed ring */
+        .badge-ring-middle {
+            position: absolute;
+            inset: 12px;
+            border-radius: 50%;
+            border: 1px dashed rgba(255,255,255,0.4);
+            pointer-events: none;
+        }
+        .badge-emblem-card.badge-tier-gold   .badge-ring-middle { border-color: rgba(212,175,55,0.5); }
+        .badge-emblem-card.badge-tier-silver .badge-ring-middle { border-color: rgba(160,174,192,0.5); }
+        .badge-emblem-card.badge-tier-bronze .badge-ring-middle { border-color: rgba(205,127,50,0.5); }
+
+        /* Badge face */
+        .badge-ring-inner {
+            position: absolute;
+            inset: 18px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.1), 0 2px 6px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .badge-emblem-icon {
+            display: block;
+            line-height: 1;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .badge-emblem-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 6px 0;
+            line-height: 1.3;
+        }
+
+        .badge-emblem-desc {
+            font-size: 0.76rem;
+            opacity: 0.6;
+            line-height: 1.45;
+            flex: 1;
+            margin-bottom: 8px;
+        }
+
+        .badge-emblem-category {
+            font-size: 0.69rem;
+            opacity: 0.5;
+            background: rgba(0, 0, 0, 0.06);
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+            letter-spacing: 0.2px;
+        }
+
+        .btn-claim-badge {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-color), #805AD5);
+            color: white;
+            border: none;
+            padding: 9px 12px;
+            border-radius: 11px;
+            font-weight: 700;
+            font-size: 0.84rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 10px rgba(107,70,193,0.28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            letter-spacing: 0.3px;
+        }
+        .btn-claim-badge:hover {
+            filter: brightness(1.12);
+            transform: translateY(-2px);
+            box-shadow: 0 7px 18px rgba(107,70,193,0.42);
+        }
+
+        @media (max-width: 950px) {
+            .badge-collection-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            .badge-emblem { width: 86px; height: 86px; }
+            .badge-ring-inner { font-size: 1.65rem; }
+        }
+        /* ===== End Badge Emblem UI ===== */
+
         /* Legendary Spoils Tier Badges */
         .spoils-tier-badge {
             font-size: 0.7rem;
@@ -1213,7 +1416,8 @@
             transform: translateY(-1px);
         }
 
-        .store-item-card:hover .edit-btn-hover { opacity: 1; }
+        .store-item-card:hover .edit-btn-hover,
+        .badge-emblem-card:hover .edit-btn-hover { opacity: 1 !important; }
 
         @media (max-width: 950px) {
             .shop-grid {
@@ -3249,7 +3453,7 @@
             header.className = 'shop-header';
             header.innerHTML = `
                 <div class="shop-nav-bar">
-                    <div style="font-weight: bold; font-size: 1.1rem; color: var(--accent-color);">🏅 Badge Store & Collection</div>
+                    <div style="font-weight: bold; font-size: 1.1rem; color: var(--accent-color);">🏅 Badge Collection</div>
                     <div style="display: flex; gap: 5px; margin-left: auto;">
                          <button onclick="openManagementModal('store')" title="Manage Badges" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">⚙️</button>
                     </div>
@@ -3260,38 +3464,49 @@
             contentDiv.appendChild(header);
 
             const grid = document.createElement('div');
-            grid.className = 'shop-grid';
+            grid.className = 'badge-collection-grid';
 
-            const badges = state.player.shopItems.filter(item => item.category === 'Badge' && !state.player.inventory.some(i => i.itemId === item.id)).sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
+            const tierOrder = { gold: 0, silver: 1, bronze: 2 };
+            const badges = state.player.shopItems
+                .filter(item => item.category === 'Badge' && !state.player.inventory.some(i => i.itemId === item.id))
+                .sort((a, b) => {
+                    const ta = tierOrder[a.badgeTier] ?? 3;
+                    const tb = tierOrder[b.badgeTier] ?? 3;
+                    return ta !== tb ? ta - tb : (a.title || '').localeCompare(b.title || '');
+                });
 
             if (badges.length === 0) {
-                grid.innerHTML = `<div style = "grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;"> 所有成就徽章皆已獲得！請前往「成就」頁面查看。</div> `;
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;opacity:0.7;padding:50px;">所有成就徽章皆已獲得！請前往「成就」頁面查看。</div>`;
             } else {
                 grid.innerHTML = badges.map(item => {
-                    // Determine Class and Icon
                     let tierClass = '';
-                    let cornerIcon = '';
-                    if (item.badgeTier === 'gold') {
-                        tierClass = 'badge-gold';
-                        cornerIcon = '<div class="badge-corner-icon">☀️</div>';
-                    } else if (item.badgeTier === 'silver') {
-                        tierClass = 'badge-silver';
-                        cornerIcon = '<div class="badge-corner-icon">🌙</div>';
-                    } else if (item.badgeTier === 'bronze') {
-                        tierClass = 'badge-bronze';
-                        cornerIcon = '<div class="badge-corner-icon">⭐</div>';
-                    }
+                    let stars = '';
+                    if (item.badgeTier === 'gold')        { tierClass = 'badge-tier-gold';   stars = '★★★'; }
+                    else if (item.badgeTier === 'silver')  { tierClass = 'badge-tier-silver'; stars = '★★'; }
+                    else if (item.badgeTier === 'bronze')  { tierClass = 'badge-tier-bronze'; stars = '★'; }
 
                     return `
-                <div class="store-item-card ${tierClass}" onclick="openEditShopItemModal('${item.id}')" style="cursor: pointer;">
-                    ${cornerIcon}
-                    <button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')" style="position:absolute;bottom:60px;right:10px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.85rem;box-shadow:0 2px 6px rgba(0,0,0,0.1);">✏️</button>
-                    <div class="item-icon-wrapper">${item.icon}</div>
-                    <h4>${item.title}</h4>
-                    <p class="desc">${item.description}</p>
-                    ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;font-size:0.8rem;color:var(--accent-color);margin-bottom:6px;text-decoration:underline;background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:12px;">🔗 Link</a>` : ''}
-                    <div style="font-size:0.78rem;opacity:0.65;margin:4px 0 10px;text-align:center;">${item.badgeCategory || 'General'}</div>
-                    <button class="btn-buy" onclick="event.stopPropagation(); buyBadge('${item.id}')">🏅 獲得</button>
+                <div class="badge-emblem-card ${tierClass}" onclick="openEditShopItemModal('${item.id}')">
+                    <button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')"
+                        style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.78rem;box-shadow:0 2px 6px rgba(0,0,0,0.12);">✏️</button>
+                    <div class="badge-tier-stars">${stars}</div>
+                    <div class="badge-emblem">
+                        <div class="badge-ring-outer">
+                            <div class="badge-bolt b-top"></div>
+                            <div class="badge-bolt b-right"></div>
+                            <div class="badge-bolt b-bottom"></div>
+                            <div class="badge-bolt b-left"></div>
+                        </div>
+                        <div class="badge-ring-middle"></div>
+                        <div class="badge-ring-inner">
+                            <span class="badge-emblem-icon">${item.icon}</span>
+                        </div>
+                    </div>
+                    <h4 class="badge-emblem-title">${item.title}</h4>
+                    <p class="badge-emblem-desc">${item.description}</p>
+                    ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;font-size:0.77rem;color:var(--accent-color);margin-bottom:8px;text-decoration:underline;background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:12px;">🔗 Link</a>` : ''}
+                    <div class="badge-emblem-category">${item.badgeCategory || 'General'}</div>
+                    <button class="btn-claim-badge" onclick="event.stopPropagation(); buyBadge('${item.id}')">🏅 獲得</button>
                 </div>
                 `}).join('');
             }
@@ -3303,8 +3518,8 @@
             linkBox.style.marginTop = '20px';
             linkBox.style.textAlign = 'center';
             linkBox.innerHTML = `
-                <p style = "margin-bottom: 10px; opacity: 0.8;"> 想查看已獲得的勳章牆嗎？</p>
-                    <button class="btn btn-primary" onclick="switchTab('achievements')">🏆 前往成就 (Achievements) 頁面</button>
+                <p style="margin-bottom:10px;opacity:0.8;">想查看已獲得的勳章牆嗎？</p>
+                <button class="btn btn-primary" onclick="switchTab('achievements')">🏆 前往成就 (Achievements) 頁面</button>
             `;
             contentDiv.appendChild(linkBox);
         }
