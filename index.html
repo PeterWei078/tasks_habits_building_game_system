@@ -841,7 +841,7 @@
         }
 
         /* Responsive */
-        @media (max-width: 768px) {
+        @media (max-width: 950px) {
             .app-container {
                 flex-direction: column;
             }
@@ -4819,13 +4819,14 @@
             // Add Task Button & Daily Task Layout (Split View)
             const topLayout = document.createElement('div');
             topLayout.style.display = 'flex';
+            topLayout.style.flexWrap = 'wrap';
             topLayout.style.gap = '20px';
             topLayout.style.marginBottom = '20px';
 
             // Left side: Daily Task
             const dailyTaskContainer = document.createElement('div');
             dailyTaskContainer.className = 'glass glass-card';
-            dailyTaskContainer.style.flex = '1';
+            dailyTaskContainer.style.flex = '1 1 280px';
             dailyTaskContainer.style.border = '2px solid rgba(255, 107, 107, 0.6)'; // Highlight border
             dailyTaskContainer.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)';
             dailyTaskContainer.style.boxShadow = '0 0 15px rgba(255, 107, 107, 0.2)';
@@ -4853,7 +4854,7 @@
             // Right side: Action Card
             const actionCard = document.createElement('div');
             actionCard.className = 'glass glass-card';
-            actionCard.style.flex = '1';
+            actionCard.style.flex = '1 1 280px';
             actionCard.style.display = 'flex';
             actionCard.style.flexDirection = 'column';
             actionCard.style.justifyContent = 'center';
