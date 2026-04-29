@@ -431,6 +431,7 @@
             align-items: center;
             justify-content: center;
             font-size: 2rem;
+            overflow: hidden;
         }
 
         .badge-emblem-icon {
@@ -2518,6 +2519,30 @@
             });
         }
 
+        // Migrate badge icons: map known badge titles → generated PNG paths
+        if (state.player.shopItems) {
+            const BADGE_IMAGE_MAP = [
+                { match: t => /早睡|Early.?Sleep/i.test(t),   img: '/badges/early_sleep.png' },
+                { match: t => /初學者|Starter/i.test(t),       img: '/badges/running_starter.png' },
+                { match: t => /愛好者|Enthusiast/i.test(t),    img: '/badges/running_enthusiast.png' },
+            ];
+            state.player.shopItems.forEach(item => {
+                if (item.category !== 'Badge') return;
+                if (item.icon && item.icon.startsWith('/badges/')) return; // already migrated
+                const title = item.title || item.name || '';
+                const rule = BADGE_IMAGE_MAP.find(r => r.match(title));
+                if (rule) item.icon = rule.img;
+            });
+            // Also patch inventory snapshots
+            state.player.inventory.forEach(inv => {
+                if (!inv.snapshot || inv.snapshot.category !== 'Badge') return;
+                if (inv.snapshot.icon && inv.snapshot.icon.startsWith('/badges/')) return;
+                const title = inv.snapshot.title || '';
+                const rule = BADGE_IMAGE_MAP.find(r => r.match(title));
+                if (rule) inv.snapshot.icon = rule.img;
+            });
+        }
+
         // Cleanup orphaned default Shop Categories
         if (state.player.shopCategories && state.player.shopItems) {
             const defaultCategoriesToCheck = ['Food', 'Entertainment', 'Health'];
@@ -3442,6 +3467,14 @@
             return category ? category.icon : '📦';
         }
 
+        // Returns HTML for a badge emblem icon – supports emoji or /badges/*.png image paths
+        function getBadgeIconHtml(icon) {
+            if (icon && icon.startsWith('/badges/')) {
+                return `<img src="${icon}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" draggable="false" />`;
+            }
+            return `<span class="badge-emblem-icon">${icon || '🏅'}</span>`;
+        }
+
         // --- Badges Page ---
         function renderBadgesPage() {
             contentDiv.innerHTML = '';
@@ -3499,7 +3532,7 @@
                         </div>
                         <div class="badge-ring-middle"></div>
                         <div class="badge-ring-inner">
-                            <span class="badge-emblem-icon">${item.icon}</span>
+                            ${getBadgeIconHtml(item.icon)}
                         </div>
                     </div>
                     <h4 class="badge-emblem-title">${item.title}</h4>
@@ -8075,7 +8108,7 @@
                     badgeCard.innerHTML = `
                         ${deleteButton}
                         ${cornerIcon}
-                        <div class="item-icon-wrapper" style="width: 60px; height: 60px; font-size: 2.5rem; margin-bottom: 10px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">${badge.icon}</div>
+                        <div class="item-icon-wrapper" style="width: 60px; height: 60px; font-size: 2.5rem; margin-bottom: 10px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow:hidden;">${getBadgeIconHtml(badge.icon)}</div>
                         <div style="font-weight: bold; font-size: 1rem; margin-bottom: 5px; line-height: 1.2;">${badge.title || badge.name}</div>
                         ${badge.description ? `<div style="font-size: 0.85rem; opacity: 0.9; margin-top: auto; line-height: 1.3;">${badge.description}</div>` : ''}
                         ${badge.url ? `<a href="${badge.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-top: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
