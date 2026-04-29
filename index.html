@@ -5513,19 +5513,19 @@
 
             if (uncheckedItems.length > 0) {
                 const ddItems = uncheckedItems.map(t => `
-                    <label style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:0.85rem;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
-                        <input type="checkbox" onchange="toggleModalProjectTagAdd('${t.id}', this)" style="accent-color:var(--accent-color);">
+                    <label style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:0.85rem; color:rgba(255,255,255,0.9);" onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='none'">
+                        <input type="checkbox" onchange="toggleModalProjectTagAdd('${t.id}', this)" style="accent-color:var(--accent-color); flex-shrink:0;">
                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${t.color}; flex-shrink:0;"></span>
-                        <span>${t.name}${t.isPatch ? ' <span style="font-size:0.7rem; background:#E2E8F0; color:#4A5568; padding:1px 4px; border-radius:3px;">(Patch)</span>' : ''}</span>
+                        <span style="color:rgba(255,255,255,0.9);">${t.name}${t.isPatch ? ' <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); color:rgba(255,255,255,0.8); padding:1px 4px; border-radius:3px;">(Patch)</span>' : ''}</span>
                     </label>
                 `).join('');
                 html += `
                     <div style="position:relative; display:inline-block;">
                         <button type="button" id="projectTagAddBtn" onclick="toggleModalProjectDropdown(event)"
-                                style="background:rgba(0,0,0,0.1); border:1px dashed rgba(255,255,255,0.3); border-radius:20px; padding:4px 12px; font-size:0.82rem; cursor:pointer; color:inherit; opacity:0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'">
+                                style="background:rgba(255,255,255,0.1); border:1px dashed rgba(255,255,255,0.4); border-radius:20px; padding:4px 12px; font-size:0.82rem; cursor:pointer; color:rgba(255,255,255,0.85); opacity:0.85;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'">
                             + Add Project
                         </button>
-                        <div id="projectTagDropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:200; background:var(--card-bg,rgba(30,20,60,0.95)); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:6px; min-width:210px; max-height:220px; overflow-y:auto; box-shadow:0 6px 24px rgba(0,0,0,0.4);">
+                        <div id="projectTagDropdown" style="display:none; position:absolute; top:calc(100% + 4px); left:0; z-index:200; background:rgba(25,15,55,0.97); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.2); border-radius:10px; padding:6px; min-width:210px; max-height:220px; overflow-y:auto; box-shadow:0 6px 24px rgba(0,0,0,0.5);">
                             ${ddItems}
                         </div>
                     </div>
