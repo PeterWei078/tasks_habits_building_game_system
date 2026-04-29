@@ -1,0 +1,17 @@
+{
+  "name": "Solo Leveling | 我獨自升級",
+  "short_name": "Solo Leveling",
+  "description": "Gamified task and habit tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0D0D1A",
+  "theme_color": "#6B46C1",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
