@@ -1925,6 +1925,8 @@
                 const setDoc = firestoreModule.setDoc;
                 const getDoc = firestoreModule.getDoc;
                 const signInWithPopup = authModule.signInWithPopup;
+                const signInWithRedirect = authModule.signInWithRedirect;
+                const getRedirectResult = authModule.getRedirectResult;
                 const GoogleAuthProvider = authModule.GoogleAuthProvider;
                 const signOut = authModule.signOut;
                 const onAuthStateChanged = authModule.onAuthStateChanged;
@@ -1935,14 +1937,30 @@
                 window.firebaseDoc = doc;
                 window.firebaseSetDoc = setDoc;
 
+                // Handle redirect result on mobile (page reloads after Google redirect)
+                getRedirectResult(authInstance).catch(e => {
+                    console.error("Redirect sign-in error:", e);
+                });
+
+                const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
                 window.firebaseSignIn = () => {
                     if (loginBtnText) loginBtnText.innerText = "登入中...";
                     const provider = new GoogleAuthProvider();
-                    signInWithPopup(authInstance, provider).catch(e => {
-                        console.error(e);
-                        if (loginBtnText) loginBtnText.innerText = "使用 Google 登入同步";
-                        alert("登入失敗: " + e.message);
-                    });
+                    if (isMobile) {
+                        // Mobile: use redirect flow (popups are blocked on mobile browsers)
+                        signInWithRedirect(authInstance, provider).catch(e => {
+                            console.error(e);
+                            if (loginBtnText) loginBtnText.innerText = "使用 Google 登入同步";
+                            alert("登入失敗: " + e.message);
+                        });
+                    } else {
+                        signInWithPopup(authInstance, provider).catch(e => {
+                            console.error(e);
+                            if (loginBtnText) loginBtnText.innerText = "使用 Google 登入同步";
+                            alert("登入失敗: " + e.message);
+                        });
+                    }
                 };
 
                 window.firebaseSignOut = () => {
