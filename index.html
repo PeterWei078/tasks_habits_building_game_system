@@ -3445,6 +3445,7 @@
         // Add new entries here whenever a new badge PNG is generated.
         // Each entry: { id, path, name, match (optional auto-detect by title) }
         const BADGE_GALLERY = [
+            // ── 原有徽章（含 title 自動比對）──
             {
                 id: 'early_sleep',
                 path: '/badges/early_sleep.png',
@@ -3462,6 +3463,38 @@
                 path: '/badges/running_enthusiast.png',
                 name: '跑步愛好者',
                 match: t => /愛好者|Enthusiast/i.test(t)
+            },
+            // ── 跑步系列（銅 / 銀 / 金）──
+            {
+                id: 'running_bronze',
+                path: '/badges/running_bronze.png',
+                name: '跑步 · 銅牌'
+            },
+            {
+                id: 'running_silver',
+                path: '/badges/running_silver.png',
+                name: '跑步 · 銀牌'
+            },
+            {
+                id: 'running_gold',
+                path: '/badges/running_gold.png',
+                name: '跑步 · 金牌'
+            },
+            // ── 睡眠系列（銅 / 銀 / 金）──
+            {
+                id: 'sleep_bronze',
+                path: '/badges/sleep_bronze.png',
+                name: '睡眠 · 銅牌'
+            },
+            {
+                id: 'sleep_silver',
+                path: '/badges/sleep_silver.png',
+                name: '睡眠 · 銀牌'
+            },
+            {
+                id: 'sleep_gold',
+                path: '/badges/sleep_gold.png',
+                name: '睡眠 · 金牌'
             },
         ];
 
