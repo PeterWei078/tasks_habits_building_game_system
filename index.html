@@ -2335,6 +2335,7 @@
                             if (cloudStateStr) {
                                 state = JSON.parse(cloudStateStr);
                                 migrateCharacterGallery();
+                                saveState(); // persist migrated fields (new characters etc.) back to Firebase
                                 console.log("State loaded from Firebase");
                                 render();
                             } else {
