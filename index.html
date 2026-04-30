@@ -1833,11 +1833,18 @@
                     <!-- Add New Badge Form -->
                     <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                         <h3 style="margin-bottom: 15px;">新增徽章</h3>
-                        <div class="form-row" style="margin-bottom: 10px;">
-                            <input type="text" id="newBadgeTitle" placeholder="徽章名稱 (e.g. 早睡達人)"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                            <input type="text" id="newBadgeIcon" placeholder="Icon (Emoji 或 /badges/xxx.webp)" value="🏅"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        <input type="text" id="newBadgeTitle" placeholder="徽章名稱 (e.g. 早睡達人)"
+                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
+                        <!-- Icon row with preview + gallery -->
+                        <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                            <div id="newBadgeIconPreview" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                                <span style="font-size:1.9rem;line-height:1;">🏅</span>
+                            </div>
+                            <input type="text" id="newBadgeIcon" placeholder="Emoji 或 /badges/xxx.webp" value="🏅"
+                                style="flex:1; padding: 8px; border-radius: 6px; border: 1px solid #ccc;"
+                                oninput="updateNewBadgeIconPreview()">
+                            <button type="button" onclick="openBadgeGallery('newBadgeIcon','newBadgeIconPreview')"
+                                style="background:linear-gradient(135deg,var(--accent-color),#805AD5);color:white;border:none;padding:9px 13px;border-radius:10px;cursor:pointer;white-space:nowrap;font-size:0.82rem;font-weight:700;box-shadow:0 3px 10px rgba(107,70,193,0.3);">🖼 圖庫</button>
                         </div>
                         <div class="form-row" style="margin-bottom: 10px;">
                             <select id="newBadgeTier" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
@@ -3545,7 +3552,11 @@
         }
 
         // ---- Badge Gallery Picker ----
-        function openBadgeGallery() {
+        let _badgeGalleryTarget = { input: 'editShopIcon', preview: 'editShopIconPreview' };
+
+        function openBadgeGallery(inputId = 'editShopIcon', previewId = 'editShopIconPreview') {
+            _badgeGalleryTarget = { input: inputId, preview: previewId };
+
             let picker = document.getElementById('badgeGalleryPicker');
             if (!picker) {
                 picker = document.createElement('div');
@@ -3585,20 +3596,31 @@
         }
 
         function selectBadgeImage(path) {
-            const input = document.getElementById('editShopIcon');
-            if (input) { input.value = path; updateShopIconPreview(); }
+            const input = document.getElementById(_badgeGalleryTarget.input);
+            if (input) {
+                input.value = path;
+                updateIconPreview(_badgeGalleryTarget.input, _badgeGalleryTarget.preview);
+            }
             document.getElementById('badgeGalleryPicker').classList.remove('show');
         }
 
-        function updateShopIconPreview() {
-            const icon = document.getElementById('editShopIcon')?.value?.trim() || '';
-            const preview = document.getElementById('editShopIconPreview');
+        function updateIconPreview(inputId, previewId) {
+            const icon = document.getElementById(inputId)?.value?.trim() || '';
+            const preview = document.getElementById(previewId);
             if (!preview) return;
             if (icon.startsWith('/badges/')) {
                 preview.innerHTML = `<img src="${icon}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" />`;
             } else {
                 preview.innerHTML = `<span style="font-size:1.9rem;line-height:1;">${icon || '❓'}</span>`;
             }
+        }
+
+        function updateShopIconPreview() {
+            updateIconPreview('editShopIcon', 'editShopIconPreview');
+        }
+
+        function updateNewBadgeIconPreview() {
+            updateIconPreview('newBadgeIcon', 'newBadgeIconPreview');
         }
 
         // --- Badges Page ---
@@ -7479,6 +7501,7 @@
             document.getElementById('newBadgeTier').value = '';
             document.getElementById('newBadgeCategory').value = '';
             document.getElementById('newBadgeDesc').value = '';
+            updateNewBadgeIconPreview();
         }
 
         function renderManageBadgeItems() {
