@@ -6361,8 +6361,10 @@
         }
 
         function renderCharacterGalleryGrid() {
+            migrateCharacterGallery(); // self-contained: always ensure built-ins present
             const p = state.player;
             const gallery = p.characterGallery || [];
+            console.log('[CharGallery] gallery count:', gallery.length, gallery.map(c => c.id));
             const grid = document.getElementById('characterGalleryGrid');
             const empty = document.getElementById('characterGalleryEmpty');
             const subtitle = document.getElementById('charGallerySubtitle');
