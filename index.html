@@ -2642,10 +2642,14 @@
             state.player.theme = defaultState.player.theme;
         }
         if (!state.player.characterGallery) {
-            state.player.characterGallery = defaultState.player.characterGallery;
+            state.player.characterGallery = JSON.parse(JSON.stringify(defaultState.player.characterGallery));
+        }
+        // Ensure the starter Lv.5 mage is always in the gallery
+        if (!state.player.characterGallery.some(c => c.id === 'char_lv5_mage')) {
+            state.player.characterGallery.unshift({ id: 'char_lv5_mage', level: 5, name: '見習魔法師', path: '/characters/char_lv5_mage.webp', unlockedAt: new Date().toISOString() });
         }
         if (!state.player.activeCharacterId) {
-            state.player.activeCharacterId = defaultState.player.activeCharacterId;
+            state.player.activeCharacterId = 'char_lv5_mage';
         }
 
         // Apply theme immediately on load
@@ -6301,7 +6305,7 @@
             const empty = document.getElementById('characterGalleryEmpty');
             const subtitle = document.getElementById('charGallerySubtitle');
 
-            const nextUnlock = Math.ceil((p.level + 1) / 5) * 5;
+            const nextUnlock = Math.floor(p.level / 5) * 5 + 5;
             if (subtitle) subtitle.textContent = `目前 Lv.${p.level} · 每滿5級可解鎖新角色 · 下次解鎖：Lv.${nextUnlock}`;
 
             if (!grid) return;
@@ -6889,11 +6893,11 @@
             profileCard.className = 'glass glass-card';
 
             const activeChar = (p.characterGallery || []).find(c => c.id === p.activeCharacterId);
-            const nextUnlockLevel = Math.ceil(p.level / 5) * 5 === p.level ? p.level + 5 : Math.ceil(p.level / 5) * 5;
+            const nextUnlockLevel = Math.floor(p.level / 5) * 5 + 5; // next multiple of 5 above current level
             const charImgHtml = activeChar
                 ? `<img src="${activeChar.path}" alt="${activeChar.name}" style="width:100%; height:100%; object-fit:contain; object-position:bottom;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                    <div style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; opacity:0.4; font-size:0.85rem; gap:8px;"><span style="font-size:2rem;">🧙</span><span>角色圖片載入失敗</span></div>`
-                : `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; opacity:0.35; font-size:0.85rem; gap:8px;"><span style="font-size:2.5rem;">🧙</span><span>尚無角色</span><span style="font-size:0.75rem;">Lv.5 解鎖</span></div>`;
+                : `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; opacity:0.35; font-size:0.85rem; gap:8px;"><span style="font-size:2.5rem;">🧙</span><span>尚無角色</span><span style="font-size:0.75rem;">點擊開啟角色圖庫</span></div>`;
 
             profileCard.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -6920,7 +6924,7 @@
                 ${charImgHtml}
                 <div style="position:absolute; bottom:8px; left:0; right:0; display:flex; justify-content:center;">
                     <span style="background:rgba(0,0,0,0.45); color:#fff; font-size:0.72rem; padding:3px 10px; border-radius:20px; backdrop-filter:blur(4px);">
-                        ${activeChar ? `${activeChar.name}` : `Lv.${nextUnlockLevel} 可解鎖新角色`} · 點擊切換
+                        ${activeChar ? activeChar.name : `點擊查看圖庫 · 下次解鎖 Lv.${nextUnlockLevel}`} · 點擊切換
                     </span>
                 </div>
             </div>
