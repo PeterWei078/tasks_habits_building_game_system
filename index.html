@@ -2449,6 +2449,10 @@
                 reflections: [], // New Reflections Data
                 theme: 'default', // UI Background Color Theme
                 photoLibrary: [], // [{id, name, data (base64), addedAt}]
+                characterGallery: [
+                    { id: 'char_lv5_mage', level: 5, name: '見習魔法師', path: '/characters/char_lv5_mage.webp', unlockedAt: new Date().toISOString() }
+                ],
+                activeCharacterId: 'char_lv5_mage',
                 pageInfos: {
                     'tasks': "Welcome to **Tasks**!\n\nHere you can track your daily, urgent, and long-term quests. Complete them to earn EXP and Gold.",
                     'focus': "Welcome to **Focus Mode**!\n\nUse the Pomodoro timer to concentrate on your tasks uninterrupted.",
@@ -2636,6 +2640,12 @@
         if (typeof state.player.gold === 'undefined') state.player.gold = 0;
         if (!state.player.theme) {
             state.player.theme = defaultState.player.theme;
+        }
+        if (!state.player.characterGallery) {
+            state.player.characterGallery = defaultState.player.characterGallery;
+        }
+        if (!state.player.activeCharacterId) {
+            state.player.activeCharacterId = defaultState.player.activeCharacterId;
         }
 
         // Apply theme immediately on load
@@ -6271,6 +6281,79 @@
         // --- Photo Library ---
         let photoLibraryContext = null; // 'task' | 'project' | 'manage'
 
+        // ── Character Gallery ─────────────────────────────────────────────
+        function openCharacterGallery() {
+            const modal = document.getElementById('characterGalleryModal');
+            if (!modal) return;
+            renderCharacterGalleryGrid();
+            modal.style.display = 'flex';
+        }
+
+        function closeCharacterGallery() {
+            const modal = document.getElementById('characterGalleryModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderCharacterGalleryGrid() {
+            const p = state.player;
+            const gallery = p.characterGallery || [];
+            const grid = document.getElementById('characterGalleryGrid');
+            const empty = document.getElementById('characterGalleryEmpty');
+            const subtitle = document.getElementById('charGallerySubtitle');
+
+            const nextUnlock = Math.ceil((p.level + 1) / 5) * 5;
+            if (subtitle) subtitle.textContent = `目前 Lv.${p.level} · 每滿5級可解鎖新角色 · 下次解鎖：Lv.${nextUnlock}`;
+
+            if (!grid) return;
+            if (gallery.length === 0) {
+                grid.style.display = 'none';
+                if (empty) empty.style.display = 'block';
+                return;
+            }
+            grid.style.display = 'grid';
+            if (empty) empty.style.display = 'none';
+
+            grid.innerHTML = gallery.map(char => {
+                const isActive = char.id === p.activeCharacterId;
+                const canEquip = p.level >= char.level;
+                const borderStyle = isActive
+                    ? 'border:2px solid var(--accent-color, #805AD5); box-shadow:0 0 16px rgba(128,90,213,0.5);'
+                    : canEquip
+                        ? 'border:1px solid rgba(255,255,255,0.18);'
+                        : 'border:1px dashed rgba(255,255,255,0.15); opacity:0.5;';
+                const btnLabel = isActive ? '✓ 使用中' : (canEquip ? '切換角色' : `需 Lv.${char.level}`);
+                const btnStyle = isActive
+                    ? 'background:rgba(128,90,213,0.25); color:var(--accent-color,#805AD5); cursor:default;'
+                    : canEquip
+                        ? 'background:var(--accent-color,#805AD5); color:#fff; cursor:pointer;'
+                        : 'background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.4); cursor:not-allowed;';
+
+                return `
+                <div style="border-radius:16px; overflow:hidden; ${borderStyle} background:rgba(255,255,255,0.05); transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="height:220px; overflow:hidden; position:relative;">
+                        <img src="${char.path}" alt="${char.name}" style="width:100%; height:100%; object-fit:cover; object-position:top;" onerror="this.style.display='none'">
+                        <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.5); color:#FFD700; font-size:0.75rem; font-weight:bold; padding:3px 8px; border-radius:12px; backdrop-filter:blur(4px);">Lv.${char.level}</div>
+                        ${isActive ? `<div style="position:absolute; top:8px; left:8px; background:var(--accent-color,#805AD5); color:#fff; font-size:0.7rem; padding:3px 8px; border-radius:12px;">裝備中</div>` : ''}
+                    </div>
+                    <div style="padding:12px;">
+                        <div style="font-weight:600; font-size:0.95rem; margin-bottom:8px;">${char.name}</div>
+                        <button onclick="${canEquip && !isActive ? `switchCharacter('${char.id}')` : ''}" style="width:100%; padding:7px; border-radius:10px; border:none; font-size:0.85rem; font-weight:600; transition:opacity 0.2s; ${btnStyle}">${btnLabel}</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function switchCharacter(charId) {
+            const p = state.player;
+            const char = (p.characterGallery || []).find(c => c.id === charId);
+            if (!char || p.level < char.level) return;
+            p.activeCharacterId = charId;
+            saveState();
+            renderCharacterGalleryGrid();
+            renderStatusPage();
+        }
+        // ── End Character Gallery ─────────────────────────────────────────
+
         function openPhotoLibraryModal(context) {
             photoLibraryContext = context;
             const hint = document.getElementById('libSelectHint');
@@ -6804,6 +6887,14 @@
             // Profile Card
             const profileCard = document.createElement('div');
             profileCard.className = 'glass glass-card';
+
+            const activeChar = (p.characterGallery || []).find(c => c.id === p.activeCharacterId);
+            const nextUnlockLevel = Math.ceil(p.level / 5) * 5 === p.level ? p.level + 5 : Math.ceil(p.level / 5) * 5;
+            const charImgHtml = activeChar
+                ? `<img src="${activeChar.path}" alt="${activeChar.name}" style="width:100%; height:100%; object-fit:contain; object-position:bottom;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                   <div style="display:none; flex-direction:column; align-items:center; justify-content:center; height:100%; opacity:0.4; font-size:0.85rem; gap:8px;"><span style="font-size:2rem;">🧙</span><span>角色圖片載入失敗</span></div>`
+                : `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; opacity:0.35; font-size:0.85rem; gap:8px;"><span style="font-size:2.5rem;">🧙</span><span>尚無角色</span><span style="font-size:0.75rem;">Lv.5 解鎖</span></div>`;
+
             profileCard.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h3>${p.name}</h3>
@@ -6811,7 +6902,7 @@
                     LV. ${p.level} <span style="font-size: 0.8em; opacity: 0.7;">✏️</span>
                 </span>
             </div>
-            <div style="margin: 20px 0;">
+            <div style="margin: 12px 0 8px;">
                 <div style="font-size: 0.9rem; margin-bottom: 5px; display:flex; justify-content:space-between;">
                     <span>EXP</span>
                     <span>${p.exp} / ${expNeeded}</span>
@@ -6820,10 +6911,18 @@
                     <div style="height: 100%; width: ${expPercent}%; background: var(--accent-color); transition: width 0.5s;"></div>
                 </div>
             </div>
-            <div style="font-size: 1.2rem; display:flex; align-items:center;">
-                <span style="margin-right: 10px;">💰</span> 
+            <div style="font-size: 1.1rem; display:flex; align-items:center; margin-bottom: 14px;">
+                <span style="margin-right: 10px;">💰</span>
                 <span style="font-weight:bold;">${p.gold}</span>
                 <span style="font-size:0.9rem; margin-left: 5px; opacity:0.7;">Gold</span>
+            </div>
+            <div style="position:relative; width:100%; height:220px; background:rgba(255,255,255,0.05); border-radius:14px; overflow:hidden; border:1px solid rgba(255,255,255,0.15); cursor:pointer;" onclick="openCharacterGallery()" title="角色圖庫">
+                ${charImgHtml}
+                <div style="position:absolute; bottom:8px; left:0; right:0; display:flex; justify-content:center;">
+                    <span style="background:rgba(0,0,0,0.45); color:#fff; font-size:0.72rem; padding:3px 10px; border-radius:20px; backdrop-filter:blur(4px);">
+                        ${activeChar ? `${activeChar.name}` : `Lv.${nextUnlockLevel} 可解鎖新角色`} · 點擊切換
+                    </span>
+                </div>
             </div>
         `;
 
@@ -9397,6 +9496,24 @@
             <div id="photoLibraryEmpty" style="text-align:center; padding:45px 20px; color:var(--text-secondary,#999); display:none;">
                 <div style="font-size:3rem; margin-bottom:12px;">📷</div>
                 <div style="font-size:0.95rem;">Library is empty.<br>Upload photos above to get started.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Gallery Modal -->
+    <div id="characterGalleryModal" onclick="if(event.target===this)closeCharacterGallery()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box; backdrop-filter:blur(6px);">
+        <div style="background:var(--card-bg,rgba(30,20,60,0.97)); backdrop-filter:blur(24px); border-radius:22px; padding:28px; max-width:760px; width:100%; max-height:88vh; overflow-y:auto; box-shadow:0 24px 70px rgba(0,0,0,0.45); position:relative; border:1px solid rgba(255,255,255,0.12);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div>
+                    <h2 style="margin:0; font-size:1.5rem;">🧙 角色圖庫 (Character Gallery)</h2>
+                    <p id="charGallerySubtitle" style="margin:6px 0 0; font-size:0.85rem; opacity:0.6;"></p>
+                </div>
+                <button onclick="closeCharacterGallery()" style="background:none; border:none; font-size:1.7rem; cursor:pointer; opacity:0.55; line-height:1; padding:0; color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">✕</button>
+            </div>
+            <div id="characterGalleryGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:16px;"></div>
+            <div id="characterGalleryEmpty" style="text-align:center; padding:50px 20px; opacity:0.5; display:none;">
+                <div style="font-size:3rem; margin-bottom:12px;">🔮</div>
+                <div>每滿 5 級可解鎖新角色<br>Unlock new characters every 5 levels</div>
             </div>
         </div>
     </div>
