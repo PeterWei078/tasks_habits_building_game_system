@@ -6349,6 +6349,8 @@
         function openCharacterGallery() {
             const modal = document.getElementById('characterGalleryModal');
             if (!modal) return;
+            migrateCharacterGallery(); // always ensure built-in chars are present before showing
+            saveState();
             renderCharacterGalleryGrid();
             modal.style.display = 'flex';
         }
@@ -6943,6 +6945,7 @@
         // --- Status Page ---
         function renderStatusPage() {
             contentDiv.innerHTML = ''; // Prevent duplication
+            migrateCharacterGallery(); // ensure built-in chars always present after any Firebase overwrite
             const p = state.player;
             const expNeeded = p.level * 100;
             const expPercent = (p.exp / expNeeded) * 100;
