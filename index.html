@@ -2452,7 +2452,8 @@
                 theme: 'default', // UI Background Color Theme
                 photoLibrary: [], // [{id, name, data (base64), addedAt}]
                 characterGallery: [
-                    { id: 'char_lv5_mage', level: 5, name: '見習魔法師', path: '/characters/char_lv5_mage.webp', unlockedAt: new Date().toISOString() }
+                    { id: 'char_lv5_mage',    level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp',    unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv10_redmage', level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp', unlockedAt: new Date().toISOString() }
                 ],
                 activeCharacterId: 'char_lv5_mage',
                 pageInfos: {
@@ -2649,9 +2650,17 @@
             if (!state.player.characterGallery) {
                 state.player.characterGallery = JSON.parse(JSON.stringify(defaultState.player.characterGallery));
             }
-            if (!state.player.characterGallery.some(c => c.id === 'char_lv5_mage')) {
-                state.player.characterGallery.unshift({ id: 'char_lv5_mage', level: 5, name: '見習魔法師', path: '/characters/char_lv5_mage.webp', unlockedAt: new Date().toISOString() });
-            }
+            // Ensure every built-in character exists in the gallery
+            const builtIn = [
+                { id: 'char_lv5_mage',     level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp' },
+                { id: 'char_lv10_redmage', level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp' }
+            ];
+            builtIn.forEach(c => {
+                if (!state.player.characterGallery.some(g => g.id === c.id)) {
+                    state.player.characterGallery.push({ ...c, unlockedAt: new Date().toISOString() });
+                }
+            });
+            state.player.characterGallery.sort((a, b) => a.level - b.level);
             if (!state.player.activeCharacterId) {
                 state.player.activeCharacterId = 'char_lv5_mage';
             }
