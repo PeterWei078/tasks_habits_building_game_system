@@ -1826,6 +1826,39 @@
                     </div>
                 </div>
 
+                <div id="manageBadgesSection" style="display: none;">
+                    <!-- Badge Items List -->
+                    <div id="manageBadgeList" style="margin-bottom: 20px;"></div>
+
+                    <!-- Add New Badge Form -->
+                    <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="margin-bottom: 15px;">新增徽章</h3>
+                        <div class="form-row" style="margin-bottom: 10px;">
+                            <input type="text" id="newBadgeTitle" placeholder="徽章名稱 (e.g. 早睡達人)"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                            <input type="text" id="newBadgeIcon" placeholder="Icon (Emoji 或 /badges/xxx.webp)" value="🏅"
+                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                        </div>
+                        <div class="form-row" style="margin-bottom: 10px;">
+                            <select id="newBadgeTier" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                <option value="">Normal (無等級)</option>
+                                <option value="gold">Gold 金色</option>
+                                <option value="silver">Silver 銀色</option>
+                                <option value="bronze">Bronze 銅色</option>
+                            </select>
+                            <select id="newBadgeCategory" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                                <option value="">無分類</option>
+                                <option value="Habits">Habits 習慣</option>
+                                <option value="Skills">Skills 技能</option>
+                                <option value="Achievements">Achievements 成就</option>
+                            </select>
+                        </div>
+                        <input type="text" id="newBadgeDesc" placeholder="描述 (選填)"
+                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
+                        <button class="btn btn-primary" style="width: 100%;" onclick="addBadgeItem()">新增徽章</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -3581,7 +3614,7 @@
                 <div class="shop-nav-bar">
                     <div style="font-weight: bold; font-size: 1.1rem; color: var(--accent-color);">🏅 Badge Collection</div>
                     <div style="display: flex; gap: 5px; margin-left: auto;">
-                         <button onclick="openManagementModal('store')" title="Manage Badges" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">⚙️</button>
+                         <button onclick="openManagementModal('badges')" title="Manage Badges" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">⚙️</button>
                     </div>
                 </div>
                 `;
@@ -7121,26 +7154,28 @@
                 const listSection = document.getElementById('manageListsSection');
                 const storeSection = document.getElementById('manageStoreSection');
                 const storeCategoriesSection = document.getElementById('manageStoreCategoriesSection');
+                const badgesSection = document.getElementById('manageBadgesSection');
+
+                const allSections = [listSection, storeSection, storeCategoriesSection, badgesSection];
+                allSections.forEach(s => { if (s) s.style.display = 'none'; });
 
                 modal.classList.add('show');
 
                 if (mode === 'store') {
                     modalTitle.textContent = 'Manage Store Items';
-                    if (listSection) listSection.style.display = 'none';
                     if (storeSection) storeSection.style.display = 'block';
-                    if (storeCategoriesSection) storeCategoriesSection.style.display = 'none';
                     renderManageStoreItems();
                 } else if (mode === 'storeCategories') {
                     modalTitle.textContent = 'Manage Store Categories';
-                    if (listSection) listSection.style.display = 'none';
-                    if (storeSection) storeSection.style.display = 'none';
                     if (storeCategoriesSection) storeCategoriesSection.style.display = 'block';
                     renderManageStoreCategories();
+                } else if (mode === 'badges') {
+                    modalTitle.textContent = '管理徽章 (Manage Badges)';
+                    if (badgesSection) badgesSection.style.display = 'block';
+                    renderManageBadgeItems();
                 } else {
                     modalTitle.textContent = 'Manage Lists';
                     if (listSection) listSection.style.display = 'block';
-                    if (storeSection) storeSection.style.display = 'none';
-                    if (storeCategoriesSection) storeCategoriesSection.style.display = 'none';
                     renderManageGroups();
                 }
             } catch (e) {
@@ -7360,7 +7395,6 @@
                 }
 
                 const regularItems = state.player.shopItems.filter(i => i.category !== 'Badge');
-                const badgeItems = state.player.shopItems.filter(i => i.category === 'Badge');
 
                 const renderCard = (item) => `
                         <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
@@ -7376,43 +7410,18 @@
                         </div>
                     `;
 
-                let htmlContent = '';
-
-                if (regularItems.length > 0) {
-                    htmlContent += `<h4 style="margin-bottom: 10px; opacity: 0.8;">Store Items</h4>`;
-                    htmlContent += regularItems.map(renderCard).join('');
-                }
-
-                if (badgeItems.length > 0) {
-                    htmlContent += `<h4 style="margin-top: 20px; margin-bottom: 10px; opacity: 0.8;">Badges</h4>`;
-                    htmlContent += badgeItems.map(renderCard).join('');
-                }
-
-                if (htmlContent === '') {
-                    htmlContent = `<div style="text-align: center; opacity: 0.5; padding: 20px;">No items in the store yet.</div>`;
-                }
+                let htmlContent = regularItems.length > 0
+                    ? regularItems.map(renderCard).join('')
+                    : `<div style="text-align: center; opacity: 0.5; padding: 20px;">No items in the store yet.</div>`;
 
                 list.innerHTML = htmlContent;
 
-                // Update Add Item Category Dropdown
+                // Update Add Item Category Dropdown (no Badge option here)
                 const newShopCategory = document.getElementById('newShopCategory');
                 if (newShopCategory) {
                     let catOptions = state.player.shopCategories.map(c => `<option value="${c.name}">${c.name} ${c.icon}</option>`).join('');
-                    catOptions += `<option value="Badge">Badge 🏅</option>`;
                     catOptions += `<option value="Other">Other 📦</option>`;
                     newShopCategory.innerHTML = catOptions;
-
-                    newShopCategory.onchange = function () {
-                        const priceInput = document.getElementById('newShopPrice');
-                        if (this.value === 'Badge') {
-                            priceInput.style.display = 'none';
-                            priceInput.value = 0;
-                        } else {
-                            priceInput.style.display = 'block';
-                        }
-                    };
-                    // trigger once natively
-                    newShopCategory.onchange();
                 }
 
             } catch (e) {
@@ -7422,57 +7431,129 @@
         }
 
         function addShopItem() {
-            const title = document.getElementById('newShopTitle').value;
-            let price = parseInt(document.getElementById('newShopPrice').value) || 0;
+            const title = document.getElementById('newShopTitle').value.trim();
+            const price = parseInt(document.getElementById('newShopPrice').value) || 0;
             const category = document.getElementById('newShopCategory').value || 'Other';
-
-            if (category === 'Badge') price = 0;
-
             const tier = document.getElementById('newShopTier').value || '';
             const icon = document.getElementById('newShopIcon').value || '🎁';
             const desc = document.getElementById('newShopDesc').value;
             const url = document.getElementById('newShopUrl').value;
 
-            // ... (rest of addShopItem remains the same, assuming it's unedited below)
-            if (title && (price > 0 || category === 'Badge')) {
-                state.player.shopItems.push({
-                    id: Date.now().toString(),
-                    title,
-                    price,
-                    category,
-                    itemTier: tier, // Use itemTier to match badge logic later
-                    icon,
-                    description: desc,
-                    url: url
+            if (!title || price <= 0) {
+                alert('Please enter a valid title and price.');
+                return;
+            }
+
+            state.player.shopItems.push({
+                id: Date.now().toString(),
+                title, price, category,
+                itemTier: tier,
+                icon, description: desc, url
+            });
+            saveState();
+            renderManageStoreItems();
+            document.getElementById('newShopTitle').value = '';
+            document.getElementById('newShopPrice').value = '';
+            document.getElementById('newShopTier').value = '';
+        }
+
+        function addBadgeItem() {
+            const title = document.getElementById('newBadgeTitle').value.trim();
+            const icon = document.getElementById('newBadgeIcon').value.trim() || '🏅';
+            const badgeTier = document.getElementById('newBadgeTier').value;
+            const badgeCategory = document.getElementById('newBadgeCategory').value;
+            const description = document.getElementById('newBadgeDesc').value.trim();
+
+            if (!title) { alert('請輸入徽章名稱'); return; }
+
+            state.player.shopItems.push({
+                id: Date.now().toString(),
+                title, price: 0, category: 'Badge',
+                badgeTier, badgeCategory, icon, description
+            });
+            saveState();
+            renderManageBadgeItems();
+            renderBadgesPage();
+            document.getElementById('newBadgeTitle').value = '';
+            document.getElementById('newBadgeIcon').value = '🏅';
+            document.getElementById('newBadgeTier').value = '';
+            document.getElementById('newBadgeCategory').value = '';
+            document.getElementById('newBadgeDesc').value = '';
+        }
+
+        function renderManageBadgeItems() {
+            try {
+                const list = document.getElementById('manageBadgeList');
+                if (!list) return;
+
+                const badgeItems = (state.player.shopItems || []).filter(i => i.category === 'Badge');
+
+                if (badgeItems.length === 0) {
+                    list.innerHTML = `<div style="text-align: center; opacity: 0.5; padding: 20px;">尚未新增任何徽章。</div>`;
+                    return;
+                }
+
+                list.innerHTML = badgeItems.map(item => {
+                    const tierLabel = { gold: '⭐ Gold', silver: '◆ Silver', bronze: '● Bronze' }[item.badgeTier] || 'Normal';
+                    const owned = state.player.inventory.some(i => i.itemId === item.id);
+                    return `
+                        <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 1.5rem;">${item.icon || '🏅'}</span>
+                                <div>
+                                    <div style="font-weight: bold;">${item.title || 'Untitled'}</div>
+                                    <div style="font-size: 0.8rem; opacity: 0.7;">${tierLabel}${item.badgeCategory ? ' • ' + item.badgeCategory : ''}${owned ? ' • ✓ 已獲得' : ''}</div>
+                                </div>
+                            </div>
+                            <button class="btn btn-secondary" onclick="deleteBadgeItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error("Error rendering badge items:", e);
+                document.getElementById('manageBadgeList').innerHTML = '<div style="color:red">Error loading badges</div>';
+            }
+        }
+
+        function deleteBadgeItem(id) {
+            const item = state.player.shopItems.find(i => i.id === id);
+            const name = item ? item.title : 'this badge';
+            if (typeof openConfirmModal === 'function') {
+                openConfirmModal(`Delete badge "${name}"?`, () => {
+                    if (!state.player.deletedShopItemIds) state.player.deletedShopItemIds = [];
+                    state.player.deletedShopItemIds.push(id);
+                    state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
+                    state.player.inventory = state.player.inventory.filter(i => i.itemId !== id);
+                    saveState();
+                    renderManageBadgeItems();
+                    renderBadgesPage();
                 });
+            } else if (confirm(`Delete badge "${name}"?`)) {
+                if (!state.player.deletedShopItemIds) state.player.deletedShopItemIds = [];
+                state.player.deletedShopItemIds.push(id);
+                state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
+                state.player.inventory = state.player.inventory.filter(i => i.itemId !== id);
                 saveState();
-                renderManageStoreItems();
-                // Clear inputs
-                document.getElementById('newShopTitle').value = '';
-                document.getElementById('newShopPrice').value = '';
-                document.getElementById('newShopTier').value = '';
-            } else {
-                alert('Please enter valid title and price.');
+                renderManageBadgeItems();
+                renderBadgesPage();
             }
         }
 
         function deleteShopItem(id) {
-            if (openConfirmModal) {
-                openConfirmModal('Delete this shop item?', () => {
-                    if (!state.player.deletedShopItemIds) state.player.deletedShopItemIds = [];
-                    state.player.deletedShopItemIds.push(id);
-                    state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
-                    saveState();
-                    renderManageStoreItems();
-                    renderStorePage(); // Refresh shop page if open
-                });
-            } else if (confirm('Delete this item?')) {
+            const targetItem = state.player.shopItems.find(i => i.id === id);
+            const isBadge = targetItem && targetItem.category === 'Badge';
+            const doDelete = () => {
                 if (!state.player.deletedShopItemIds) state.player.deletedShopItemIds = [];
                 state.player.deletedShopItemIds.push(id);
                 state.player.shopItems = state.player.shopItems.filter(i => i.id !== id);
                 saveState();
                 renderManageStoreItems();
                 renderStorePage();
+            };
+            if (openConfirmModal) {
+                openConfirmModal('Delete this shop item?', doDelete);
+            } else if (confirm('Delete this item?')) {
+                doDelete();
             }
         }
 
@@ -7653,8 +7734,13 @@
                 item.url = document.getElementById('editShopUrl').value;
 
                 saveState();
-                renderManageStoreItems(); // Ensure management list updates too
-                renderStorePage();
+                if (item.category === 'Badge') {
+                    renderManageBadgeItems();
+                    renderBadgesPage();
+                } else {
+                    renderManageStoreItems();
+                    renderStorePage();
+                }
                 document.getElementById('editShopItemModal').classList.remove('show');
                 showToast('Item updated!', 'success');
             }
