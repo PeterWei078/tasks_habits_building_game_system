@@ -6314,8 +6314,8 @@
                 const d = imgData.data;
                 const seen = new Uint8Array(W * H);
 
-                // Neutral light pixel = checkerboard white/gray (no strong hue, brightness > 155)
-                const isNeutral = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) < 28 && r > 155;
+                // Neutral = low saturation + fairly bright (catches white/gray bg, avoids warm skin & colored cloth)
+                const isNeutral = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) < 32 && r > 145;
 
                 const stack = [];
                 const seed = (x, y) => {
@@ -6327,15 +6327,34 @@
                     seen[i] = 1; d[p+3] = 0; stack.push(i);
                 };
 
-                // Seed all 4 edges
+                // Phase 1: BFS flood fill from all 4 edges
                 for (let x = 0; x < W; x++) { seed(x, 0); seed(x, H-1); }
                 for (let y = 1; y < H-1; y++) { seed(0, y); seed(W-1, y); }
-
-                // BFS flood fill
                 while (stack.length) {
                     const i = stack.pop();
                     const x = i % W, y = (i / W) | 0;
                     seed(x+1, y); seed(x-1, y); seed(x, y+1); seed(x, y-1);
+                }
+
+                // Phase 2: iterative erosion — expand transparency inward to catch enclosed neutral pockets
+                // (magic glow blobs / soft light halos that flood-fill can't reach from edges)
+                for (let pass = 0; pass < 12; pass++) {
+                    let changed = false;
+                    for (let y = 1; y < H - 1; y++) {
+                        for (let x = 1; x < W - 1; x++) {
+                            const i = y * W + x;
+                            if (seen[i]) continue;
+                            const p = i * 4;
+                            if (d[p + 3] === 0) continue;
+                            if (!isNeutral(d[p], d[p + 1], d[p + 2])) continue;
+                            // Remove if touching a transparent neighbour (4-direction)
+                            if (d[((y-1)*W+x)*4+3] === 0 || d[((y+1)*W+x)*4+3] === 0 ||
+                                d[(y*W+(x-1))*4+3] === 0 || d[(y*W+(x+1))*4+3] === 0) {
+                                seen[i] = 1; d[p + 3] = 0; changed = true;
+                            }
+                        }
+                    }
+                    if (!changed) break; // converged early
                 }
 
                 ctx.putImageData(imgData, 0, 0);
