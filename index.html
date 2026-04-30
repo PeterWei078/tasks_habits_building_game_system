@@ -2496,9 +2496,9 @@
         // Migrate badge icons: map known badge titles → generated PNG paths
         if (state.player.shopItems) {
             const BADGE_IMAGE_MAP = [
-                { match: t => /早睡|Early.?Sleep/i.test(t),   img: '/badges/early_sleep.png' },
-                { match: t => /初學者|Starter/i.test(t),       img: '/badges/running_starter.png' },
-                { match: t => /愛好者|Enthusiast/i.test(t),    img: '/badges/running_enthusiast.png' },
+                { match: t => /早睡|Early.?Sleep/i.test(t),   img: '/badges/early_sleep.webp' },
+                { match: t => /初學者|Starter/i.test(t),       img: '/badges/running_starter.webp' },
+                { match: t => /愛好者|Enthusiast/i.test(t),    img: '/badges/running_enthusiast.webp' },
             ];
             state.player.shopItems.forEach(item => {
                 if (item.category !== 'Badge') return;
@@ -3448,52 +3448,52 @@
             // ── 原有徽章（含 title 自動比對）──
             {
                 id: 'early_sleep',
-                path: '/badges/early_sleep.png',
+                path: '/badges/early_sleep.webp',
                 name: '早睡徽章',
                 match: t => /早睡|Early.?Sleep/i.test(t)
             },
             {
                 id: 'running_starter',
-                path: '/badges/running_starter.png',
+                path: '/badges/running_starter.webp',
                 name: '跑步初學者',
                 match: t => /初學者|Starter/i.test(t)
             },
             {
                 id: 'running_enthusiast',
-                path: '/badges/running_enthusiast.png',
+                path: '/badges/running_enthusiast.webp',
                 name: '跑步愛好者',
                 match: t => /愛好者|Enthusiast/i.test(t)
             },
             // ── 跑步系列（銅 / 銀 / 金）──
             {
                 id: 'running_bronze',
-                path: '/badges/running_bronze.png',
+                path: '/badges/running_bronze.webp',
                 name: '跑步 · 銅牌'
             },
             {
                 id: 'running_silver',
-                path: '/badges/running_silver.png',
+                path: '/badges/running_silver.webp',
                 name: '跑步 · 銀牌'
             },
             {
                 id: 'running_gold',
-                path: '/badges/running_gold.png',
+                path: '/badges/running_gold.webp',
                 name: '跑步 · 金牌'
             },
             // ── 睡眠系列（銅 / 銀 / 金）──
             {
                 id: 'sleep_bronze',
-                path: '/badges/sleep_bronze.png',
+                path: '/badges/sleep_bronze.webp',
                 name: '睡眠 · 銅牌'
             },
             {
                 id: 'sleep_silver',
-                path: '/badges/sleep_silver.png',
+                path: '/badges/sleep_silver.webp',
                 name: '睡眠 · 銀牌'
             },
             {
                 id: 'sleep_gold',
-                path: '/badges/sleep_gold.png',
+                path: '/badges/sleep_gold.webp',
                 name: '睡眠 · 金牌'
             },
         ];
@@ -7545,7 +7545,7 @@
                             <label>Icon</label>
                             <div style="display:flex;gap:10px;align-items:center;">
                                 <div id="editShopIconPreview" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;"></div>
-                                <input type="text" id="editShopIcon" style="flex:1;" placeholder="Emoji 或 /badges/name.png" oninput="updateShopIconPreview()">
+                                <input type="text" id="editShopIcon" style="flex:1;" placeholder="Emoji 或 /badges/name.webp" oninput="updateShopIconPreview()">
                                 <button type="button" onclick="openBadgeGallery()" style="background:linear-gradient(135deg,var(--accent-color),#805AD5);color:white;border:none;padding:9px 13px;border-radius:10px;cursor:pointer;white-space:nowrap;font-size:0.82rem;font-weight:700;box-shadow:0 3px 10px rgba(107,70,193,0.3);">🖼 圖庫</button>
                             </div>
                         </div>
