@@ -2453,8 +2453,11 @@
                 theme: 'default', // UI Background Color Theme
                 photoLibrary: [], // [{id, name, data (base64), addedAt}]
                 characterGallery: [
-                    { id: 'char_lv5_mage',    level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp',    unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv10_redmage', level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp', unlockedAt: new Date().toISOString() }
+                    { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師',   path: '/characters/char_lv5_mage.webp',          unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_martial',       level: 5,  name: '初級武道家',   path: '/characters/char_lv5_martial.webp',       unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士',   path: '/characters/char_lv5_dragonknight.webp',  unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',     path: '/characters/char_lv10_redmage.webp',      unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',     path: '/characters/char_lv10_bard.webp',         unlockedAt: new Date().toISOString() }
                 ],
                 activeCharacterId: 'char_lv5_mage',
                 pageInfos: {
@@ -2653,8 +2656,11 @@
             }
             // Ensure every built-in character exists in the gallery
             const builtIn = [
-                { id: 'char_lv5_mage',     level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp' },
-                { id: 'char_lv10_redmage', level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp' }
+                { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp' },
+                { id: 'char_lv5_martial',       level: 5,  name: '初級武道家', path: '/characters/char_lv5_martial.webp' },
+                { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士', path: '/characters/char_lv5_dragonknight.webp' },
+                { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp' },
+                { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',   path: '/characters/char_lv10_bard.webp' }
             ];
             builtIn.forEach(c => {
                 if (!state.player.characterGallery.some(g => g.id === c.id)) {
@@ -6314,8 +6320,10 @@
                 const d = imgData.data;
                 const seen = new Uint8Array(W * H);
 
-                // Neutral = low saturation + fairly bright (catches white/gray bg, avoids warm skin & colored cloth)
-                const isNeutral = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) < 32 && r > 145;
+                // Neutral = low saturation + fairly bright (white/gray bg).
+                // Phase 2 erosion was removed: it cannot distinguish white clothing from white background
+                // and causes garments to become transparent. Edge flood-fill only is safer.
+                const isNeutral = (r, g, b) => Math.max(r, g, b) - Math.min(r, g, b) < 30 && r > 150;
 
                 const stack = [];
                 const seed = (x, y) => {
@@ -6327,34 +6335,13 @@
                     seen[i] = 1; d[p+3] = 0; stack.push(i);
                 };
 
-                // Phase 1: BFS flood fill from all 4 edges
+                // BFS flood fill from all 4 edges — only background connected to image boundary is removed
                 for (let x = 0; x < W; x++) { seed(x, 0); seed(x, H-1); }
                 for (let y = 1; y < H-1; y++) { seed(0, y); seed(W-1, y); }
                 while (stack.length) {
                     const i = stack.pop();
                     const x = i % W, y = (i / W) | 0;
                     seed(x+1, y); seed(x-1, y); seed(x, y+1); seed(x, y-1);
-                }
-
-                // Phase 2: iterative erosion — expand transparency inward to catch enclosed neutral pockets
-                // (magic glow blobs / soft light halos that flood-fill can't reach from edges)
-                for (let pass = 0; pass < 12; pass++) {
-                    let changed = false;
-                    for (let y = 1; y < H - 1; y++) {
-                        for (let x = 1; x < W - 1; x++) {
-                            const i = y * W + x;
-                            if (seen[i]) continue;
-                            const p = i * 4;
-                            if (d[p + 3] === 0) continue;
-                            if (!isNeutral(d[p], d[p + 1], d[p + 2])) continue;
-                            // Remove if touching a transparent neighbour (4-direction)
-                            if (d[((y-1)*W+x)*4+3] === 0 || d[((y+1)*W+x)*4+3] === 0 ||
-                                d[(y*W+(x-1))*4+3] === 0 || d[(y*W+(x+1))*4+3] === 0) {
-                                seen[i] = 1; d[p + 3] = 0; changed = true;
-                            }
-                        }
-                    }
-                    if (!changed) break; // converged early
                 }
 
                 ctx.putImageData(imgData, 0, 0);
@@ -6428,8 +6415,8 @@
 
                 return `
                 <div style="border-radius:16px; overflow:hidden; ${borderStyle} background:rgba(255,255,255,0.05); transition:transform 0.2s;" onmouseover="if(${canEquip && !isActive})this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
-                    <div style="height:220px; overflow:hidden; position:relative;">
-                        <img src="${char.path}" alt="${char.name}" style="width:100%; height:100%; object-fit:cover; object-position:top; ${!canEquip ? 'filter:grayscale(60%);' : ''}" onload="stripCharacterBackground(this)" onerror="this.style.display='none'">
+                    <div style="aspect-ratio:2/3; overflow:hidden; position:relative; background:var(--bg-gradient); background-attachment:fixed;">
+                        <img src="${char.path}" alt="${char.name}" style="width:100%; height:100%; object-fit:contain; object-position:center; mix-blend-mode:multiply; ${!canEquip ? 'filter:grayscale(60%);' : ''}" onerror="this.style.display='none'">
                         <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.55); color:#FFD700; font-size:0.75rem; font-weight:bold; padding:3px 8px; border-radius:12px; backdrop-filter:blur(4px);">Lv.${char.level}</div>
                         ${isActive ? `<div style="position:absolute; top:8px; left:8px; background:var(--accent-color,#805AD5); color:#fff; font-size:0.7rem; padding:3px 8px; border-radius:12px;">裝備中</div>` : ''}
                         ${lockOverlay}
@@ -6976,9 +6963,32 @@
             title.style.display = 'flex';
             title.style.justifyContent = 'space-between';
             title.style.alignItems = 'center';
+            title.style.flexWrap = 'wrap';
+            title.style.gap = '12px';
             title.innerHTML = `
-                玩家狀態 (Player Status)
-                <button onclick="openPageInfoModal('status', '狀態 (Status)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+                <span>玩家狀態 (Player Status)</span>
+                <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.13); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.25); border-radius:18px; padding:10px 18px; box-shadow:0 4px 16px rgba(0,0,0,0.10);">
+                    <span class="level-badge" onclick="editPlayerLevel()" style="cursor:pointer; font-size:1.05rem; padding:6px 16px; margin-right:14px;" title="Click to Edit Level">LV. ${p.level} <span style="font-size:0.8em; opacity:0.7;">✏️</span></span>
+                    <div style="width:1px; height:38px; background:rgba(255,255,255,0.22); margin-right:14px;"></div>
+                    <div style="min-width:160px; margin-right:14px;">
+                        <div style="font-size:0.78rem; opacity:0.65; margin-bottom:4px; display:flex; justify-content:space-between; font-weight:600; letter-spacing:0.03em;">
+                            <span>EXP</span><span>${p.exp} / ${expNeeded}</span>
+                        </div>
+                        <div style="height:9px; background:rgba(0,0,0,0.15); border-radius:5px; overflow:hidden;">
+                            <div style="height:100%; width:${expPercent}%; background:var(--accent-color); border-radius:5px; transition:width 0.5s; box-shadow:0 0 8px var(--accent-color);"></div>
+                        </div>
+                    </div>
+                    <div style="width:1px; height:38px; background:rgba(255,255,255,0.22); margin-right:14px;"></div>
+                    <div style="display:flex; align-items:center; gap:7px;">
+                        <span style="font-size:1.4rem; line-height:1;">💰</span>
+                        <div>
+                            <div style="font-weight:800; font-size:1.15rem; line-height:1.1; letter-spacing:0.02em;">${p.gold}</div>
+                            <div style="font-size:0.72rem; opacity:0.55; line-height:1.2; font-weight:600;">Gold</div>
+                        </div>
+                    </div>
+                    <div style="width:1px; height:38px; background:rgba(255,255,255,0.22); margin:0 10px;"></div>
+                    <button onclick="openPageInfoModal('status', '狀態 (Status)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+                </div>
             `;
 
             const grid = document.createElement('div');
@@ -6991,37 +7001,20 @@
             const activeChar = (p.characterGallery || []).find(c => c.id === p.activeCharacterId);
             const nextUnlockLevel = Math.floor(p.level / 5) * 5 + 5;
             const charImgHtml = activeChar
-                ? `<img src="${activeChar.path}" alt="${activeChar.name}" style="width:100%; height:100%; object-fit:contain; object-position:bottom; filter:drop-shadow(0 6px 20px rgba(80,40,120,0.28));" onload="stripCharacterBackground(this)" onerror="this.style.display='none'">`
+                ? `<img src="${activeChar.path}" alt="${activeChar.name}" style="width:100%; height:100%; object-fit:contain; object-position:bottom; mix-blend-mode:multiply;" onerror="this.style.display='none'">`
                 : `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; opacity:0.35; font-size:0.85rem; gap:8px;"><span style="font-size:2.5rem;">🧙</span><span>尚無角色</span></div>`;
 
+            profileCard.style.padding = '0';
+            profileCard.style.overflow = 'hidden';
             profileCard.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3>${p.name}</h3>
-                <span class="level-badge" onclick="editPlayerLevel()" style="cursor: pointer;" title="Click to Edit Level">
-                    LV. ${p.level} <span style="font-size: 0.8em; opacity: 0.7;">✏️</span>
-                </span>
-            </div>
-            <div style="margin: 12px 0 8px;">
-                <div style="font-size: 0.9rem; margin-bottom: 5px; display:flex; justify-content:space-between;">
-                    <span>EXP</span>
-                    <span>${p.exp} / ${expNeeded}</span>
-                </div>
-                <div style="height: 10px; background: rgba(0,0,0,0.1); border-radius: 5px; overflow: hidden;">
-                    <div style="height: 100%; width: ${expPercent}%; background: var(--accent-color); transition: width 0.5s;"></div>
-                </div>
-            </div>
-            <div style="font-size: 1.1rem; display:flex; align-items:center; margin-bottom: 10px;">
-                <span style="margin-right: 10px;">💰</span>
-                <span style="font-weight:bold;">${p.gold}</span>
-                <span style="font-size:0.9rem; margin-left: 5px; opacity:0.7;">Gold</span>
-            </div>
-            <div style="position:relative; width:100%; height:260px; cursor:pointer;" onclick="openCharacterGallery()" title="點擊切換角色">
+            <div style="position:relative; width:100%; aspect-ratio:2/3; cursor:pointer; background:var(--bg-gradient); background-attachment:fixed; border-radius:16px; overflow:hidden;" onclick="openCharacterGallery()" title="點擊切換角色">
                 ${charImgHtml}
-                <div style="position:absolute; top:6px; right:6px; background:rgba(0,0,0,0.48); color:#FFD700; font-size:0.75rem; font-weight:bold; padding:3px 9px; border-radius:20px; backdrop-filter:blur(4px);">${activeChar ? `Lv.${activeChar.level}` : ''}</div>
-                <div style="position:absolute; top:6px; left:6px;">
+                <div style="position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.48); color:#FFD700; font-size:0.75rem; font-weight:bold; padding:3px 9px; border-radius:20px; backdrop-filter:blur(4px);">${activeChar ? `Lv.${activeChar.level}` : ''}</div>
+                <div style="position:absolute; top:8px; left:8px;">
                     <span style="background:rgba(255,255,255,0.18); color:inherit; font-size:1rem; padding:4px 7px; border-radius:20px; backdrop-filter:blur(4px); cursor:pointer;" title="角色圖庫">⇄</span>
                 </div>
                 ${!activeChar ? `<div style="position:absolute; bottom:8px; left:0; right:0; text-align:center; font-size:0.75rem; opacity:0.5;">下次解鎖 Lv.${nextUnlockLevel}</div>` : ''}
+            </div>
         `;
 
             // Chart Card
