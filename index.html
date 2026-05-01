@@ -5644,7 +5644,7 @@
                 const isDailyFocus = task.title && task.title.includes("🔥當日小任務");
                 let photoHtml = '';
                 if (task.photo) {
-                    photoHtml = `<div class="task-photo-container" style="margin-left: 15px; flex-shrink: 0;"><img class="task-photo" src="${task.photo}" style="max-width: 240px; max-height: 180px; border-radius: 8px; border: 2px solid var(--accent-color, rgba(255,255,255,0.5)); object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onclick="event.stopPropagation(); window.open(this.src)"></div>`;
+                    photoHtml = `<div class="task-photo-container" style="margin-left: 15px; flex-shrink: 0;"><img class="task-photo" src="${task.photo}" style="max-width: 240px; max-height: 180px; border-radius: 8px; border: 2px solid var(--accent-color, rgba(255,255,255,0.5)); object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onclick="event.stopPropagation()"></div>`;
                 }
 
                 item.innerHTML = `
