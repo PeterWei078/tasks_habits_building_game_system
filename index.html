@@ -487,6 +487,69 @@
         @media (max-width: 950px) {
             .badge-collection-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
         }
+        /* Badge locked (unobtained) state */
+        .badge-emblem-card.badge-locked {
+            opacity: 0.68;
+            cursor: default;
+        }
+        .badge-emblem-card.badge-locked .badge-emblem {
+            width: min(110px, calc(100% - 12px));
+        }
+        .badge-emblem-card.badge-locked .badge-ring-inner {
+            filter: grayscale(100%) brightness(0.92);
+            border-color: #aaa;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.35), 0 4px 14px rgba(0,0,0,0.10);
+        }
+        .badge-emblem-card.badge-locked .badge-emblem-icon,
+        .badge-emblem-card.badge-locked .badge-emblem-icon img {
+            filter: grayscale(100%) brightness(0.88);
+        }
+        .badge-emblem-card.badge-locked .badge-tier-pip { filter: grayscale(100%); }
+        .badge-emblem-card.badge-locked::before { background: linear-gradient(90deg, #999, #bbb); opacity: 0.5; }
+        .badge-emblem-card.badge-locked.badge-tier-gold,
+        .badge-emblem-card.badge-locked.badge-tier-silver,
+        .badge-emblem-card.badge-locked.badge-tier-bronze {
+            border-color: rgba(160,160,160,0.35);
+            box-shadow: none;
+        }
+        .badge-emblem-card.badge-locked:hover {
+            transform: none;
+            box-shadow: none;
+            background: rgba(255,255,255,0.12);
+        }
+        .badge-emblem-card.badge-locked:hover .badge-ring-inner { transform: none; }
+        .badge-emblem-card.badge-locked:hover .badge-emblem-icon { transform: none; }
+
+        /* Obtained indicator */
+        .badge-obtained-label {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 11px;
+            font-weight: 700;
+            font-size: 0.84rem;
+            text-align: center;
+            background: rgba(72,187,120,0.15);
+            color: #38a169;
+            border: 1.5px solid rgba(72,187,120,0.38);
+            letter-spacing: 0.3px;
+            box-sizing: border-box;
+        }
+
+        /* Category section divider inside the badge grid */
+        .badge-category-header {
+            grid-column: 1 / -1;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            color: var(--accent-color);
+            padding: 4px 2px 6px;
+            border-bottom: 1.5px solid rgba(124,58,237,0.22);
+            margin-top: 10px;
+            text-transform: uppercase;
+            opacity: 0.85;
+        }
+        .badge-category-header:first-child { margin-top: 0; }
+
         /* ===== End Badge Emblem UI ===== */
 
         /* Legendary Spoils Tier Badges */
@@ -3701,54 +3764,67 @@
             grid.className = 'badge-collection-grid';
 
             const tierOrder = { gold: 0, silver: 1, bronze: 2 };
-            const badges = state.player.shopItems
-                .filter(item => item.category === 'Badge' && !state.player.inventory.some(i => i.itemId === item.id))
+            const allBadges = state.player.shopItems
+                .filter(item => item.category === 'Badge')
                 .sort((a, b) => {
+                    const catA = (a.badgeCategory || 'General').toLowerCase();
+                    const catB = (b.badgeCategory || 'General').toLowerCase();
+                    if (catA !== catB) return catA.localeCompare(catB);
                     const ta = tierOrder[a.badgeTier] ?? 3;
                     const tb = tierOrder[b.badgeTier] ?? 3;
                     return ta !== tb ? ta - tb : (a.title || '').localeCompare(b.title || '');
                 });
 
-            if (badges.length === 0) {
-                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;opacity:0.7;padding:50px;">所有成就徽章皆已獲得！請前往「成就」頁面查看。</div>`;
+            if (allBadges.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;opacity:0.7;padding:50px;">尚未建立任何徽章。</div>`;
             } else {
-                grid.innerHTML = badges.map(item => {
-                    let tierClass = '';
-                    let pip = '';
-                    if (item.badgeTier === 'gold')       { tierClass = 'badge-tier-gold';   pip = '<div class="badge-tier-pip pip-gold">★</div>'; }
-                    else if (item.badgeTier === 'silver') { tierClass = 'badge-tier-silver'; pip = '<div class="badge-tier-pip pip-silver">◆</div>'; }
-                    else if (item.badgeTier === 'bronze') { tierClass = 'badge-tier-bronze'; pip = '<div class="badge-tier-pip pip-bronze">●</div>'; }
+                // Group by category
+                const groups = {};
+                allBadges.forEach(item => {
+                    const cat = item.badgeCategory || 'General';
+                    if (!groups[cat]) groups[cat] = [];
+                    groups[cat].push(item);
+                });
 
-                    return `
-                <div class="badge-emblem-card ${tierClass}" onclick="openEditShopItemModal('${item.id}')">
-                    <button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')"
-                        style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.78rem;box-shadow:0 2px 6px rgba(0,0,0,0.12);z-index:4;">✏️</button>
-                    <div class="badge-emblem">
-                        <div class="badge-ring-inner">
-                            ${getBadgeIconHtml(item.icon, item.title)}
-                        </div>
-                        ${pip}
-                    </div>
-                    <h4 class="badge-emblem-title">${item.title}</h4>
-                    <p class="badge-emblem-desc">${item.description}</p>
-                    ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;font-size:0.77rem;color:var(--accent-color);margin-bottom:8px;text-decoration:underline;background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:12px;">🔗 Link</a>` : ''}
-                    <div class="badge-emblem-category">${item.badgeCategory || 'General'}</div>
-                    <button class="btn-claim-badge" onclick="event.stopPropagation(); buyBadge('${item.id}')">🏅 獲得</button>
-                </div>
-                `}).join('');
+                let html = '';
+                Object.entries(groups).forEach(([cat, items]) => {
+                    html += `<div class="badge-category-header">📂 ${cat}</div>`;
+                    items.forEach(item => {
+                        const obtained = state.player.inventory.some(i => i.itemId === item.id);
+                        let tierClass = '';
+                        let pip = '';
+                        if (item.badgeTier === 'gold')       { tierClass = 'badge-tier-gold';   pip = '<div class="badge-tier-pip pip-gold">★</div>'; }
+                        else if (item.badgeTier === 'silver') { tierClass = 'badge-tier-silver'; pip = '<div class="badge-tier-pip pip-silver">◆</div>'; }
+                        else if (item.badgeTier === 'bronze') { tierClass = 'badge-tier-bronze'; pip = '<div class="badge-tier-pip pip-bronze">●</div>'; }
+
+                        const lockedClass = obtained ? '' : 'badge-locked';
+                        const clickAttr = obtained ? `onclick="openEditShopItemModal('${item.id}')"` : '';
+                        const editBtn = obtained ? `<button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')"
+                            style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.78rem;box-shadow:0 2px 6px rgba(0,0,0,0.12);z-index:4;">✏️</button>` : '';
+                        const actionArea = obtained
+                            ? `<div class="badge-obtained-label">✓ 已獲得</div>`
+                            : `<button class="btn-claim-badge" onclick="event.stopPropagation(); buyBadge('${item.id}')">🏅 獲得</button>`;
+
+                        html += `
+                        <div class="badge-emblem-card ${tierClass} ${lockedClass}" ${clickAttr}>
+                            ${editBtn}
+                            <div class="badge-emblem">
+                                <div class="badge-ring-inner">
+                                    ${getBadgeIconHtml(item.icon, item.title)}
+                                </div>
+                                ${pip}
+                            </div>
+                            <h4 class="badge-emblem-title">${item.title}</h4>
+                            <p class="badge-emblem-desc">${item.description}</p>
+                            ${item.url ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;font-size:0.77rem;color:var(--accent-color);margin-bottom:8px;text-decoration:underline;background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:12px;">🔗 Link</a>` : ''}
+                            <div class="badge-emblem-category">${item.badgeCategory || 'General'}</div>
+                            ${actionArea}
+                        </div>`;
+                    });
+                });
+                grid.innerHTML = html;
             }
             contentDiv.appendChild(grid);
-
-            // Add Collection Link/Summary
-            const linkBox = document.createElement('div');
-            linkBox.className = 'glass glass-card';
-            linkBox.style.marginTop = '20px';
-            linkBox.style.textAlign = 'center';
-            linkBox.innerHTML = `
-                <p style="margin-bottom:10px;opacity:0.8;">想查看已獲得的勳章牆嗎？</p>
-                <button class="btn btn-primary" onclick="switchTab('achievements')">🏆 前往成就 (Achievements) 頁面</button>
-            `;
-            contentDiv.appendChild(linkBox);
         }
 
         function buyBadge(itemId) {
