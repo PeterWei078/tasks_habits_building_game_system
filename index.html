@@ -3809,7 +3809,7 @@
                         const editBtn = obtained ? `<button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')"
                             style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.78rem;box-shadow:0 2px 6px rgba(0,0,0,0.12);z-index:4;">✏️</button>` : '';
                         const actionArea = obtained
-                            ? `<div class="badge-obtained-label">✓ 已獲得</div>`
+                            ? ``
                             : `<button class="btn-claim-badge" onclick="event.stopPropagation(); buyBadge('${item.id}')">🏅 獲得</button>`;
 
                         html += `
