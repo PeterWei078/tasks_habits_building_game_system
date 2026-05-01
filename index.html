@@ -535,6 +535,23 @@
             box-sizing: border-box;
         }
 
+        /* Obtained badge — highlight desc + category */
+        .badge-emblem-card.badge-obtained .badge-emblem-desc {
+            opacity: 1;
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.28);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-weight: 500;
+        }
+        .badge-emblem-card.badge-obtained .badge-emblem-category {
+            opacity: 0.9;
+            background: rgba(255,255,255,0.22);
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
         /* Category section divider inside the badge grid */
         .badge-category-header {
             grid-column: 1 / -1;
@@ -3804,7 +3821,7 @@
                         else if (item.badgeTier === 'silver') { tierClass = 'badge-tier-silver'; pip = '<div class="badge-tier-pip pip-silver">◆</div>'; }
                         else if (item.badgeTier === 'bronze') { tierClass = 'badge-tier-bronze'; pip = '<div class="badge-tier-pip pip-bronze">●</div>'; }
 
-                        const lockedClass = obtained ? '' : 'badge-locked';
+                        const lockedClass = obtained ? 'badge-obtained' : 'badge-locked';
                         const clickAttr = obtained ? `onclick="openEditShopItemModal('${item.id}')"` : '';
                         const editBtn = obtained ? `<button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')"
                             style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.78rem;box-shadow:0 2px 6px rgba(0,0,0,0.12);z-index:4;">✏️</button>` : '';
