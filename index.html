@@ -3636,6 +3636,13 @@
                 path: '/badges/running_gold.webp',
                 name: '跑步 · 金牌'
             },
+            // ── 美食 / 餐廳系列 ──
+            {
+                id: 'michelin2star',
+                path: '/badges/badge_michelin2star.webp',
+                name: '米其林二星',
+                match: t => /米其林.?二星|Michelin.?2|Michelin.?Two/i.test(t)
+            },
             // ── 睡眠系列（銅 / 銀 / 金）──
             {
                 id: 'sleep_bronze',
