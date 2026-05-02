@@ -1925,9 +1925,6 @@
                 </div>
 
                 <div id="manageBadgesSection" style="display: none;">
-                    <!-- Badge Items List -->
-                    <div id="manageBadgeList" style="margin-bottom: 20px;"></div>
-
                     <!-- Add New Badge Form -->
                     <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                         <h3 style="margin-bottom: 15px;">新增徽章</h3>
@@ -3822,9 +3819,9 @@
                         else if (item.badgeTier === 'bronze') { tierClass = 'badge-tier-bronze'; pip = '<div class="badge-tier-pip pip-bronze">●</div>'; }
 
                         const lockedClass = obtained ? 'badge-obtained' : 'badge-locked';
-                        const clickAttr = obtained ? `onclick="openEditShopItemModal('${item.id}')"` : '';
-                        const editBtn = obtained ? `<button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')"
-                            style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.78rem;box-shadow:0 2px 6px rgba(0,0,0,0.12);z-index:4;">✏️</button>` : '';
+                        const clickAttr = `onclick="openEditShopItemModal('${item.id}')"`;
+                        const editBtn = `<button class="edit-btn-hover" onclick="event.stopPropagation(); openEditShopItemModal('${item.id}')"
+                            style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.8);border:none;border-radius:50%;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:0.78rem;box-shadow:0 2px 6px rgba(0,0,0,0.12);z-index:4;">✏️</button>`;
                         const actionArea = obtained
                             ? ``
                             : `<button class="btn-claim-badge" onclick="event.stopPropagation(); buyBadge('${item.id}')">🏅 獲得</button>`;
