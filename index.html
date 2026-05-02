@@ -1153,6 +1153,15 @@
             margin-right: 15px;
         }
 
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .sync-spinning {
+            display: inline-block;
+            animation: spin 0.8s linear infinite;
+        }
+
         /* Responsive */
         @media (max-width: 950px) {
             .app-container {
@@ -1584,7 +1593,10 @@
                         <img id="user-photo" src="" style="width: 24px; height: 24px; border-radius: 50%;">
                         <span id="user-name" style="font-size: 0.85rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);"></span>
                     </div>
-                    <button onclick="window.firebaseSignOut()" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1rem; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; transition: background 0.2s;" title="登出 (Sign Out)" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='none'">🚪</button>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <button id="sync-cloud-btn" onclick="syncFromCloud()" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1rem; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; transition: background 0.2s;" title="從雲端更新 (Sync from Cloud)" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='none'"><span id="sync-cloud-icon">🔄</span></button>
+                        <button onclick="window.firebaseSignOut()" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1rem; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 4px; transition: background 0.2s;" title="登出 (Sign Out)" onmouseover="this.style.background='rgba(0,0,0,0.1)'" onmouseout="this.style.background='none'">🚪</button>
+                    </div>
                 </div>
                 <button id="login-btn" onclick="window.firebaseSignIn()" class="btn btn-primary" style="width: 100%; font-size: 0.9rem; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <span>🌐</span> <span id="login-btn-text">使用 Google 登入同步</span>
@@ -2508,6 +2520,53 @@
         
         // Start initialization
         initFirebase();
+
+        async function syncFromCloud() {
+            if (!window.firebaseUserUid || !window.firebaseDb) {
+                showToast('⚠️ 尚未登入', '請先登入 Google 帳號才能同步雲端資料');
+                return;
+            }
+            const btn = document.getElementById('sync-cloud-btn');
+            const icon = document.getElementById('sync-cloud-icon');
+            if (btn) btn.disabled = true;
+            if (icon) { icon.textContent = '🔄'; icon.classList.add('sync-spinning'); }
+
+            try {
+                const { getDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+                const uid = window.firebaseUserUid;
+                const userDocRef = doc(window.firebaseDb, "users", uid);
+                const docSnap = await getDoc(userDocRef);
+
+                let cloudStateStr = null;
+                if (docSnap.exists() && docSnap.data().totalChunks) {
+                    const totalChunks = docSnap.data().totalChunks;
+                    let fullStr = "";
+                    for (let i = 0; i < totalChunks; i++) {
+                        const chunkSnap = await getDoc(doc(window.firebaseDb, `users/${uid}/dataChunks/${i}`));
+                        if (chunkSnap.exists()) fullStr += chunkSnap.data().chunk;
+                    }
+                    cloudStateStr = fullStr;
+                } else if (docSnap.exists() && docSnap.data().state) {
+                    cloudStateStr = docSnap.data().state;
+                }
+
+                if (cloudStateStr) {
+                    state = JSON.parse(cloudStateStr);
+                    migrateCharacterGallery();
+                    localStorage.setItem('sl_data', cloudStateStr);
+                    render();
+                    showToast('☁️ 雲端同步完成', '已成功從雲端載入最新資料');
+                } else {
+                    showToast('ℹ️ 雲端無資料', '雲端尚無儲存的資料');
+                }
+            } catch (err) {
+                console.error("syncFromCloud error:", err);
+                showToast('❌ 同步失敗', err.message || '無法連線至雲端');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) { icon.textContent = '🔄'; icon.classList.remove('sync-spinning'); }
+            }
+        }
 
         // --- State Management ---
         const defaultState = {
