@@ -3447,7 +3447,15 @@
                         showToast("Focus Complete!", "Great job! Take a break.");
                         state.player.gold += 10;
                         state.player.exp += 20;
-                        checkLevelUp();
+                        const _pomExpNeeded = state.player.level * 100;
+                        if (state.player.exp >= _pomExpNeeded) {
+                            state.player.level++;
+                            state.player.exp -= _pomExpNeeded;
+                            distributeOccupationAttrExp(state.player.level);
+                            if (typeof showLevelUpOverlay === 'function') {
+                                showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
+                            }
+                        }
                         saveState();
                     }
                 }
@@ -3709,27 +3717,82 @@
         ];
 
         // ── Occupation Registry ───────────────────────────────────────────
+        // attrDist: percentage (integer, sum = 100) distributed to each attribute on level-up
         const OCCUPATIONS = {
             basic: [
-                { id: 'warrior',  name: '戰士',   icon: '⚔️',  desc: '力量與防禦的化身',     maxLevel: 20 },
-                { id: 'martial',  name: '武術家', icon: '🥊',  desc: '快速連擊的格鬥家',     maxLevel: 20 },
-                { id: 'mage',     name: '魔法師', icon: '🔮',  desc: '精通魔法的施術者',     maxLevel: 20 },
-                { id: 'hunter',   name: '獵人',   icon: '🏹',  desc: '精準的遠程攻擊者',     maxLevel: 20 },
+                { id: 'warrior', name: '戰士', icon: '⚔️', desc: '力量與防禦的化身', maxLevel: 20,
+                  attrDist: { strength:35, vitality:25, agility:15, willpower:10, dexterity:7, intelligence:4, charisma:2, luck:2 } },
+                { id: 'martial', name: '武術家', icon: '🥊', desc: '快速連擊的格鬥家', maxLevel: 20,
+                  attrDist: { agility:30, strength:25, dexterity:15, vitality:12, willpower:8, luck:5, charisma:3, intelligence:2 } },
+                { id: 'mage', name: '魔法師', icon: '🔮', desc: '精通魔法的施術者', maxLevel: 20,
+                  attrDist: { intelligence:35, willpower:20, luck:15, charisma:10, agility:8, dexterity:5, vitality:4, strength:3 } },
+                { id: 'hunter', name: '獵人', icon: '🏹', desc: '精準的遠程攻擊者', maxLevel: 20,
+                  attrDist: { agility:30, dexterity:25, luck:20, strength:10, intelligence:7, vitality:5, willpower:2, charisma:1 } },
             ],
             advanced: [
-                { id: 'dragonknight',  name: '龍騎士',       icon: '🐉', desc: '駕馭龍力的騎士',       minLevel: 20 },
-                { id: 'shadow_ninja',  name: '影忍',          icon: '🗡️', desc: '潛行於暗處的刺客',     minLevel: 20 },
-                { id: 'sage',          name: '賢者（法師）', icon: '📜', desc: '掌握古代智慧的法師',   minLevel: 20 },
-                { id: 'beastmaster',   name: '馴獸師',        icon: '🦁', desc: '與野獸共鳴的訓練師',   minLevel: 20 },
+                { id: 'dragonknight', name: '龍騎士', icon: '🐉', desc: '駕馭龍力的騎士', minLevel: 20,
+                  attrDist: { strength:30, vitality:25, charisma:15, willpower:12, agility:8, dexterity:5, intelligence:3, luck:2 } },
+                { id: 'shadow_ninja', name: '影忍', icon: '🗡️', desc: '潛行於暗處的刺客', minLevel: 20,
+                  attrDist: { agility:35, dexterity:25, luck:15, strength:10, willpower:8, intelligence:4, vitality:2, charisma:1 } },
+                { id: 'sage', name: '賢者（法師）', icon: '📜', desc: '掌握古代智慧的法師', minLevel: 20,
+                  attrDist: { intelligence:30, willpower:25, charisma:15, luck:15, agility:6, dexterity:5, vitality:3, strength:1 } },
+                { id: 'beastmaster', name: '馴獸師', icon: '🦁', desc: '與野獸共鳴的訓練師', minLevel: 20,
+                  attrDist: { vitality:25, strength:20, agility:20, charisma:15, dexterity:8, willpower:7, luck:3, intelligence:2 } },
             ],
             special: [
-                { id: 'shadow_monarch', name: '暗影君王', icon: '👑', desc: '統御暗影的絕對王者', minLevel: 30 },
+                { id: 'shadow_monarch', name: '暗影君王', icon: '👑', desc: '統御暗影的絕對王者', minLevel: 30,
+                  attrDist: { strength:25, agility:20, willpower:20, intelligence:15, dexterity:10, luck:5, vitality:3, charisma:2 } },
             ]
         };
 
         // Returns a flat list of all occupations (any tier)
         function getAllOccupations() {
             return [...OCCUPATIONS.basic, ...OCCUPATIONS.advanced, ...OCCUPATIONS.special];
+        }
+
+        // Called after a player levels up to newLevel (>= 6).
+        // Distributes newLevel × 10 EXP to each attribute according to the active character's occupation.
+        function distributeOccupationAttrExp(newLevel) {
+            if (newLevel < 6) return; // bonus starts from level 5 → 6
+            const p = state.player;
+            const activeChar = (p.characterGallery || []).find(c => c.id === p.activeCharacterId);
+            const occId = activeChar ? activeChar.occupation : null;
+            const occ = occId ? getAllOccupations().find(o => o.id === occId) : null;
+            if (!occ || !occ.attrDist) return;
+
+            const totalPerAttr = newLevel * 10; // EXP pool per-attribute (before distribution)
+            const gainedAttrs = [];
+            Object.entries(occ.attrDist).forEach(([attrKey, pct]) => {
+                const attr = p.attributes[attrKey];
+                if (!attr) return;
+                const gain = Math.round(totalPerAttr * pct / 100);
+                if (gain <= 0) return;
+                attr.exp = (attr.exp || 0) + gain;
+                gainedAttrs.push({ key: attrKey, gain });
+                // Check attribute level-up
+                let leveled = false;
+                while (true) {
+                    const needed = 50 + attr.level * 50;
+                    if (attr.exp >= needed) {
+                        attr.level++;
+                        attr.exp -= needed;
+                        leveled = true;
+                    } else break;
+                }
+                if (leveled && typeof showLevelUpOverlay === 'function') {
+                    showLevelUpOverlay(
+                        `${attributesConfig[attrKey].label.split(' ')[0]} Level Up!`,
+                        `Now Level ${attr.level}`
+                    );
+                }
+            });
+
+            if (gainedAttrs.length > 0) {
+                const preview = gainedAttrs.slice(0, 3).map(a =>
+                    `${attributesConfig[a.key].label.split(' ')[0]} +${a.gain}`
+                ).join(' · ');
+                showToast(`${occ.icon} 職業加成 (${occ.name})`, `屬性 EXP 獲得：${preview}${gainedAttrs.length > 3 ? ' …' : ''}`);
+            }
         }
 
         // Returns the tier label for a given occupation id
@@ -5349,6 +5412,7 @@
                     if (state.player.exp >= expNeeded) {
                         state.player.level++;
                         state.player.exp -= expNeeded;
+                        distributeOccupationAttrExp(state.player.level);
                         if (typeof showLevelUpOverlay === 'function') {
                             showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
                         } else {
@@ -6696,11 +6760,34 @@
                 sel.appendChild(optGroup);
             });
 
-            // Update hint on change
+            // Update distribution table on change
             function updateHint() {
                 const selOcc = getAllOccupations().find(o => o.id === sel.value);
                 const hint = document.getElementById('charEditOccupationHint');
-                hint.textContent = selOcc ? selOcc.desc : '';
+                if (!selOcc) { hint.innerHTML = ''; return; }
+                const dist = selOcc.attrDist || {};
+                // Sort attributes by percentage descending
+                const sorted = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+                const rows = sorted.map(([k, pct]) => {
+                    const cfg = attributesConfig[k];
+                    if (!cfg) return '';
+                    const label = cfg.label; // e.g. "智力 (INT)"
+                    const shortName = label.split(' ')[0];
+                    const badge = label.split(' ')[1] || '';
+                    return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+                        <span style="font-size:0.72rem;font-weight:700;min-width:46px;opacity:0.8;">${shortName} <span style="opacity:0.55;">${badge}</span></span>
+                        <div style="flex:1;height:7px;background:rgba(255,255,255,0.12);border-radius:4px;overflow:hidden;">
+                            <div style="height:100%;width:${pct}%;background:${cfg.border};border-radius:4px;transition:width 0.4s;"></div>
+                        </div>
+                        <span style="font-size:0.72rem;font-weight:700;min-width:30px;text-align:right;opacity:0.8;">${pct}%</span>
+                    </div>`;
+                }).join('');
+                hint.innerHTML = `
+                    <div style="margin-top:2px;font-size:0.77rem;opacity:0.6;margin-bottom:7px;">${selOcc.desc}</div>
+                    <div style="margin-top:4px;padding:10px 12px;background:rgba(255,255,255,0.06);border-radius:10px;border:1px solid rgba(255,255,255,0.1);">
+                        <div style="font-size:0.72rem;font-weight:700;opacity:0.5;letter-spacing:0.05em;margin-bottom:9px;">升等屬性 EXP 分配比例</div>
+                        ${rows}
+                    </div>`;
             }
             sel.onchange = updateHint;
             updateHint();
@@ -6935,6 +7022,7 @@
                     state.player.level++;
                     state.player.exp -= expNeeded;
                     levelUp = true;
+                    distributeOccupationAttrExp(state.player.level);
                 }
 
                 showToast("Quest Completed!", `+${task.rewardExp} EXP, +${task.rewardGold} Gold${levelUp ? ' (LEVEL UP!)' : ''}`);
@@ -10039,7 +10127,7 @@
                 <select id="charEditOccupation" style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:var(--text-primary);font-size:0.92rem;cursor:pointer;">
                     <option value="">── 未設定 ──</option>
                 </select>
-                <p id="charEditOccupationHint" style="font-size:0.78rem;opacity:0.5;margin-top:5px;line-height:1.4;"></p>
+                <div id="charEditOccupationHint" style="font-size:0.78rem;opacity:0.8;margin-top:5px;line-height:1.4;"></div>
             </div>
             <!-- Actions -->
             <div style="display:flex;gap:10px;">
