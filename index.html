@@ -6734,8 +6734,8 @@
                     <img src="${char.path}" alt="${char.name}" style="width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply;" onerror="this.style.display='none'">
                 </div>
                 <div>
-                    <div style="font-weight:700;font-size:1rem;">${char.name}</div>
-                    <div style="font-size:0.82rem;opacity:0.6;margin-top:3px;">Lv.${char.level}</div>
+                    <div style="font-weight:700;font-size:1rem;color:#fff;">${char.name}</div>
+                    <div style="font-size:0.82rem;color:rgba(255,255,255,0.6);margin-top:3px;">Lv.${char.level}</div>
                 </div>
             `;
 
@@ -6775,17 +6775,17 @@
                     const shortName = label.split(' ')[0];
                     const badge = label.split(' ')[1] || '';
                     return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
-                        <span style="font-size:0.72rem;font-weight:700;min-width:46px;opacity:0.8;">${shortName} <span style="opacity:0.55;">${badge}</span></span>
-                        <div style="flex:1;height:7px;background:rgba(255,255,255,0.12);border-radius:4px;overflow:hidden;">
+                        <span style="font-size:0.72rem;font-weight:700;min-width:46px;color:#fff;">${shortName} <span style="color:rgba(255,255,255,0.55);">${badge}</span></span>
+                        <div style="flex:1;height:7px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;">
                             <div style="height:100%;width:${pct}%;background:${cfg.border};border-radius:4px;transition:width 0.4s;"></div>
                         </div>
-                        <span style="font-size:0.72rem;font-weight:700;min-width:30px;text-align:right;opacity:0.8;">${pct}%</span>
+                        <span style="font-size:0.72rem;font-weight:700;min-width:30px;text-align:right;color:#fff;">${pct}%</span>
                     </div>`;
                 }).join('');
                 hint.innerHTML = `
-                    <div style="margin-top:2px;font-size:0.77rem;opacity:0.6;margin-bottom:7px;">${selOcc.desc}</div>
-                    <div style="margin-top:4px;padding:10px 12px;background:rgba(255,255,255,0.06);border-radius:10px;border:1px solid rgba(255,255,255,0.1);">
-                        <div style="font-size:0.72rem;font-weight:700;opacity:0.5;letter-spacing:0.05em;margin-bottom:9px;">升等屬性 EXP 分配比例</div>
+                    <div style="margin-top:2px;font-size:0.77rem;color:rgba(255,255,255,0.65);margin-bottom:7px;">${selOcc.desc}</div>
+                    <div style="margin-top:4px;padding:10px 12px;background:rgba(255,255,255,0.07);border-radius:10px;border:1px solid rgba(255,255,255,0.15);">
+                        <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.55);letter-spacing:0.05em;margin-bottom:9px;">升等屬性 EXP 分配比例</div>
                         ${rows}
                     </div>`;
             }
@@ -10114,25 +10114,25 @@
 
     <!-- Character Edit Modal -->
     <div id="characterEditModal" onclick="if(event.target===this)closeCharacterEditModal()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:10000;justify-content:center;align-items:center;padding:20px;box-sizing:border-box;backdrop-filter:blur(6px);">
-        <div style="background:var(--card-bg,rgba(30,20,60,0.97));backdrop-filter:blur(24px);border-radius:20px;padding:28px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.12);position:relative;">
+        <div style="background:var(--card-bg,rgba(30,20,60,0.97));backdrop-filter:blur(24px);border-radius:20px;padding:28px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.12);position:relative;color:#fff;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                <h3 style="margin:0;font-size:1.25rem;">✏️ 編輯角色</h3>
-                <button onclick="closeCharacterEditModal()" style="background:none;border:none;font-size:1.6rem;cursor:pointer;opacity:0.55;line-height:1;padding:0;color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">✕</button>
+                <h3 style="margin:0;font-size:1.25rem;color:#fff;">✏️ 編輯角色</h3>
+                <button onclick="closeCharacterEditModal()" style="background:none;border:none;font-size:1.6rem;cursor:pointer;opacity:0.55;line-height:1;padding:0;color:#fff;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">✕</button>
             </div>
             <!-- Character preview row -->
-            <div id="charEditPreview" style="display:flex;align-items:center;gap:14px;margin-bottom:22px;background:rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;"></div>
+            <div id="charEditPreview" style="display:flex;align-items:center;gap:14px;margin-bottom:22px;background:rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;color:#fff;"></div>
             <!-- Occupation field -->
             <div style="margin-bottom:18px;">
-                <label style="font-size:0.85rem;font-weight:600;opacity:0.75;display:block;margin-bottom:6px;">職業 (Occupation)</label>
-                <select id="charEditOccupation" style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:var(--text-primary);font-size:0.92rem;cursor:pointer;">
-                    <option value="">── 未設定 ──</option>
+                <label style="font-size:0.85rem;font-weight:600;color:rgba(255,255,255,0.8);display:block;margin-bottom:6px;">職業 (Occupation)</label>
+                <select id="charEditOccupation" style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.12);color:#fff;font-size:0.92rem;cursor:pointer;">
+                    <option value="" style="background:#2d1b4e;color:#fff;">── 未設定 ──</option>
                 </select>
-                <div id="charEditOccupationHint" style="font-size:0.78rem;opacity:0.8;margin-top:5px;line-height:1.4;"></div>
+                <div id="charEditOccupationHint" style="font-size:0.78rem;color:#fff;margin-top:5px;line-height:1.4;"></div>
             </div>
             <!-- Actions -->
             <div style="display:flex;gap:10px;">
                 <button onclick="saveCharacterEdit()" class="btn btn-primary" style="flex:1;padding:10px;">💾 儲存</button>
-                <button onclick="closeCharacterEditModal()" class="btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.12);">取消</button>
+                <button onclick="closeCharacterEditModal()" class="btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.2);">取消</button>
             </div>
             <input type="hidden" id="charEditId">
         </div>
