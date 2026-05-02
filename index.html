@@ -1618,7 +1618,7 @@
                 </li>
                 <li class="nav-item" id="nav-achievements" onclick="switchTab('achievements')">
                     <span class="nav-icon">🏆</span>
-                    <span class="nav-text">成就 (Achievements)</span>
+                    <span class="nav-text">成就與技能</span>
                 </li>
 
                 <!-- Personal -->
@@ -1626,6 +1626,10 @@
                 <li class="nav-item" id="nav-status" onclick="switchTab('status')">
                     <span class="nav-icon">📊</span>
                     <span class="nav-text">狀態 (Status)</span>
+                </li>
+                <li class="nav-item" id="nav-occupation" onclick="switchTab('occupation')">
+                    <span class="nav-icon">🧝</span>
+                    <span class="nav-text">職業 (Occupation)</span>
                 </li>
                 <li class="nav-item" id="nav-statistics" onclick="switchTab('statistics')">
                     <span class="nav-icon">📈</span>
@@ -2558,11 +2562,11 @@
                 theme: 'default', // UI Background Color Theme
                 photoLibrary: [], // [{id, name, data (base64), addedAt}]
                 characterGallery: [
-                    { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師',   path: '/characters/char_lv5_mage.webp',          unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv5_martial',       level: 5,  name: '初級武道家',   path: '/characters/char_lv5_martial.webp',       unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士',   path: '/characters/char_lv5_dragonknight.webp',  unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',     path: '/characters/char_lv10_redmage.webp',      unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',     path: '/characters/char_lv10_bard.webp',         unlockedAt: new Date().toISOString() }
+                    { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師',   path: '/characters/char_lv5_mage.webp',          occupation: 'mage',         unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_martial',       level: 5,  name: '初級武道家',   path: '/characters/char_lv5_martial.webp',       occupation: 'martial',      unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士',   path: '/characters/char_lv5_dragonknight.webp',  occupation: 'dragonknight', unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',     path: '/characters/char_lv10_redmage.webp',      occupation: 'mage',         unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',     path: '/characters/char_lv10_bard.webp',         occupation: null,           unlockedAt: new Date().toISOString() }
                 ],
                 activeCharacterId: 'char_lv5_mage',
                 pageInfos: {
@@ -2570,6 +2574,7 @@
                     'focus': "Welcome to **Focus Mode**!\n\nUse the Pomodoro timer to concentrate on your tasks uninterrupted.",
                     'projects': "Welcome to **Projects**!\n\nOrganize large, multi-step goals here. Track progress bars and completion status.",
                     'status': "Welcome to **Status**!\n\nView your current Level, Attribute stats, and overall character progression.",
+                    'occupation': "Welcome to **Occupation**!\n\n瀏覽所有職業與已創建的角色圖鑑。點擊卡片上的編輯按鈕可設定角色所屬職業。20 級後可選擇進階職業，30 級後可暫時切換特殊職業。",
                     'activity': "Welcome to **Activity**!\n\nReview your historical task completions and analyze your productivity heatmap.",
                     'statistics': "Welcome to **Statistics**!\n\nAnalyze your attribute growth over time using the interactive radar charts.",
                     'reflections': "Welcome to **Reflections**!\n\nWrite daily journal entries to track your thoughts and lessons learned.",
@@ -2761,15 +2766,18 @@
             }
             // Ensure every built-in character exists in the gallery
             const builtIn = [
-                { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp' },
-                { id: 'char_lv5_martial',       level: 5,  name: '初級武道家', path: '/characters/char_lv5_martial.webp' },
-                { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士', path: '/characters/char_lv5_dragonknight.webp' },
-                { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp' },
-                { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',   path: '/characters/char_lv10_bard.webp' }
+                { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp',          occupation: 'mage' },
+                { id: 'char_lv5_martial',       level: 5,  name: '初級武道家', path: '/characters/char_lv5_martial.webp',       occupation: 'martial' },
+                { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士', path: '/characters/char_lv5_dragonknight.webp',  occupation: 'dragonknight' },
+                { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp',      occupation: 'mage' },
+                { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',   path: '/characters/char_lv10_bard.webp',         occupation: null }
             ];
             builtIn.forEach(c => {
-                if (!state.player.characterGallery.some(g => g.id === c.id)) {
+                const existing = state.player.characterGallery.find(g => g.id === c.id);
+                if (!existing) {
                     state.player.characterGallery.push({ ...c, unlockedAt: new Date().toISOString() });
+                } else if (!('occupation' in existing)) {
+                    existing.occupation = c.occupation;
                 }
             });
             state.player.characterGallery.sort((a, b) => a.level - b.level);
@@ -2885,6 +2893,7 @@
             contentDiv.innerHTML = '';
             if (currentTab === 'tasks') renderTasksPage();
             else if (currentTab === 'status') renderStatusPage();
+            else if (currentTab === 'occupation') renderOccupationPage();
             else if (currentTab === 'focus') renderFocusPage();
             else if (currentTab === 'projects') renderProjectsPage();
             else if (currentTab === 'patch') renderPatchPage();
@@ -3698,6 +3707,39 @@
                 name: '睡眠 · 金牌'
             },
         ];
+
+        // ── Occupation Registry ───────────────────────────────────────────
+        const OCCUPATIONS = {
+            basic: [
+                { id: 'warrior',  name: '戰士',   icon: '⚔️',  desc: '力量與防禦的化身',     maxLevel: 20 },
+                { id: 'martial',  name: '武術家', icon: '🥊',  desc: '快速連擊的格鬥家',     maxLevel: 20 },
+                { id: 'mage',     name: '魔法師', icon: '🔮',  desc: '精通魔法的施術者',     maxLevel: 20 },
+                { id: 'hunter',   name: '獵人',   icon: '🏹',  desc: '精準的遠程攻擊者',     maxLevel: 20 },
+            ],
+            advanced: [
+                { id: 'dragonknight',  name: '龍騎士',       icon: '🐉', desc: '駕馭龍力的騎士',       minLevel: 20 },
+                { id: 'shadow_ninja',  name: '影忍',          icon: '🗡️', desc: '潛行於暗處的刺客',     minLevel: 20 },
+                { id: 'sage',          name: '賢者（法師）', icon: '📜', desc: '掌握古代智慧的法師',   minLevel: 20 },
+                { id: 'beastmaster',   name: '馴獸師',        icon: '🦁', desc: '與野獸共鳴的訓練師',   minLevel: 20 },
+            ],
+            special: [
+                { id: 'shadow_monarch', name: '暗影君王', icon: '👑', desc: '統御暗影的絕對王者', minLevel: 30 },
+            ]
+        };
+
+        // Returns a flat list of all occupations (any tier)
+        function getAllOccupations() {
+            return [...OCCUPATIONS.basic, ...OCCUPATIONS.advanced, ...OCCUPATIONS.special];
+        }
+
+        // Returns the tier label for a given occupation id
+        function getOccupationTier(id) {
+            if (OCCUPATIONS.basic.some(o => o.id === id))    return 'basic';
+            if (OCCUPATIONS.advanced.some(o => o.id === id)) return 'advanced';
+            if (OCCUPATIONS.special.some(o => o.id === id))  return 'special';
+            return null;
+        }
+        // ── End Occupation Registry ──────────────────────────────────────
 
         // Returns HTML for a badge icon – resolves by stored path, gallery title-match, or emoji fallback.
         // Immune to Firebase state overwrites because resolution happens at render time.
@@ -6613,6 +6655,76 @@
             renderCharacterGalleryGrid();
             renderStatusPage();
         }
+        // ── Character Edit Modal ──────────────────────────────────────────
+        function openCharacterEditModal(charId) {
+            const p = state.player;
+            const char = (p.characterGallery || []).find(c => c.id === charId);
+            if (!char) return;
+
+            document.getElementById('charEditId').value = charId;
+
+            // Preview
+            const preview = document.getElementById('charEditPreview');
+            preview.innerHTML = `
+                <div style="width:54px;height:81px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg-gradient);background-attachment:fixed;">
+                    <img src="${char.path}" alt="${char.name}" style="width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply;" onerror="this.style.display='none'">
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:1rem;">${char.name}</div>
+                    <div style="font-size:0.82rem;opacity:0.6;margin-top:3px;">Lv.${char.level}</div>
+                </div>
+            `;
+
+            // Build occupation select
+            const sel = document.getElementById('charEditOccupation');
+            sel.innerHTML = '<option value="">── 未設定 ──</option>';
+            const groups = [
+                { label: '基本職業 (Lv 1–20)', items: OCCUPATIONS.basic },
+                { label: '進階職業 (Lv 20+)',  items: OCCUPATIONS.advanced },
+                { label: '特殊職業 (Lv 30+)',  items: OCCUPATIONS.special },
+            ];
+            groups.forEach(g => {
+                const optGroup = document.createElement('optgroup');
+                optGroup.label = g.label;
+                g.items.forEach(occ => {
+                    const opt = document.createElement('option');
+                    opt.value = occ.id;
+                    opt.textContent = `${occ.icon} ${occ.name}`;
+                    if (char.occupation === occ.id) opt.selected = true;
+                    optGroup.appendChild(opt);
+                });
+                sel.appendChild(optGroup);
+            });
+
+            // Update hint on change
+            function updateHint() {
+                const selOcc = getAllOccupations().find(o => o.id === sel.value);
+                const hint = document.getElementById('charEditOccupationHint');
+                hint.textContent = selOcc ? selOcc.desc : '';
+            }
+            sel.onchange = updateHint;
+            updateHint();
+
+            document.getElementById('characterEditModal').style.display = 'flex';
+        }
+
+        function closeCharacterEditModal() {
+            document.getElementById('characterEditModal').style.display = 'none';
+        }
+
+        function saveCharacterEdit() {
+            const charId = document.getElementById('charEditId').value;
+            const newOccupation = document.getElementById('charEditOccupation').value || null;
+            const char = (state.player.characterGallery || []).find(c => c.id === charId);
+            if (!char) return;
+            char.occupation = newOccupation;
+            saveState();
+            closeCharacterEditModal();
+            if (currentTab === 'occupation') renderOccupationPage();
+            showToast('已更新', `${char.name} 的職業已設定完成。`);
+        }
+        // ── End Character Edit Modal ──────────────────────────────────────
+
         // ── End Character Gallery ─────────────────────────────────────────
 
         function openPhotoLibraryModal(context) {
@@ -7123,6 +7235,135 @@
             } else {
                 alert("Please enter valid Level (>0) and EXP (>=0).");
             }
+        }
+
+        // --- Occupation Page ---
+        function renderOccupationPage() {
+            contentDiv.innerHTML = '';
+            migrateCharacterGallery();
+            const p = state.player;
+            const gallery = p.characterGallery || [];
+
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+            title.innerHTML = `
+                職業 (Occupation)
+                <button onclick="openPageInfoModal('occupation','職業 (Occupation)')" title="Page Info" style="background:none;border:none;cursor:pointer;font-size:1.2rem;opacity:0.7;padding:5px;transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+            `;
+            contentDiv.appendChild(title);
+
+            const sectionDefs = [
+                { tier: 'basic',    label: '四大基本職業',  subtitle: '20 級以前的職業選擇', reqLabel: null,        occupations: OCCUPATIONS.basic,    minSlots: 4 },
+                { tier: 'advanced', label: '進階職業',       subtitle: '20 級以上可選',        reqLabel: '需達 Lv.20', occupations: OCCUPATIONS.advanced, minSlots: 4 },
+                { tier: 'special',  label: '特殊職業',       subtitle: '30 級以上可暫時切換',  reqLabel: '需達 Lv.30', occupations: OCCUPATIONS.special,  minSlots: 3 },
+            ];
+
+            sectionDefs.forEach(section => {
+                const canAccess = section.tier === 'basic' ? true
+                    : section.tier === 'advanced' ? p.level >= 20
+                    : p.level >= 30;
+
+                const sec = document.createElement('div');
+                sec.className = 'glass glass-card';
+                sec.style.marginBottom = '28px';
+
+                // Section header
+                const headerEl = document.createElement('div');
+                headerEl.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+                        <h3 style="margin:0;font-size:1.15rem;font-weight:700;color:var(--accent-color);">${section.label}</h3>
+                        <span style="font-size:0.82rem;opacity:0.65;background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;">${section.subtitle}</span>
+                        ${section.reqLabel && !canAccess ? `<span style="font-size:0.8rem;background:rgba(0,0,0,0.18);color:rgba(255,255,255,0.75);padding:3px 10px;border-radius:12px;">🔒 ${section.reqLabel}</span>` : ''}
+                        ${section.reqLabel && canAccess ? `<span style="font-size:0.8rem;background:rgba(72,187,120,0.25);color:#276749;padding:3px 10px;border-radius:12px;">✓ 已解鎖</span>` : ''}
+                    </div>
+                    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.2);margin-bottom:18px;">
+                `;
+                sec.appendChild(headerEl);
+
+                section.occupations.forEach((occ, occIdx) => {
+                    const chars = gallery.filter(c => c.occupation === occ.id).sort((a,b) => a.level - b.level);
+                    const placeholderCount = Math.max(0, section.minSlots - chars.length);
+
+                    // Occupation sub-header
+                    const occHeader = document.createElement('div');
+                    occHeader.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:12px;' + (occIdx > 0 ? 'margin-top:22px;' : '');
+                    occHeader.innerHTML = `
+                        <span style="font-size:1.5rem;line-height:1;">${occ.icon}</span>
+                        <div>
+                            <div style="font-weight:700;font-size:1rem;">${occ.name}</div>
+                            <div style="font-size:0.78rem;opacity:0.58;">${occ.desc}</div>
+                        </div>
+                        <div style="margin-left:auto;font-size:0.78rem;opacity:0.55;background:rgba(255,255,255,0.18);padding:2px 9px;border-radius:10px;">${chars.length} 個角色</div>
+                    `;
+                    sec.appendChild(occHeader);
+
+                    // Cards grid
+                    const grid = document.createElement('div');
+                    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;';
+
+                    // Existing character cards
+                    chars.forEach(char => {
+                        const isActive = char.id === p.activeCharacterId;
+                        const canEquip = p.level >= char.level;
+                        const borderStyle = isActive
+                            ? 'border:2px solid var(--accent-color,#805AD5);box-shadow:0 0 14px rgba(128,90,213,0.4);'
+                            : 'border:1px solid rgba(255,255,255,0.2);';
+
+                        const card = document.createElement('div');
+                        card.style.cssText = `border-radius:14px;overflow:hidden;${borderStyle}background:rgba(255,255,255,0.08);transition:transform 0.2s;position:relative;`;
+                        card.onmouseenter = () => { if(!isActive) card.style.transform='scale(1.03)'; };
+                        card.onmouseleave = () => { card.style.transform='scale(1)'; };
+
+                        const lockOverlay = !canEquip ? `
+                            <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;z-index:2;">
+                                <span style="font-size:1.5rem;">🔒</span>
+                                <span style="color:#fff;font-size:0.72rem;font-weight:600;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:10px;">Lv.${char.level} 解鎖</span>
+                            </div>` : '';
+
+                        card.innerHTML = `
+                            <div style="aspect-ratio:2/3;overflow:hidden;position:relative;background:var(--bg-gradient);background-attachment:fixed;">
+                                <img src="${char.path}" alt="${char.name}" style="width:100%;height:100%;object-fit:contain;object-position:center;mix-blend-mode:multiply;${!canEquip?'filter:grayscale(60%);':''}" onerror="this.style.display='none'">
+                                <div style="position:absolute;top:7px;right:7px;background:rgba(0,0,0,0.55);color:#FFD700;font-size:0.68rem;font-weight:bold;padding:2px 7px;border-radius:10px;backdrop-filter:blur(4px);z-index:3;">Lv.${char.level}</div>
+                                ${isActive ? `<div style="position:absolute;top:7px;left:7px;background:var(--accent-color,#805AD5);color:#fff;font-size:0.62rem;padding:2px 7px;border-radius:10px;z-index:3;">使用中</div>` : ''}
+                                ${lockOverlay}
+                            </div>
+                            <div style="padding:10px;">
+                                <div style="font-weight:600;font-size:0.85rem;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${char.name}">${char.name}</div>
+                                <button onclick="openCharacterEditModal('${char.id}')" style="width:100%;padding:5px;border-radius:8px;border:none;font-size:0.77rem;font-weight:600;background:rgba(255,255,255,0.18);color:var(--text-primary);cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.32)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">✏️ 編輯</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+
+                    // Placeholder cards
+                    for (let i = 0; i < placeholderCount; i++) {
+                        const ph = document.createElement('div');
+                        ph.style.cssText = 'border-radius:14px;overflow:hidden;border:1px dashed rgba(150,150,150,0.35);background:rgba(150,150,150,0.07);opacity:0.55;';
+                        ph.innerHTML = `
+                            <div style="aspect-ratio:2/3;background:repeating-linear-gradient(45deg,rgba(150,150,150,0.06),rgba(150,150,150,0.06) 10px,rgba(150,150,150,0.12) 10px,rgba(150,150,150,0.12) 20px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;">
+                                <div style="font-size:2.2rem;opacity:0.35;">🂠</div>
+                                <div style="font-size:0.7rem;opacity:0.4;letter-spacing:0.5px;">待新增</div>
+                            </div>
+                            <div style="padding:10px;">
+                                <div style="height:13px;background:rgba(150,150,150,0.22);border-radius:4px;margin-bottom:8px;"></div>
+                                <div style="height:24px;background:rgba(150,150,150,0.12);border-radius:8px;"></div>
+                            </div>
+                        `;
+                        grid.appendChild(ph);
+                    }
+
+                    sec.appendChild(grid);
+
+                    if (occIdx < section.occupations.length - 1) {
+                        const hr = document.createElement('hr');
+                        hr.style.cssText = 'border:none;border-top:1px solid rgba(255,255,255,0.1);margin:20px 0 0;';
+                        sec.appendChild(hr);
+                    }
+                });
+
+                contentDiv.appendChild(sec);
+            });
         }
 
         // --- Status Page ---
@@ -8468,7 +8709,7 @@
             contentDiv.innerHTML = '';
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '成就（Achievements）與技能（Skills）';
+            title.textContent = '成就（Achievements）';
 
             // Header Controls (Filter/View - Optional, keeping simple for now)
             // const controls = document.createElement('div'); ...
@@ -9780,6 +10021,32 @@
                 <div style="font-size:3rem; margin-bottom:12px;">🔮</div>
                 <div>每滿 5 級可解鎖新角色<br>Unlock new characters every 5 levels</div>
             </div>
+        </div>
+    </div>
+
+    <!-- Character Edit Modal -->
+    <div id="characterEditModal" onclick="if(event.target===this)closeCharacterEditModal()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:10000;justify-content:center;align-items:center;padding:20px;box-sizing:border-box;backdrop-filter:blur(6px);">
+        <div style="background:var(--card-bg,rgba(30,20,60,0.97));backdrop-filter:blur(24px);border-radius:20px;padding:28px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.12);position:relative;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="margin:0;font-size:1.25rem;">✏️ 編輯角色</h3>
+                <button onclick="closeCharacterEditModal()" style="background:none;border:none;font-size:1.6rem;cursor:pointer;opacity:0.55;line-height:1;padding:0;color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">✕</button>
+            </div>
+            <!-- Character preview row -->
+            <div id="charEditPreview" style="display:flex;align-items:center;gap:14px;margin-bottom:22px;background:rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;"></div>
+            <!-- Occupation field -->
+            <div style="margin-bottom:18px;">
+                <label style="font-size:0.85rem;font-weight:600;opacity:0.75;display:block;margin-bottom:6px;">職業 (Occupation)</label>
+                <select id="charEditOccupation" style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:var(--text-primary);font-size:0.92rem;cursor:pointer;">
+                    <option value="">── 未設定 ──</option>
+                </select>
+                <p id="charEditOccupationHint" style="font-size:0.78rem;opacity:0.5;margin-top:5px;line-height:1.4;"></p>
+            </div>
+            <!-- Actions -->
+            <div style="display:flex;gap:10px;">
+                <button onclick="saveCharacterEdit()" class="btn btn-primary" style="flex:1;padding:10px;">💾 儲存</button>
+                <button onclick="closeCharacterEditModal()" class="btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.12);">取消</button>
+            </div>
+            <input type="hidden" id="charEditId">
         </div>
     </div>
 </body>
