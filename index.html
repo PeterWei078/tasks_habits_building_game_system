@@ -3760,7 +3760,7 @@
             const occ = occId ? getAllOccupations().find(o => o.id === occId) : null;
             if (!occ || !occ.attrDist) return;
 
-            const totalPerAttr = newLevel * 10; // EXP pool per-attribute (before distribution)
+            const totalPerAttr = newLevel * 100; // EXP pool per-attribute (before distribution)
             const gainedAttrs = [];
             Object.entries(occ.attrDist).forEach(([attrKey, pct]) => {
                 const attr = p.attributes[attrKey];
