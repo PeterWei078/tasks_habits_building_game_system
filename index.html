@@ -4990,7 +4990,7 @@
                     editModal.id = 'editArchiveModal';
                     editModal.className = 'modal-backdrop';
                     editModal.innerHTML = `
-                        <div class="modal-content" style="max-width: 400px;">
+                        <div class="modal-content" style="max-width: 440px;">
                             <div class="modal-header">
                                 <h2>✏️ 編輯成就</h2>
                                 <button class="close-btn" onclick="document.getElementById('editArchiveModal').classList.remove('show')">Close</button>
@@ -5003,6 +5003,10 @@
                                 <div class="form-group">
                                     <label>完成日期</label>
                                     <input type="date" id="editAchieveDate" class="form-control" style="width: 100%; padding: 8px;">
+                                </div>
+                                <div class="form-group" style="margin-top: 12px;">
+                                    <label>描述 / 備注</label>
+                                    <textarea id="editAchieveDesc" rows="4" class="form-control" style="width: 100%; padding: 8px; resize: vertical;" placeholder="記錄這個成就的意義、過程或感想…"></textarea>
                                 </div>
                                 <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveAchievementEdit()">儲存</button>
                             </div>
@@ -8808,19 +8812,23 @@
                 editModal.id = 'editArchiveModal';
                 editModal.className = 'modal-backdrop';
                 editModal.innerHTML = `
-                    <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-content" style="max-width: 440px;">
                         <div class="modal-header">
                             <h2>✏️ 編輯成就</h2>
                             <button class="close-btn" onclick="document.getElementById('editArchiveModal').classList.remove('show')">Close</button>
                         </div>
                         <div class="modal-body">
                             <div class="form-group">
-                                <label>任務名稱</label>
+                                <label>名稱</label>
                                 <input type="text" id="editAchieveName" class="form-control" style="width: 100%; padding: 8px; margin-bottom: 10px;">
                             </div>
                             <div class="form-group">
                                 <label>完成日期</label>
                                 <input type="date" id="editAchieveDate" class="form-control" style="width: 100%; padding: 8px;">
+                            </div>
+                            <div class="form-group" style="margin-top: 12px;">
+                                <label>描述 / 備注</label>
+                                <textarea id="editAchieveDesc" rows="4" class="form-control" style="width: 100%; padding: 8px; resize: vertical;" placeholder="記錄這個成就的意義、過程或感想…"></textarea>
                             </div>
                             <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveAchievementEdit()">儲存</button>
                         </div>
@@ -9284,6 +9292,7 @@
 
             const dateVal = completedTs ? new Date(completedTs).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
             document.getElementById('editAchieveDate').value = dateVal;
+            document.getElementById('editAchieveDesc').value = item.description || '';
             document.getElementById('editArchiveModal').classList.add('show');
         }
 
@@ -9292,6 +9301,7 @@
 
             const newName = document.getElementById('editAchieveName').value.trim();
             const newDateStr = document.getElementById('editAchieveDate').value;
+            const newDesc = document.getElementById('editAchieveDesc').value;
             if (!newName) { alert('名稱不可為空'); return; }
 
             let item, groupId;
@@ -9299,11 +9309,13 @@
                 item = state.player.tags.find(p => p.id === currentEditId);
                 if (!item) return;
                 item.name = newName;
+                item.description = newDesc;
                 groupId = item.groupId;
             } else {
                 item = state.tasks.find(t => t.id == currentEditId);
                 if (!item) return;
                 item.title = newName;
+                item.description = newDesc;
                 groupId = item.groupId;
             }
 
