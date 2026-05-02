@@ -4951,6 +4951,15 @@
                                     <div id="projTasksList"></div>
                                 </div>
 
+                                <div class="form-row" style="margin-top: 14px;">
+                                    <div class="form-group">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                            <input type="checkbox" id="projIsAchievement" style="width: auto; accent-color: var(--accent-color);">
+                                            <span>🏆 列入成就紀錄 (Achievement)</span>
+                                        </label>
+                                        <div style="font-size: 0.75rem; opacity: 0.6; margin-top: 3px; margin-left: 24px;">勾選後，完成此 Project 時會列入「成就（Achievements）」頁面</div>
+                                    </div>
+                                </div>
                                 <button type="button" id="btnSaveProject" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveProject()">Save Project</button>
                                 <button type="button" id="btnConvertToProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(72, 187, 120, 0.2); color: #48BB78; border: 1px solid #48BB78; display: none;" onclick="convertPatchToProject()">Convert to Project (轉為正式專案)</button>
                                 <button type="button" id="btnDeleteProject" class="btn" style="width: 100%; margin-top: 10px; background: rgba(229, 62, 62, 0.2); color: #E53E3E;" onclick="deleteProject()">Delete Project</button>
@@ -4983,19 +4992,19 @@
                     editModal.innerHTML = `
                         <div class="modal-content" style="max-width: 400px;">
                             <div class="modal-header">
-                                <h2>Edit Achievement</h2>
+                                <h2>✏️ 編輯成就</h2>
                                 <button class="close-btn" onclick="document.getElementById('editArchiveModal').classList.remove('show')">Close</button>
                             </div>
                             <div class="modal-body">
                                 <div class="form-group">
-                                    <label>Project Name</label>
+                                    <label>名稱</label>
                                     <input type="text" id="editAchieveName" class="form-control" style="width: 100%; padding: 8px; margin-bottom: 10px;">
                                 </div>
                                 <div class="form-group">
-                                    <label>Completion Date</label>
+                                    <label>完成日期</label>
                                     <input type="date" id="editAchieveDate" class="form-control" style="width: 100%; padding: 8px;">
                                 </div>
-                                <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveAchievementEdit()">Save Changes</button>
+                                <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveAchievementEdit()">儲存</button>
                             </div>
                         </div>
                     `;
@@ -5022,6 +5031,7 @@
                     document.getElementById('projRewardExp').value = project.rewardExp || 0;
                     document.getElementById('projRewardGold').value = project.rewardGold || 0;
                     document.getElementById('projDesc').value = project.description || '';
+                    document.getElementById('projIsAchievement').checked = !!project.isAchievement;
 
                     document.getElementById('btnSaveProject').textContent = isPatchMode ? 'Save Patch' : 'Save Project';
                     document.getElementById('btnDeleteProject').textContent = isPatchMode ? 'Delete Patch' : 'Delete Project';
@@ -5048,6 +5058,7 @@
                     document.getElementById('projRewardExp').value = 0;
                     document.getElementById('projRewardGold').value = 0;
                     document.getElementById('projDesc').value = '';
+                    document.getElementById('projIsAchievement').checked = false;
 
                     document.getElementById('btnSaveProject').textContent = isPatchMode ? 'Save Patch' : 'Save Project';
                     document.getElementById('btnDeleteProject').textContent = isPatchMode ? 'Delete Patch' : 'Delete Project';
@@ -5320,6 +5331,7 @@
                 const rewardGold = parseInt(document.getElementById('projRewardGold').value) || 0;
                 const description = document.getElementById('projDesc').value;
                 const photos = JSON.parse(document.getElementById('projPhotosContainer').dataset.photos || '[]');
+                const isAchievement = document.getElementById('projIsAchievement').checked;
 
                 // DEBUG ALERT
                 // alert(`Saving Project... ID: ${editingProjectId}`);
@@ -5338,6 +5350,7 @@
                         project.rewardGold = rewardGold;
                         project.description = description;
                         project.photos = photos;
+                        project.isAchievement = isAchievement;
                     } else {
                         alert("Critical: Project/Patch ID not found in state!");
                     }
@@ -5353,7 +5366,8 @@
                         rewardExp,
                         rewardGold,
                         description,
-                        photos
+                        photos,
+                        isAchievement
                     };
 
                     if (isPatchMode) {
@@ -8824,8 +8838,9 @@
             const grid = document.createElement('div');
             grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 8px;';
 
-            // All completed achievement tasks
+            // All completed achievement items (tasks + projects)
             const allAchievementTasks = state.tasks.filter(t => t.completed && t.isAchievement);
+            const allAchievementProjects = state.player.tags.filter(p => p.completed && p.isAchievement);
 
             // Per-group config: icon image + gradient
             const GROUP_CONFIG = {
@@ -8846,7 +8861,8 @@
             const visibleGroups = (state.player.groups || []).filter(g => g.id !== 'default');
             if (visibleGroups.length > 0) {
                 grid.innerHTML = visibleGroups.map(group => {
-                    const count = allAchievementTasks.filter(t => t.groupId === group.id).length;
+                    const count = allAchievementTasks.filter(t => t.groupId === group.id).length
+                                + allAchievementProjects.filter(p => p.groupId === group.id).length;
                     const cfg = getGroupConfig(group);
                     const iconHtml = cfg.img
                         ? `<img src="${cfg.img}" alt="${group.name}" style="width:90px;height:90px;object-fit:cover;border-radius:50%;border:3px solid rgba(255,255,255,0.35);box-shadow:0 0 18px rgba(${cfg.glow},0.55);display:block;">`
@@ -9107,64 +9123,103 @@
             const listContainer = document.getElementById('achieveList');
             if (!listContainer) return;
 
-            // Completed achievement tasks in this group
-            const tasks = state.tasks.filter(t => t.completed && t.isAchievement && t.groupId === groupId);
-            tasks.sort((a, b) => (b.completedDate || b.id || 0) - (a.completedDate || a.id || 0));
+            const tasks    = state.tasks.filter(t => t.completed && t.isAchievement && t.groupId === groupId);
+            const projects = state.player.tags.filter(p => p.completed && p.isAchievement && p.groupId === groupId);
 
-            if (tasks.length === 0) {
+            tasks.sort(   (a, b) => (b.completedDate || b.id || 0) - (a.completedDate || a.id || 0));
+            projects.sort((a, b) => (b.completedDate || 0) - (a.completedDate || 0));
+
+            if (tasks.length === 0 && projects.length === 0) {
                 listContainer.innerHTML = `
                     <div style="text-align:center; padding:40px 20px; color:rgba(255,255,255,0.4);">
                         <div style="font-size:3rem; margin-bottom:12px;">🌟</div>
                         <div style="font-size:0.95rem;">此類別尚無成就紀錄</div>
-                        <div style="font-size:0.8rem; margin-top:6px; opacity:0.6;">完成標記為「成就」的任務後，會顯示在這裡</div>
+                        <div style="font-size:0.8rem; margin-top:6px; opacity:0.6;">完成標記為「成就」的任務或 Project 後，會顯示在這裡</div>
                     </div>`;
                 return;
             }
 
-            listContainer.innerHTML = tasks.map((t, i) => {
-                const completedTs = t.completedDate || t.id;
-                const dateObj = completedTs ? new Date(typeof completedTs === 'number' && completedTs > 1e12 ? completedTs : completedTs * 1000) : new Date();
-                const year = dateObj.getFullYear();
-                const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-                const day = dateObj.getDate().toString().padStart(2, '0');
-                const dateStr = `${year} · ${month} · ${day}`;
-                const accentColor = t.color || '#d4af37';
-                const descHtml = t.description ? `<div style="font-size:0.82rem; color:rgba(255,255,255,0.55); margin-top:5px; line-height:1.5; font-style:italic;">${t.description}</div>` : '';
-                const expHtml = t.rewardExp ? `<span style="font-size:0.75rem; color:#a78bfa; background:rgba(167,139,250,0.12); border:1px solid rgba(167,139,250,0.3); border-radius:10px; padding:2px 8px;">+${t.rewardExp} EXP</span>` : '';
+            function makeAchievementCard(item, idx, total, type) {
+                const completedTs = item.completedDate || (type === 'task' ? item.id : 0);
+                const dateObj = completedTs ? new Date(completedTs) : new Date();
+                const dateStr = `${dateObj.getFullYear()} · ${String(dateObj.getMonth()+1).padStart(2,'0')} · ${String(dateObj.getDate()).padStart(2,'0')}`;
+                const accentColor = item.color || (type === 'task' ? '#a78bfa' : '#34d399');
+                const descHtml = item.description
+                    ? `<div style="font-size:0.82rem; color:rgba(255,255,255,0.55); margin-top:5px; line-height:1.5; font-style:italic;">${item.description}</div>` : '';
+                const expVal  = item.rewardExp  || 0;
+                const goldVal = item.rewardGold || 0;
+                const rewardsHtml = [
+                    expVal  ? `<span style="font-size:0.72rem; color:#a78bfa; background:rgba(167,139,250,0.12); border:1px solid rgba(167,139,250,0.3); border-radius:10px; padding:2px 8px;">+${expVal} EXP</span>` : '',
+                    goldVal ? `<span style="font-size:0.72rem; color:#fbbf24; background:rgba(251,191,36,0.10); border:1px solid rgba(251,191,36,0.3); border-radius:10px; padding:2px 8px;">+${goldVal} 💰</span>` : ''
+                ].filter(Boolean).join('');
+                const title = type === 'task' ? item.title : item.name;
+                const iconEmoji   = type === 'task' ? '⚔️' : '🗂️';
+                const iconBg      = type === 'task'
+                    ? 'linear-gradient(135deg,rgba(167,139,250,0.25),rgba(167,139,250,0.08))'
+                    : 'linear-gradient(135deg,rgba(52,211,153,0.25),rgba(52,211,153,0.08))';
+                const iconBorder  = type === 'task' ? 'rgba(167,139,250,0.4)' : 'rgba(52,211,153,0.4)';
+                const borderLeft  = accentColor;
+                const romanNum    = toRoman(total - idx);
 
                 return `
-                    <div style="position:relative; margin-bottom:16px; padding:18px 20px 14px;
-                        background:linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-                        border:1px solid rgba(255,215,0,0.18);
-                        border-left:3px solid ${accentColor};
+                    <div style="position:relative; margin-bottom:12px; padding:16px 18px 12px;
+                        background:linear-gradient(135deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.02) 100%);
+                        border:1px solid rgba(255,215,0,0.15);
+                        border-left:3px solid ${borderLeft};
                         border-radius:12px;
                         transition:background 0.2s;"
-                        onmouseover="this.style.background='linear-gradient(135deg,rgba(255,215,0,0.07) 0%,rgba(255,255,255,0.03) 100%)'; this.querySelector('.achieve-actions').style.opacity='1';"
+                        onmouseover="this.style.background='linear-gradient(135deg,rgba(255,215,0,0.06) 0%,rgba(255,255,255,0.03) 100%)'; this.querySelector('.achieve-actions').style.opacity='1';"
                         onmouseout="this.style.background='linear-gradient(135deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.02) 100%)'; this.querySelector('.achieve-actions').style.opacity='0';">
-                        <!-- roman numeral / rank -->
-                        <div style="position:absolute;top:12px;right:48px; font-size:0.7rem; color:rgba(255,215,0,0.35); font-family:serif; letter-spacing:1px;">${toRoman(tasks.length - i)}</div>
-                        <!-- action buttons (hidden by default, appear on hover) -->
-                        <div class="achieve-actions" style="position:absolute;top:8px;right:8px; display:flex; gap:4px; opacity:0; transition:opacity 0.2s;">
-                            <button onclick="event.stopPropagation(); editAchievement('${t.id}')"
-                                style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:3px 7px; cursor:pointer; color:rgba(255,255,255,0.5); font-size:0.75rem; line-height:1;" title="編輯">✏️</button>
-                            <button onclick="event.stopPropagation(); deleteAchievement('${t.id}', '${groupId}')"
-                                style="background:rgba(255,0,0,0.08); border:1px solid rgba(255,0,0,0.2); border-radius:6px; padding:3px 7px; cursor:pointer; color:rgba(255,100,100,0.6); font-size:0.75rem; line-height:1;" title="刪除">✕</button>
+                        <div style="position:absolute;top:10px;right:46px; font-size:0.65rem; color:rgba(255,215,0,0.3); font-family:serif; letter-spacing:1px;">${romanNum}</div>
+                        <div class="achieve-actions" style="position:absolute;top:7px;right:7px; display:flex; gap:4px; opacity:0; transition:opacity 0.2s;">
+                            <button onclick="event.stopPropagation(); editAchievement('${item.id}','${type}')"
+                                style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:2px 6px; cursor:pointer; color:rgba(255,255,255,0.45); font-size:0.7rem; line-height:1;" title="編輯">✏️</button>
+                            <button onclick="event.stopPropagation(); deleteAchievement('${item.id}','${groupId}','${type}')"
+                                style="background:rgba(255,0,0,0.08); border:1px solid rgba(255,0,0,0.18); border-radius:6px; padding:2px 6px; cursor:pointer; color:rgba(255,100,100,0.55); font-size:0.7rem; line-height:1;" title="移除">✕</button>
                         </div>
-                        <!-- content -->
-                        <div style="display:flex; align-items:flex-start; gap:12px;">
-                            <div style="width:36px; height:36px; flex-shrink:0; border-radius:50%; background:linear-gradient(135deg,rgba(255,215,0,0.2),rgba(255,215,0,0.05)); border:1px solid rgba(255,215,0,0.3); display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-top:2px;">🏅</div>
+                        <div style="display:flex; align-items:flex-start; gap:10px;">
+                            <div style="width:34px; height:34px; flex-shrink:0; border-radius:50%;
+                                background:${iconBg}; border:1px solid ${iconBorder};
+                                display:flex; align-items:center; justify-content:center; font-size:1rem; margin-top:1px;">${iconEmoji}</div>
                             <div style="flex:1; min-width:0;">
-                                <div style="font-weight:700; font-size:1rem; color:#fff; line-height:1.35; text-shadow:0 1px 4px rgba(0,0,0,0.5);">${t.title}</div>
+                                <div style="font-weight:700; font-size:0.97rem; color:#fff; line-height:1.35; text-shadow:0 1px 4px rgba(0,0,0,0.5);">${title}</div>
                                 ${descHtml}
-                                <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
-                                    <span style="font-size:0.78rem; color:rgba(255,215,0,0.6); letter-spacing:1px; font-family:serif;">${dateStr}</span>
-                                    ${expHtml}
+                                <div style="display:flex; align-items:center; gap:7px; margin-top:7px; flex-wrap:wrap;">
+                                    <span style="font-size:0.75rem; color:rgba(255,215,0,0.55); letter-spacing:0.8px; font-family:serif;">${dateStr}</span>
+                                    ${rewardsHtml}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    </div>`;
+            }
+
+            let html = '';
+
+            // ── Projects section ──
+            if (projects.length > 0) {
+                html += `
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; margin-top:4px;">
+                        <span style="font-size:1rem;">🗂️</span>
+                        <span style="font-size:0.78rem; font-weight:700; letter-spacing:1.5px; color:rgba(52,211,153,0.8); text-transform:uppercase;">Projects</span>
+                        <div style="flex:1; height:1px; background:linear-gradient(90deg,rgba(52,211,153,0.3),transparent);"></div>
+                        <span style="font-size:0.72rem; color:rgba(52,211,153,0.5);">${projects.length}</span>
+                    </div>`;
+                html += projects.map((p, i) => makeAchievementCard(p, i, projects.length, 'project')).join('');
+            }
+
+            // ── Tasks section ──
+            if (tasks.length > 0) {
+                html += `
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; margin-top:${projects.length > 0 ? '18px' : '4px'};">
+                        <span style="font-size:1rem;">⚔️</span>
+                        <span style="font-size:0.78rem; font-weight:700; letter-spacing:1.5px; color:rgba(167,139,250,0.8); text-transform:uppercase;">Quests</span>
+                        <div style="flex:1; height:1px; background:linear-gradient(90deg,rgba(167,139,250,0.3),transparent);"></div>
+                        <span style="font-size:0.72rem; color:rgba(167,139,250,0.5);">${tasks.length}</span>
+                    </div>`;
+                html += tasks.map((t, i) => makeAchievementCard(t, i, tasks.length, 'task')).join('');
+            }
+
+            listContainer.innerHTML = html;
         }
 
         function toRoman(num) {
@@ -9175,16 +9230,20 @@
             return result;
         }
 
-        function deleteAchievement(id, groupId) {
-            openConfirmModal('確定要從成就紀錄中移除此項目？（任務本身不會被刪除）', () => {
-                const task = state.tasks.find(t => t.id == id);
-                if (task) {
-                    task.isAchievement = false;
+        function deleteAchievement(id, groupId, type) {
+            const label = type === 'project' ? 'Project' : 'Quest';
+            openConfirmModal(`確定要從成就紀錄中移除此 ${label}？（項目本身不會被刪除）`, () => {
+                if (type === 'project') {
+                    const proj = state.player.tags.find(p => p.id === id);
+                    if (proj) proj.isAchievement = false;
+                } else {
+                    const task = state.tasks.find(t => t.id == id);
+                    if (task) task.isAchievement = false;
                 }
                 saveState();
                 renderAchievementsPage();
                 renderAchievementModalList(groupId);
-                showToast('已移除成就', '此任務已從成就紀錄中移除。');
+                showToast('已移除成就', '此項目已從成就紀錄中移除。');
             });
         }
 
@@ -9201,44 +9260,62 @@
                 render(); // Re-render to update UI
             });
         }
-        // Edit Logic for achievement tasks
+        // Edit Logic for achievement items (tasks or projects)
         let currentEditId = null;
+        let currentEditType = 'task'; // 'task' | 'project'
 
-        function editAchievement(id) {
+        function editAchievement(id, type) {
+            type = type || 'task';
             currentEditId = id;
-            const task = state.tasks.find(t => t.id == id);
-            if (!task) return;
+            currentEditType = type;
 
-            document.getElementById('editAchieveName').value = task.title;
+            let item, completedTs;
+            if (type === 'project') {
+                item = state.player.tags.find(p => p.id === id);
+                if (!item) return;
+                document.getElementById('editAchieveName').value = item.name;
+                completedTs = item.completedDate;
+            } else {
+                item = state.tasks.find(t => t.id == id);
+                if (!item) return;
+                document.getElementById('editAchieveName').value = item.title;
+                completedTs = item.completedDate;
+            }
 
-            const completedTs = task.completedDate;
             const dateVal = completedTs ? new Date(completedTs).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
             document.getElementById('editAchieveDate').value = dateVal;
-
             document.getElementById('editArchiveModal').classList.add('show');
         }
 
         function saveAchievementEdit() {
             if (!currentEditId) return;
 
-            const task = state.tasks.find(t => t.id == currentEditId);
-            if (!task) return;
-
             const newName = document.getElementById('editAchieveName').value.trim();
             const newDateStr = document.getElementById('editAchieveDate').value;
-
             if (!newName) { alert('名稱不可為空'); return; }
 
-            task.title = newName;
+            let item, groupId;
+            if (currentEditType === 'project') {
+                item = state.player.tags.find(p => p.id === currentEditId);
+                if (!item) return;
+                item.name = newName;
+                groupId = item.groupId;
+            } else {
+                item = state.tasks.find(t => t.id == currentEditId);
+                if (!item) return;
+                item.title = newName;
+                groupId = item.groupId;
+            }
+
             if (newDateStr) {
                 const dateObj = new Date(newDateStr);
                 dateObj.setHours(12, 0, 0, 0);
-                task.completedDate = dateObj.getTime();
+                item.completedDate = dateObj.getTime();
             }
 
             saveState();
             renderAchievementsPage();
-            renderAchievementModalList(task.groupId);
+            renderAchievementModalList(groupId);
             document.getElementById('editArchiveModal').classList.remove('show');
             showToast('成就已更新', '變更已儲存。');
         }
