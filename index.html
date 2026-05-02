@@ -567,6 +567,38 @@
         }
         .badge-category-header:first-child { margin-top: 0; }
 
+        /* Badge filter bar */
+        .badge-filter-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .badge-filter-btn {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: 1.5px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0.72;
+        }
+        .badge-filter-btn:hover {
+            background: rgba(255,255,255,0.18);
+            opacity: 1;
+            transform: translateY(-1px);
+        }
+        .badge-filter-btn.active {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+            opacity: 1;
+            box-shadow: 0 3px 12px rgba(107,70,193,0.35);
+        }
+
         /* ===== End Badge Emblem UI ===== */
 
         /* Legendary Spoils Tier Badges */
@@ -3763,45 +3795,91 @@
         // --- Badges Page ---
         function renderBadgesPage() {
             contentDiv.innerHTML = '';
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.textContent = '徽章 (Badges)';
 
+            const allBadgesPool = (state.player.shopItems || []).filter(item => item.category === 'Badge');
+            const totalCount = allBadgesPool.length;
+            const obtainedCount = allBadgesPool.filter(i => state.player.inventory.some(inv => inv.itemId === i.id)).length;
+            const pct = totalCount > 0 ? Math.round(obtainedCount / totalCount * 100) : 0;
+
+            // ── Beautiful title block ──
+            const titleWrap = document.createElement('div');
+            titleWrap.style.cssText = 'margin-bottom:22px;';
+            titleWrap.innerHTML = `
+                <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+                    <h2 class="page-title" style="margin-bottom:0;background:linear-gradient(135deg,var(--accent-color) 0%,#B794F4 55%,#F6AD55 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.15;">徽章圖鑑</h2>
+                    <span style="font-size:1rem;font-weight:500;opacity:0.55;letter-spacing:0.5px;">Badge Collection</span>
+                </div>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:12px;">
+                    <span style="font-size:0.82rem;opacity:0.65;">🏅 已獲得 <strong>${obtainedCount}</strong> / ${totalCount} 枚</span>
+                    ${totalCount > 0 ? `
+                    <div style="flex:1;max-width:180px;height:5px;border-radius:10px;background:rgba(255,255,255,0.15);overflow:hidden;">
+                        <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent-color),#B794F4);border-radius:10px;transition:width 0.6s ease;"></div>
+                    </div>
+                    <span style="font-size:0.78rem;opacity:0.5;">${pct}%</span>` : ''}
+                </div>
+            `;
+
+            // ── Nav bar with gear ──
             const header = document.createElement('div');
             header.className = 'shop-header';
+            header.style.marginBottom = '0';
             header.innerHTML = `
-                <div class="shop-nav-bar">
-                    <div style="font-weight: bold; font-size: 1.1rem; color: var(--accent-color);">🏅 Badge Collection</div>
-                    <div style="display: flex; gap: 5px; margin-left: auto;">
-                         <button onclick="openManagementModal('badges')" title="Manage Badges" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">⚙️</button>
-                    </div>
+                <div class="shop-nav-bar" style="padding:8px 16px;">
+                    <div id="badgeFilterBar" class="badge-filter-bar" style="margin:0;flex:1;"></div>
+                    <button onclick="openManagementModal('badges')" title="新增徽章" style="background:none;border:none;cursor:pointer;font-size:1.2rem;opacity:0.7;padding:5px;transition:opacity 0.2s;flex-shrink:0;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">⚙️</button>
                 </div>
-                `;
+            `;
 
-            contentDiv.appendChild(title);
+            contentDiv.appendChild(titleWrap);
             contentDiv.appendChild(header);
 
+            // ── Populate filter buttons ──
+            const catMeta = {
+                'All':          { label: '全部',     icon: '✨' },
+                'Habits':       { label: 'Habits',   icon: '🏃' },
+                'Skills':       { label: 'Skills',   icon: '⚡' },
+                'Achievements': { label: 'Achievements', icon: '🏆' },
+                'General':      { label: 'General',  icon: '📂' },
+            };
+            const existingCats = [...new Set(allBadgesPool.map(i => i.badgeCategory || 'General'))];
+            const filterCats = ['All', ...existingCats];
+            if (!window._badgeFilter) window._badgeFilter = 'All';
+
+            const filterBar = document.getElementById('badgeFilterBar');
+            if (filterBar) {
+                filterBar.innerHTML = filterCats.map(cat => {
+                    const m = catMeta[cat] || { label: cat, icon: '📂' };
+                    const count = cat === 'All' ? totalCount : allBadgesPool.filter(i => (i.badgeCategory || 'General') === cat).length;
+                    const isActive = window._badgeFilter === cat;
+                    return `<button class="badge-filter-btn${isActive ? ' active' : ''}" onclick="setBadgeFilter('${cat}')">${m.icon} ${m.label} <span style="opacity:0.65;font-size:0.75em;">${count}</span></button>`;
+                }).join('');
+            }
+
+            // ── Build grid ──
             const grid = document.createElement('div');
             grid.className = 'badge-collection-grid';
+            grid.style.marginTop = '20px';
 
             const tierOrder = { gold: 0, silver: 1, bronze: 2 };
-            const allBadges = state.player.shopItems
-                .filter(item => item.category === 'Badge')
-                .sort((a, b) => {
-                    const catA = (a.badgeCategory || 'General').toLowerCase();
-                    const catB = (b.badgeCategory || 'General').toLowerCase();
-                    if (catA !== catB) return catA.localeCompare(catB);
-                    const ta = tierOrder[a.badgeTier] ?? 3;
-                    const tb = tierOrder[b.badgeTier] ?? 3;
-                    return ta !== tb ? ta - tb : (a.title || '').localeCompare(b.title || '');
-                });
+            let badges = allBadgesPool.slice().sort((a, b) => {
+                const catA = (a.badgeCategory || 'General').toLowerCase();
+                const catB = (b.badgeCategory || 'General').toLowerCase();
+                if (catA !== catB) return catA.localeCompare(catB);
+                const ta = tierOrder[a.badgeTier] ?? 3;
+                const tb = tierOrder[b.badgeTier] ?? 3;
+                return ta !== tb ? ta - tb : (a.title || '').localeCompare(b.title || '');
+            });
 
-            if (allBadges.length === 0) {
-                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;opacity:0.7;padding:50px;">尚未建立任何徽章。</div>`;
+            if (window._badgeFilter && window._badgeFilter !== 'All') {
+                badges = badges.filter(i => (i.badgeCategory || 'General') === window._badgeFilter);
+            }
+
+            if (badges.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;opacity:0.7;padding:50px;">此分類尚無徽章。</div>`;
             } else {
-                // Group by category
+                const showHeaders = window._badgeFilter === 'All';
                 const groups = {};
-                allBadges.forEach(item => {
+                badges.forEach(item => {
                     const cat = item.badgeCategory || 'General';
                     if (!groups[cat]) groups[cat] = [];
                     groups[cat].push(item);
@@ -3809,7 +3887,10 @@
 
                 let html = '';
                 Object.entries(groups).forEach(([cat, items]) => {
-                    html += `<div class="badge-category-header">📂 ${cat}</div>`;
+                    if (showHeaders) {
+                        const m = catMeta[cat] || { icon: '📂' };
+                        html += `<div class="badge-category-header">${m.icon} ${cat}</div>`;
+                    }
                     items.forEach(item => {
                         const obtained = state.player.inventory.some(i => i.itemId === item.id);
                         let tierClass = '';
@@ -3846,6 +3927,11 @@
                 grid.innerHTML = html;
             }
             contentDiv.appendChild(grid);
+        }
+
+        function setBadgeFilter(cat) {
+            window._badgeFilter = cat;
+            renderBadgesPage();
         }
 
         function buyBadge(itemId) {
