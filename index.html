@@ -1627,10 +1627,6 @@
                     <span class="nav-icon">📊</span>
                     <span class="nav-text">狀態 (Status)</span>
                 </li>
-                <li class="nav-item" id="nav-activity" onclick="switchTab('activity')">
-                    <span class="nav-icon">📅</span>
-                    <span class="nav-text">活動 (Activity)</span>
-                </li>
                 <li class="nav-item" id="nav-statistics" onclick="switchTab('statistics')">
                     <span class="nav-icon">📈</span>
                     <span class="nav-text">統計 (Statistics)</span>
@@ -2897,10 +2893,6 @@
             else if (currentTab === 'badges') renderBadgesPage();
             else if (currentTab === 'achievements') renderAchievementsPage();
             else if (currentTab === 'reflections') renderReflectionsPage(); // Add Reflections Page
-            else if (currentTab === 'activity') {
-                console.log("Calling renderActivityPage..."); // DEBUG
-                renderActivityPage();
-            }
             else {
                 console.log("Falling back to placeholder for:", currentTab); // DEBUG
                 renderPlaceholderPage();
@@ -7282,81 +7274,11 @@
             contentDiv.appendChild(title);
             contentDiv.appendChild(grid);
 
-            // --- SKILLS SECTION ---
-            const skillsSection = document.createElement('div');
-            skillsSection.style.marginTop = '40px';
-
-            const skillsHeader = document.createElement('div');
-            skillsHeader.style.display = 'flex';
-            skillsHeader.style.justifyContent = 'space-between';
-            skillsHeader.style.alignItems = 'center';
-            skillsHeader.style.marginBottom = '20px';
-            skillsHeader.innerHTML = `
-                <h2 class="page-title" style="margin: 0;">技能 (Skills)</h2>
-                <button class="btn btn-primary" onclick="openSkillModal()">+ 新增技能 (Add Skill)</button>
-            `;
-            skillsSection.appendChild(skillsHeader);
-
-            const skillsGrid = document.createElement('div');
-            skillsGrid.style.display = 'grid';
-            skillsGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
-            skillsGrid.style.gap = '20px';
-
-            const pastelColors = ['#E9D8FD', '#C4F1F9', '#C6F6D5', '#FEFCBF', '#FED7E2', '#FEEBC8'];
-
-            (state.player.skills || []).forEach((skill, idx) => {
-                const bgColor = pastelColors[idx % pastelColors.length];
-                const xpColor = '#4299E1'; // standard bar color
-
-                // Real EXP progress towards current level
-                const currentLevel = skill.level || 1;
-                const totalExp = skill.exp || 0;
-                // Since Level = FLOOR(TotalEXP / 100) + 1, the progress in the current level is TotalEXP % 100.
-                const currentLevelExp = totalExp % 100;
-                const expNeeded = 100;
-                const percent = Math.min(100, (currentLevelExp / expNeeded) * 100);
-
-                const card = document.createElement('div');
-                card.className = 'glass glass-card';
-                card.style.padding = '20px';
-                card.style.display = 'flex';
-                card.style.flexDirection = 'column';
-                card.style.cursor = 'pointer';
-                card.onclick = () => openSkillModal(skill.id);
-
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-                        <div style="width: 50px; height: 50px; border-radius: 50%; background: ${bgColor}; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">
-                            ${skill.icon}
-                        </div>
-                        <div style="border: 1px solid ${bgColor}; color: #4A5568; background: white; border-radius: 20px; padding: 2px 10px; font-weight: bold; font-size: 0.85rem;">
-                            Lv.${currentLevel}
-                        </div>
-                    </div>
-                    <div style="font-weight: bold; font-size: 1.2rem; margin-bottom: 20px; color: var(--text-primary);">
-                        ${skill.name}
-                    </div>
-                    <div style="height: 6px; background: rgba(0,0,0,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
-                        <div style="height: 100%; width: ${percent}%; background: ${xpColor}; border-radius: 3px;"></div>
-                    </div>
-                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">
-                        ${currentLevelExp} / ${expNeeded}
-                    </div>
-                `;
-                skillsGrid.appendChild(card);
-            });
-
-            if (!state.player.skills || state.player.skills.length === 0) {
-                skillsGrid.innerHTML = `
-                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 2px dashed rgba(0,0,0,0.1); color: var(--text-secondary);">
-                        尚未建立任何技能。點擊右上角新增技能！<br>
-                        <span style="font-size: 0.8rem; opacity: 0.7;">(No skills created yet. Click Add Skill to start tracking progress)</span>
-                    </div>
-                `;
-            }
-
-            skillsSection.appendChild(skillsGrid);
-            contentDiv.appendChild(skillsSection);
+            // --- ACTIVITY MATRIX SECTION ---
+            const activityWrap = document.createElement('div');
+            activityWrap.style.marginTop = '40px';
+            contentDiv.appendChild(activityWrap);
+            renderActivityPage({ container: activityWrap, onNavigate: renderStatusPage });
 
             // Render Chart
             renderChart();
@@ -8546,7 +8468,7 @@
             contentDiv.innerHTML = '';
             const title = document.createElement('h2');
             title.className = 'page-title';
-            title.textContent = '成就 (Achievements)';
+            title.textContent = '成就（Achievements）與技能（Skills）';
 
             // Header Controls (Filter/View - Optional, keeping simple for now)
             // const controls = document.createElement('div'); ...
@@ -8624,12 +8546,79 @@
             contentDiv.appendChild(title);
             contentDiv.appendChild(grid);
 
-            // Badge Collection Section
-            const badgeSection = document.createElement('div');
-            badgeSection.style.marginTop = '40px';
-            badgeSection.innerHTML = '<h3 style="margin-bottom: 20px; border-bottom: 2px solid rgba(0,0,0,0.1); padding-bottom: 10px;">🏅 徽章圖鑑 (Badge Collection)</h3>';
-            renderBadgeCollection(badgeSection);
-            contentDiv.appendChild(badgeSection);
+            // Skills Section
+            const skillsSectionA = document.createElement('div');
+            skillsSectionA.style.marginTop = '40px';
+
+            const skillsHeaderA = document.createElement('div');
+            skillsHeaderA.style.display = 'flex';
+            skillsHeaderA.style.justifyContent = 'space-between';
+            skillsHeaderA.style.alignItems = 'center';
+            skillsHeaderA.style.marginBottom = '20px';
+            skillsHeaderA.innerHTML = `
+                <h2 class="page-title" style="margin: 0;">技能 (Skills)</h2>
+                <button class="btn btn-primary" onclick="openSkillModal()">+ 新增技能 (Add Skill)</button>
+            `;
+            skillsSectionA.appendChild(skillsHeaderA);
+
+            const skillsGridA = document.createElement('div');
+            skillsGridA.style.display = 'grid';
+            skillsGridA.style.gridTemplateColumns = 'repeat(auto-fill, minmax(200px, 1fr))';
+            skillsGridA.style.gap = '20px';
+
+            const pastelColorsA = ['#E9D8FD', '#C4F1F9', '#C6F6D5', '#FEFCBF', '#FED7E2', '#FEEBC8'];
+
+            (state.player.skills || []).forEach((skill, idx) => {
+                const bgColor = pastelColorsA[idx % pastelColorsA.length];
+                const xpColor = '#4299E1';
+
+                const currentLevel = skill.level || 1;
+                const totalExp = skill.exp || 0;
+                const currentLevelExp = totalExp % 100;
+                const expNeeded = 100;
+                const percent = Math.min(100, (currentLevelExp / expNeeded) * 100);
+
+                const card = document.createElement('div');
+                card.className = 'glass glass-card';
+                card.style.padding = '20px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.cursor = 'pointer';
+                card.onclick = () => openSkillModal(skill.id);
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                        <div style="width: 50px; height: 50px; border-radius: 50%; background: ${bgColor}; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; box-shadow: inset 0 2px 4px rgba(255,255,255,0.5);">
+                            ${skill.icon}
+                        </div>
+                        <div style="border: 1px solid ${bgColor}; color: #4A5568; background: white; border-radius: 20px; padding: 2px 10px; font-weight: bold; font-size: 0.85rem;">
+                            Lv.${currentLevel}
+                        </div>
+                    </div>
+                    <div style="font-weight: bold; font-size: 1.2rem; margin-bottom: 20px; color: var(--text-primary);">
+                        ${skill.name}
+                    </div>
+                    <div style="height: 6px; background: rgba(0,0,0,0.08); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
+                        <div style="height: 100%; width: ${percent}%; background: ${xpColor}; border-radius: 3px;"></div>
+                    </div>
+                    <div style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">
+                        ${currentLevelExp} / ${expNeeded}
+                    </div>
+                `;
+                skillsGridA.appendChild(card);
+            });
+
+            if (!state.player.skills || state.player.skills.length === 0) {
+                skillsGridA.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: rgba(0,0,0,0.02); border-radius: 12px; border: 2px dashed rgba(0,0,0,0.1); color: var(--text-secondary);">
+                        尚未建立任何技能。點擊右上角新增技能！<br>
+                        <span style="font-size: 0.8rem; opacity: 0.7;">(No skills created yet. Click Add Skill to start tracking progress)</span>
+                    </div>
+                `;
+            }
+
+            skillsSectionA.appendChild(skillsGridA);
+            contentDiv.appendChild(skillsSectionA);
         }
 
         function renderBadgeCollection(container) {
@@ -8946,8 +8935,10 @@
         let activityHeatmapView = 'year'; // 'year' | 'quarter'
         let currentActivityDate = new Date();
 
-        function renderActivityPage() {
-            contentDiv.innerHTML = '';
+        function renderActivityPage(options = {}) {
+            const _container = options.container || contentDiv;
+            const _onNavigate = options.onNavigate || (() => renderActivityPage(options));
+            if (!options.container) contentDiv.innerHTML = '';
 
             const headerRow = document.createElement('div');
             headerRow.style.display = 'flex';
@@ -8987,7 +8978,7 @@
                 } else {
                     currentActivityDate.setMonth(currentActivityDate.getMonth() - 3);
                 }
-                renderActivityPage();
+                _onNavigate();
             };
 
             const displayLabel = document.createElement('span');
@@ -9005,7 +8996,7 @@
                 } else {
                     currentActivityDate.setMonth(currentActivityDate.getMonth() + 3);
                 }
-                renderActivityPage();
+                _onNavigate();
             };
 
             navGroup.appendChild(btnPrev);
@@ -9020,12 +9011,12 @@
             const btnYear = document.createElement('button');
             btnYear.className = `filter-chip ${activityHeatmapView === 'year' ? 'active' : ''}`;
             btnYear.textContent = 'Year';
-            btnYear.onclick = () => { activityHeatmapView = 'year'; currentActivityDate = new Date(); renderActivityPage(); };
+            btnYear.onclick = () => { activityHeatmapView = 'year'; currentActivityDate = new Date(); _onNavigate(); };
 
             const btnQuarter = document.createElement('button');
             btnQuarter.className = `filter-chip ${activityHeatmapView === 'quarter' ? 'active' : ''}`;
             btnQuarter.textContent = 'Quarter';
-            btnQuarter.onclick = () => { activityHeatmapView = 'quarter'; currentActivityDate = new Date(); renderActivityPage(); };
+            btnQuarter.onclick = () => { activityHeatmapView = 'quarter'; currentActivityDate = new Date(); _onNavigate(); };
 
             toggleGroup.appendChild(btnYear);
             toggleGroup.appendChild(btnQuarter);
@@ -9246,8 +9237,8 @@
             });
 
             heatmapContainer.appendChild(grid);
-            contentDiv.appendChild(headerRow);
-            contentDiv.appendChild(heatmapContainer);
+            _container.appendChild(headerRow);
+            _container.appendChild(heatmapContainer);
 
             const historyNote = document.createElement('div');
             historyNote.style.marginTop = '20px';
@@ -9255,7 +9246,7 @@
             historyNote.style.fontSize = '0.9rem';
             historyNote.style.textAlign = 'center';
             historyNote.textContent = 'Hover over colored blocks for daily insights. Deeper greens equal higher EXP yields.';
-            contentDiv.appendChild(historyNote);
+            _container.appendChild(historyNote);
         }
 
         // --- Statistics Actions ---
@@ -9327,8 +9318,8 @@
                 // Intelligent Re-render
                 if (typeof renderStatisticsPage === 'function' && document.querySelector('h2.page-title')?.textContent.includes('Statistics')) {
                     renderStatisticsPage();
-                } else if (typeof renderActivityPage === 'function') {
-                    renderActivityPage();
+                } else {
+                    render();
                 }
                 showToast('Activity deleted', 'info');
             };
@@ -9394,7 +9385,7 @@
                 act.details.exp = parseInt(document.getElementById('editActExp').value);
 
                 saveState();
-                renderActivityPage();
+                render();
                 document.getElementById('editActivityModal').classList.remove('show');
                 showToast('Activity updated', 'success');
             }
