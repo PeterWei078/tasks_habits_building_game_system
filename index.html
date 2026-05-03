@@ -8951,6 +8951,10 @@
                                 <label>描述 / 備注</label>
                                 <textarea id="editAchieveDesc" rows="4" class="form-control" style="width: 100%; padding: 8px; resize: vertical;" placeholder="記錄這個成就的意義、過程或感想…"></textarea>
                             </div>
+                            <div class="form-group" style="margin-top: 12px;">
+                                <label>連結 (URL)</label>
+                                <input type="url" id="editAchieveUrl" class="form-control" style="width: 100%; padding: 8px;" placeholder="https://...">
+                            </div>
                             <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveAchievementEdit()">儲存</button>
                         </div>
                     </div>
@@ -9281,6 +9285,8 @@
                     expVal  ? `<span style="font-size:0.72rem; color:#a78bfa; background:rgba(167,139,250,0.12); border:1px solid rgba(167,139,250,0.3); border-radius:10px; padding:2px 8px;">+${expVal} EXP</span>` : '',
                     goldVal ? `<span style="font-size:0.72rem; color:#fbbf24; background:rgba(251,191,36,0.10); border:1px solid rgba(251,191,36,0.3); border-radius:10px; padding:2px 8px;">+${goldVal} 💰</span>` : ''
                 ].filter(Boolean).join('');
+                const urlHtml = item.url
+                    ? `<a href="${item.url}" target="_blank" onclick="event.stopPropagation()" style="font-size:0.72rem; color:#60a5fa; background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.3); border-radius:10px; padding:2px 8px; text-decoration:none; display:inline-flex; align-items:center; gap:3px;">🔗 Link</a>` : '';
                 const title = type === 'task' ? item.title : item.name;
                 const iconEmoji   = type === 'task' ? '⚔️' : '🗂️';
                 const iconBg      = type === 'task'
@@ -9316,6 +9322,7 @@
                                 <div style="display:flex; align-items:center; gap:7px; margin-top:7px; flex-wrap:wrap;">
                                     <span style="font-size:0.75rem; color:rgba(255,215,0,0.55); letter-spacing:0.8px; font-family:serif;">${dateStr}</span>
                                     ${rewardsHtml}
+                                    ${urlHtml}
                                 </div>
                             </div>
                         </div>
@@ -9414,6 +9421,7 @@
             const dateVal = completedTs ? new Date(completedTs).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
             document.getElementById('editAchieveDate').value = dateVal;
             document.getElementById('editAchieveDesc').value = item.description || '';
+            document.getElementById('editAchieveUrl').value = item.url || '';
             document.getElementById('editArchiveModal').classList.add('show');
         }
 
@@ -9423,6 +9431,7 @@
             const newName = document.getElementById('editAchieveName').value.trim();
             const newDateStr = document.getElementById('editAchieveDate').value;
             const newDesc = document.getElementById('editAchieveDesc').value;
+            const newUrl = document.getElementById('editAchieveUrl').value.trim();
             if (!newName) { alert('名稱不可為空'); return; }
 
             let item, groupId;
@@ -9431,12 +9440,14 @@
                 if (!item) return;
                 item.name = newName;
                 item.description = newDesc;
+                item.url = newUrl;
                 groupId = item.groupId;
             } else {
                 item = state.tasks.find(t => t.id == currentEditId);
                 if (!item) return;
                 item.title = newName;
                 item.description = newDesc;
+                item.url = newUrl;
                 groupId = item.groupId;
             }
 
