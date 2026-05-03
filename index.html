@@ -2466,6 +2466,9 @@
                             if (cloudStateStr) {
                                 state = JSON.parse(cloudStateStr);
                                 migrateCharacterGallery();
+                                // Record the cloud timestamp BEFORE saveState() so the dirty flag logic
+                                // knows this device just loaded fresh data (not a local-only change)
+                                localStorage.setItem('sl_last_cloud_at', docSnap.data().updatedAt || new Date().toISOString());
                                 saveState(); // persist migrated fields (new characters etc.) back to Firebase
                                 console.log("State loaded from Firebase");
                                 render();
@@ -2532,59 +2535,37 @@
             if (icon) { icon.textContent = '🔄'; icon.classList.add('sync-spinning'); }
 
             try {
-                const { getDoc, setDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+                const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+                const { getDoc, setDoc, doc } = firestoreModule;
                 const uid = window.firebaseUserUid;
                 const db = window.firebaseDb;
                 const userDocRef = doc(db, "users", uid);
 
-                // Step 1: fetch cloud metadata only (lightweight — no chunk reads yet)
+                // Lightweight metadata fetch — no chunk reads yet
                 const metaSnap = await getDoc(userDocRef);
-                const cloudUpdatedAt = metaSnap.exists() ? metaSnap.data().updatedAt : null;
-                const localUpdatedAt = state._updatedAt || null;
+                const cloudAt = (metaSnap.exists() && metaSnap.data().updatedAt) ? metaSnap.data().updatedAt : '';
+                const lastCloudAt = localStorage.getItem('sl_last_cloud_at') || '';
+                const isDirty = localStorage.getItem('sl_local_dirty') === '1';
 
-                const cloudTime = cloudUpdatedAt ? new Date(cloudUpdatedAt).getTime() : 0;
-                const localTime = localUpdatedAt ? new Date(localUpdatedAt).getTime() : 0;
-                // 5-second tolerance: treat near-equal timestamps as "in sync"
-                const diff = localTime - cloudTime;
+                // ISO string comparison works correctly for UTC timestamps
+                const cloudIsNewer = cloudAt > lastCloudAt;
 
-                if (diff > 5000) {
-                    // Local is newer → push to cloud
-                    const stateString = JSON.stringify(state);
-                    const chunkSize = 800000;
-                    const totalChunks = Math.ceil(stateString.length / chunkSize);
-                    await setDoc(userDocRef, { totalChunks, updatedAt: state._updatedAt });
-                    for (let i = 0; i < totalChunks; i++) {
-                        await setDoc(doc(db, `users/${uid}/dataChunks/${i}`),
-                            { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
-                    }
-                    localStorage.setItem('sl_data', stateString);
-                    showToast('📤 已上傳至雲端', '本機資料較新，已成功同步至雲端');
-
-                } else if (diff < -5000) {
-                    // Cloud is newer → pull chunks and overwrite local
-                    let cloudStateStr = null;
-                    if (metaSnap.data().totalChunks) {
-                        const totalChunks = metaSnap.data().totalChunks;
-                        let fullStr = "";
-                        for (let i = 0; i < totalChunks; i++) {
-                            const chunkSnap = await getDoc(doc(db, `users/${uid}/dataChunks/${i}`));
-                            if (chunkSnap.exists()) fullStr += chunkSnap.data().chunk;
-                        }
-                        cloudStateStr = fullStr;
-                    } else if (metaSnap.data().state) {
-                        cloudStateStr = metaSnap.data().state;
-                    }
-
-                    if (cloudStateStr) {
-                        state = JSON.parse(cloudStateStr);
-                        migrateCharacterGallery();
-                        localStorage.setItem('sl_data', JSON.stringify(state));
-                        render();
-                        showToast('☁️ 已從雲端更新', '雲端資料較新，已成功載入最新資料');
+                if (cloudIsNewer && isDirty) {
+                    // Both sides have changes since last sync — ask user
+                    const useCloud = confirm(
+                        '⚠️ 同步衝突\n\n本機有未上傳的變更，雲端也有較新的資料。\n\n確定 → 下載雲端資料（本機未同步的變更將遺失）\n取消 → 上傳本機資料（覆蓋雲端）'
+                    );
+                    if (useCloud) {
+                        await _doPull(getDoc, doc, uid, db, metaSnap, cloudAt);
                     } else {
-                        showToast('ℹ️ 雲端無資料', '雲端尚無儲存的資料');
+                        await _doPush(setDoc, doc, uid, db, userDocRef);
                     }
-
+                } else if (cloudIsNewer) {
+                    // Cloud has newer data (another device pushed) → pull
+                    await _doPull(getDoc, doc, uid, db, metaSnap, cloudAt);
+                } else if (isDirty) {
+                    // Local has unsynced changes (previous Firestore write failed?) → push
+                    await _doPush(setDoc, doc, uid, db, userDocRef);
                 } else {
                     showToast('✅ 資料已是最新', '本機與雲端完全同步，無需更新');
                 }
@@ -2595,6 +2576,48 @@
                 if (btn) btn.disabled = false;
                 if (icon) { icon.textContent = '🔄'; icon.classList.remove('sync-spinning'); }
             }
+        }
+
+        async function _doPull(getDoc, doc, uid, db, metaSnap, cloudAt) {
+            let cloudStateStr = null;
+            if (metaSnap.data().totalChunks) {
+                const totalChunks = metaSnap.data().totalChunks;
+                let fullStr = "";
+                for (let i = 0; i < totalChunks; i++) {
+                    const chunkSnap = await getDoc(doc(db, `users/${uid}/dataChunks/${i}`));
+                    if (chunkSnap.exists()) fullStr += chunkSnap.data().chunk;
+                }
+                cloudStateStr = fullStr;
+            } else if (metaSnap.data().state) {
+                cloudStateStr = metaSnap.data().state;
+            }
+
+            if (cloudStateStr) {
+                state = JSON.parse(cloudStateStr);
+                migrateCharacterGallery();
+                localStorage.setItem('sl_data', JSON.stringify(state));
+                localStorage.setItem('sl_last_cloud_at', cloudAt);
+                localStorage.setItem('sl_local_dirty', '0');
+                render();
+                showToast('☁️ 已從雲端更新', '已成功載入雲端最新資料');
+            } else {
+                showToast('ℹ️ 雲端無資料', '雲端尚無儲存的資料');
+            }
+        }
+
+        async function _doPush(setDoc, doc, uid, db, userDocRef) {
+            const stateString = JSON.stringify(state);
+            const savedAt = new Date().toISOString();
+            const chunkSize = 800000;
+            const totalChunks = Math.ceil(stateString.length / chunkSize);
+            await setDoc(userDocRef, { totalChunks, updatedAt: savedAt });
+            for (let i = 0; i < totalChunks; i++) {
+                await setDoc(doc(db, `users/${uid}/dataChunks/${i}`),
+                    { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
+            }
+            localStorage.setItem('sl_last_cloud_at', savedAt);
+            localStorage.setItem('sl_local_dirty', '0');
+            showToast('📤 已上傳至雲端', '本機資料已成功同步至雲端');
         }
 
         // --- State Management ---
@@ -2911,6 +2934,7 @@
             // 1. Try saving to LocalStorage
             try {
                 localStorage.setItem('sl_data', stateString);
+                localStorage.setItem('sl_local_dirty', '1'); // local has changes not yet confirmed in cloud
             } catch (e) {
                 isLocalSaveSuccess = false;
                 if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
@@ -2924,7 +2948,7 @@
                     console.error("Error saving state locally:", e);
                 }
             }
-            
+
             // 2. Always try syncing to Firebase
             if (window.firebaseSetDoc && window.firebaseUserUid && !window.isFirebaseSyncing) {
                 window.isFirebaseSyncing = true;
@@ -2932,20 +2956,23 @@
                 const db = window.firebaseDb;
                 const doc = window.firebaseDoc;
                 const setDoc = window.firebaseSetDoc;
+                const savedAt = state._updatedAt; // capture before async
 
                 const chunkSize = 800000; // ~800KB chunks
                 const totalChunks = Math.ceil(stateString.length / chunkSize);
 
                 (async () => {
                     try {
-                        // Save metadata (use state._updatedAt so cloud timestamp matches state timestamp)
-                        await setDoc(doc(db, "users", uid), { totalChunks: totalChunks, updatedAt: state._updatedAt });
-                        // Save chunks
+                        await setDoc(doc(db, "users", uid), { totalChunks: totalChunks, updatedAt: savedAt });
                         for (let i = 0; i < totalChunks; i++) {
                             await setDoc(doc(db, `users/${uid}/dataChunks/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
                         }
+                        // Cloud confirmed in sync — clear dirty flag and record cloud timestamp
+                        localStorage.setItem('sl_local_dirty', '0');
+                        localStorage.setItem('sl_last_cloud_at', savedAt);
                     } catch (e) {
                         console.error("Firebase save error", e);
+                        // sl_local_dirty stays '1' so sync button can detect and retry push
                     } finally {
                         window.isFirebaseSyncing = false;
                     }
