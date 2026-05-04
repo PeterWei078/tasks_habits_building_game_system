@@ -7511,7 +7511,7 @@
             const sectionDefs = [
                 { tier: 'basic',    label: '四大基本職業',  subtitle: '20 級以前的職業選擇', reqLabel: null,        occupations: OCCUPATIONS.basic,    minSlots: 4 },
                 { tier: 'advanced', label: '進階職業',       subtitle: '20 級以上可選',        reqLabel: '需達 Lv.20', occupations: OCCUPATIONS.advanced, minSlots: 4 },
-                { tier: 'special',  label: '特殊職業',       subtitle: '30 級以上可暫時切換',  reqLabel: '需達 Lv.30', occupations: OCCUPATIONS.special,  minSlots: 3 },
+                { tier: 'special',  label: '特殊職業',       subtitle: '30 級以上可暫時切換',  reqLabel: '需達 Lv.30', occupations: OCCUPATIONS.special,  minSlots: 0 },
             ];
 
             sectionDefs.forEach(section => {
@@ -7560,6 +7560,7 @@
                     // Existing character cards
                     chars.forEach(char => {
                         const isActive = char.id === p.activeCharacterId;
+                        const isSpecialTier = section.tier === 'special';
                         const canEquip = p.level >= char.level;
                         const borderStyle = isActive
                             ? 'border:2px solid var(--accent-color,#805AD5);box-shadow:0 0 14px rgba(128,90,213,0.4);'
@@ -7573,13 +7574,17 @@
                         const lockOverlay = !canEquip ? `
                             <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;z-index:2;">
                                 <span style="font-size:1.5rem;">🔒</span>
-                                <span style="color:#fff;font-size:0.72rem;font-weight:600;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:10px;">Lv.${char.level} 解鎖</span>
+                                <span style="color:#fff;font-size:0.72rem;font-weight:600;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:10px;">${isSpecialTier ? `需達 Lv.${char.level} 切換` : `Lv.${char.level} 解鎖`}</span>
                             </div>` : '';
+
+                        const levelBadge = isSpecialTier
+                            ? `<div style="position:absolute;top:7px;right:7px;background:rgba(80,0,0,0.72);color:#FFD700;font-size:0.65rem;font-weight:bold;padding:2px 7px;border-radius:10px;backdrop-filter:blur(4px);z-index:3;">⚡ Lv.${char.level}</div>`
+                            : `<div style="position:absolute;top:7px;right:7px;background:rgba(0,0,0,0.55);color:#FFD700;font-size:0.68rem;font-weight:bold;padding:2px 7px;border-radius:10px;backdrop-filter:blur(4px);z-index:3;">Lv.${char.level}</div>`;
 
                         card.innerHTML = `
                             <div style="aspect-ratio:2/3;overflow:hidden;position:relative;background:var(--bg-gradient);background-attachment:fixed;">
                                 <img src="${char.path}" alt="${char.name}" style="width:100%;height:100%;object-fit:contain;object-position:center;mix-blend-mode:multiply;${!canEquip?'filter:grayscale(60%);':''}" onerror="this.style.display='none'">
-                                <div style="position:absolute;top:7px;right:7px;background:rgba(0,0,0,0.55);color:#FFD700;font-size:0.68rem;font-weight:bold;padding:2px 7px;border-radius:10px;backdrop-filter:blur(4px);z-index:3;">Lv.${char.level}</div>
+                                ${levelBadge}
                                 ${isActive ? `<div style="position:absolute;top:7px;left:7px;background:var(--accent-color,#805AD5);color:#fff;font-size:0.62rem;padding:2px 7px;border-radius:10px;z-index:3;">使用中</div>` : ''}
                                 ${lockOverlay}
                             </div>
