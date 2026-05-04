@@ -2694,7 +2694,8 @@
                     { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士',   path: '/characters/char_lv5_dragonknight.webp',  occupation: 'dragonknight', unlockedAt: new Date().toISOString() },
                     { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',     path: '/characters/char_lv10_redmage.webp',      occupation: 'mage',         unlockedAt: new Date().toISOString() },
                     { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',     path: '/characters/char_lv10_bard.webp',         occupation: null,           unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp', occupation: 'shadow_monarch', unlockedAt: new Date().toISOString() }
+                    { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp', occupation: 'shadow_monarch', unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv30_sharingan_sasuke', level: 30, displayLevel: '???', name: '萬花筒寫輪眼佐助', path: '/characters/char_lv30_sharingan_sasuke.webp', occupation: 'sharingan_sasuke', unlockedAt: new Date().toISOString() }
                 ],
                 activeCharacterId: 'char_lv5_mage',
                 pageInfos: {
@@ -2902,7 +2903,8 @@
                 { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士', path: '/characters/char_lv5_dragonknight.webp',  occupation: 'dragonknight' },
                 { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp',      occupation: 'mage' },
                 { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',   path: '/characters/char_lv10_bard.webp',         occupation: null },
-                { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp', occupation: 'shadow_monarch' }
+                { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp', occupation: 'shadow_monarch' },
+                { id: 'char_lv30_sharingan_sasuke', level: 30, displayLevel: '???', name: '萬花筒寫輪眼佐助', path: '/characters/char_lv30_sharingan_sasuke.webp', occupation: 'sharingan_sasuke' }
             ];
             builtIn.forEach(c => {
                 const existing = state.player.characterGallery.find(g => g.id === c.id);
@@ -3879,6 +3881,8 @@
             special: [
                 { id: 'shadow_monarch', name: '暗影君王', icon: '👑', desc: '統御暗影的絕對王者', minLevel: 30,
                   attrDist: { strength:25, agility:20, willpower:20, intelligence:15, dexterity:10, luck:5, vitality:3, charisma:2 } },
+                { id: 'sharingan_sasuke', name: '萬花筒寫輪眼', icon: '🔴', desc: '以天照焚盡一切的寫輪眼使者', minLevel: 30,
+                  attrDist: { intelligence:30, willpower:25, agility:20, dexterity:12, strength:5, vitality:4, luck:2, charisma:2 } },
             ]
         };
 
