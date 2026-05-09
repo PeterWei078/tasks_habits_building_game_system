@@ -6080,7 +6080,7 @@
             const filteredTasks = state.tasks.filter(t => {
                 // Filter out the daily task from the general list so it's not duplicated
                 if (t.title.includes(dailyTaskName)) return false;
-                
+                if (state.featuredTaskId && String(t.id) === String(state.featuredTaskId)) return false;
                 if (state.hideCompletedTasks && t.completed) return false;
                 const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
 
