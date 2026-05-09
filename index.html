@@ -5850,9 +5850,9 @@
             const dailyTaskContainer = document.createElement('div');
             dailyTaskContainer.className = 'glass glass-card';
             dailyTaskContainer.style.flex = '1 1 280px';
-            dailyTaskContainer.style.border = '2px solid rgba(255, 107, 107, 0.6)'; // Highlight border
-            dailyTaskContainer.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)';
-            dailyTaskContainer.style.boxShadow = '0 0 15px rgba(255, 107, 107, 0.2)';
+            dailyTaskContainer.style.border = '4px solid rgba(255, 80, 80, 0.95)';
+            dailyTaskContainer.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
+            dailyTaskContainer.style.boxShadow = '0 0 0 2px rgba(255,80,80,0.25), 0 0 24px rgba(255, 80, 80, 0.45), inset 0 0 20px rgba(255,80,80,0.06)';
             dailyTaskContainer.style.position = 'relative';
             dailyTaskContainer.style.display = 'flex';
             dailyTaskContainer.style.flexDirection = 'column';
@@ -5862,25 +5862,26 @@
 
             const dailyTaskLabel = document.createElement('div');
             dailyTaskLabel.style.position = 'absolute';
-            dailyTaskLabel.style.top = '-12px';
+            dailyTaskLabel.style.top = '-14px';
             dailyTaskLabel.style.left = '15px';
-            dailyTaskLabel.style.background = '#FF6B6B';
+            dailyTaskLabel.style.background = 'linear-gradient(90deg, #ff4444, #ff6b6b)';
             dailyTaskLabel.style.color = '#FFF';
-            dailyTaskLabel.style.padding = '2px 10px';
+            dailyTaskLabel.style.padding = '3px 14px';
             dailyTaskLabel.style.borderRadius = '12px';
-            dailyTaskLabel.style.fontSize = '0.75rem';
+            dailyTaskLabel.style.fontSize = '0.8rem';
             dailyTaskLabel.style.fontWeight = 'bold';
-            dailyTaskLabel.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-            dailyTaskLabel.textContent = 'Daily Focus';
+            dailyTaskLabel.style.letterSpacing = '0.05em';
+            dailyTaskLabel.style.boxShadow = '0 2px 8px rgba(255,68,68,0.6)';
+            dailyTaskLabel.textContent = '🔥 Daily Focus';
             dailyTaskContainer.appendChild(dailyTaskLabel);
 
             // Right side: Featured Quest (first pinned non-completed task)
             const featuredCard = document.createElement('div');
             featuredCard.className = 'glass glass-card';
             featuredCard.style.flex = '1 1 280px';
-            featuredCard.style.border = '2px solid rgba(72, 199, 116, 0.7)';
-            featuredCard.style.background = 'linear-gradient(135deg, rgba(72, 199, 116, 0.08) 0%, rgba(255, 255, 255, 0.05) 100%)';
-            featuredCard.style.boxShadow = '0 0 15px rgba(72, 199, 116, 0.2)';
+            featuredCard.style.border = '4px solid rgba(48, 209, 104, 0.95)';
+            featuredCard.style.background = 'linear-gradient(135deg, rgba(72, 199, 116, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
+            featuredCard.style.boxShadow = '0 0 0 2px rgba(48,209,104,0.25), 0 0 24px rgba(48, 209, 104, 0.45), inset 0 0 20px rgba(72,199,116,0.06)';
             featuredCard.style.position = 'relative';
             featuredCard.style.display = 'flex';
             featuredCard.style.flexDirection = 'column';
@@ -5890,16 +5891,17 @@
 
             const featuredLabel = document.createElement('div');
             featuredLabel.style.position = 'absolute';
-            featuredLabel.style.top = '-12px';
+            featuredLabel.style.top = '-14px';
             featuredLabel.style.left = '15px';
-            featuredLabel.style.background = 'rgba(72, 199, 116, 0.9)';
+            featuredLabel.style.background = 'linear-gradient(90deg, #1db954, #48c774)';
             featuredLabel.style.color = '#FFF';
-            featuredLabel.style.padding = '2px 10px';
+            featuredLabel.style.padding = '3px 14px';
             featuredLabel.style.borderRadius = '12px';
-            featuredLabel.style.fontSize = '0.75rem';
+            featuredLabel.style.fontSize = '0.8rem';
             featuredLabel.style.fontWeight = 'bold';
-            featuredLabel.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-            featuredLabel.textContent = '📌 Featured Quest';
+            featuredLabel.style.letterSpacing = '0.05em';
+            featuredLabel.style.boxShadow = '0 2px 8px rgba(29,185,84,0.6)';
+            featuredLabel.textContent = '⭐ Featured Quest';
             featuredCard.appendChild(featuredLabel);
 
             const featuredTask = state.featuredTaskId ? state.tasks.find(t => String(t.id) === String(state.featuredTaskId)) : null;
