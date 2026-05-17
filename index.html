@@ -3394,19 +3394,54 @@
             leftCol.appendChild(reminderCard);
             leftCol.appendChild(timerCard);
 
+            // --- Focus Time History Chart ---
+            const chartCard = document.createElement('div');
+            chartCard.className = 'glass glass-card';
+            chartCard.style.padding = '20px';
+
+            const chartHeader = document.createElement('div');
+            chartHeader.style.display = 'flex';
+            chartHeader.style.justifyContent = 'space-between';
+            chartHeader.style.alignItems = 'center';
+            chartHeader.style.marginBottom = '15px';
+
+            chartHeader.innerHTML = `
+                    <h3 style="margin:0;">Pomodoro Focus History</h3>
+                    <div style="display: flex; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 2px;">
+                        <button onclick="renderFocusChart('daily')" id="btn-chart-daily" class="btn-chart active" style="padding: 4px 12px; border: none; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Day</button>
+                        <button onclick="renderFocusChart('weekly')" id="btn-chart-weekly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Week</button>
+                        <button onclick="renderFocusChart('monthly')" id="btn-chart-monthly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Month</button>
+                    </div>
+            `;
+
+            const chartBody = document.createElement('div');
+            chartBody.id = 'focus-chart-container';
+            chartBody.style.height = '150px';
+            chartBody.style.display = 'flex';
+            chartBody.style.alignItems = 'flex-end';
+            chartBody.style.gap = '8px';
+            chartBody.style.paddingTop = '20px';
+
+            chartCard.appendChild(chartHeader);
+            chartCard.appendChild(chartBody);
+
             // Music Gallery Row
             const musicCol = document.createElement('div');
             musicCol.className = 'glass glass-card';
             musicCol.style.padding = '20px';
             musicCol.innerHTML = renderFocusMusicHTML();
 
-            focusLayout.appendChild(leftCol); // Timer on bottom
-            focusLayout.appendChild(musicCol); // Music Gallery
+            focusLayout.appendChild(leftCol); // Timer on top
+            focusLayout.appendChild(chartCard); // Chart in middle
+            focusLayout.appendChild(musicCol); // Music Gallery on bottom
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(focusLayout);
 
             updateTimerProgress();
+            
+            // Initial Render of Chart (Daily)
+            setTimeout(() => renderFocusChart('daily'), 0);
         }
 
         function renderTimelineHTML() {
@@ -4824,38 +4859,6 @@
                 <button onclick = "openPageInfoModal('statistics', '統計 (Statistics)')" title = "Page Info" style = "background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover = "this.style.opacity='1'" onmouseout = "this.style.opacity='0.7'"> ℹ️</button>
                     `;
 
-            // --- Focus Time History Chart ---
-            const chartCard = document.createElement('div');
-            chartCard.className = 'glass glass-card';
-            chartCard.style.padding = '20px';
-            chartCard.style.marginBottom = '20px';
-
-            const chartHeader = document.createElement('div');
-            chartHeader.style.display = 'flex';
-            chartHeader.style.justifyContent = 'space-between';
-            chartHeader.style.alignItems = 'center';
-            chartHeader.style.marginBottom = '15px';
-
-            chartHeader.innerHTML = `
-                    <h3 style = "margin:0;"> Pomodoro Focus History</h3>
-                        <div style="display: flex; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 2px;">
-                            <button onclick="renderFocusChart('daily')" id="btn-chart-daily" class="btn-chart active" style="padding: 4px 12px; border: none; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Day</button>
-                            <button onclick="renderFocusChart('weekly')" id="btn-chart-weekly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Week</button>
-                            <button onclick="renderFocusChart('monthly')" id="btn-chart-monthly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Month</button>
-                        </div>
-            `;
-
-            const chartBody = document.createElement('div');
-            chartBody.id = 'focus-chart-container';
-            chartBody.style.height = '150px';
-            chartBody.style.display = 'flex';
-            chartBody.style.alignItems = 'flex-end';
-            chartBody.style.gap = '8px';
-            chartBody.style.paddingTop = '20px';
-
-            chartCard.appendChild(chartHeader);
-            chartCard.appendChild(chartBody);
-
             // --- Purchased Bronze+ Items List ---
             const purchaseListCard = document.createElement('div');
             purchaseListCard.className = 'glass glass-card';
@@ -4957,11 +4960,7 @@
             purchaseListCard.innerHTML = purchasesHtml;
 
             contentDiv.appendChild(title);
-            contentDiv.appendChild(chartCard);
             contentDiv.appendChild(purchaseListCard);
-
-            // Initial Render of Chart (Daily)
-            setTimeout(() => renderFocusChart('daily'), 0);
         }
 
 
