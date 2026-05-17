@@ -3158,30 +3158,12 @@
             leftCol.appendChild(reminderCard);
             leftCol.appendChild(timerCard);
 
-            // Top Row: Timeline
-            const rightCol = document.createElement('div');
-            rightCol.className = 'glass glass-card';
-            rightCol.style.padding = '20px';
-            rightCol.style.overflowX = 'hidden';
-            rightCol.innerHTML = renderTimelineHTML();
-
-            focusLayout.appendChild(rightCol); // Timeline on top
             focusLayout.appendChild(leftCol); // Timer on bottom
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(focusLayout);
 
             updateTimerProgress();
-
-            // Auto-scroll timeline to center the "Today" line
-            setTimeout(() => {
-                const todayLine = document.getElementById('today-timeline-line');
-                const scrollContainer = focusLayout.querySelector('.custom-timeline-scroll');
-                if (todayLine && scrollContainer) {
-                    const targetScrollLeft = todayLine.offsetLeft - (scrollContainer.clientWidth / 2);
-                    scrollContainer.scrollLeft = targetScrollLeft;
-                }
-            }, 0);
         }
 
         function renderTimelineHTML() {
@@ -6085,10 +6067,30 @@
             listCard.appendChild(listContainer);
 
             contentDiv.appendChild(title);
+
+            // Top Row: Timeline
+            const timelineContainer = document.createElement('div');
+            timelineContainer.className = 'glass glass-card';
+            timelineContainer.style.padding = '20px';
+            timelineContainer.style.marginBottom = '20px';
+            timelineContainer.style.overflowX = 'hidden';
+            timelineContainer.innerHTML = renderTimelineHTML();
+            contentDiv.appendChild(timelineContainer);
+
             contentDiv.appendChild(groupFilterContainer);
             contentDiv.appendChild(tagFilterWrapper);
             contentDiv.appendChild(topLayout);
             contentDiv.appendChild(listCard);
+
+            // Auto-scroll timeline to center the "Today" line
+            setTimeout(() => {
+                const todayLine = document.getElementById('today-timeline-line');
+                const scrollContainer = timelineContainer.querySelector('.custom-timeline-scroll');
+                if (todayLine && scrollContainer) {
+                    const targetScrollLeft = todayLine.offsetLeft - (scrollContainer.clientWidth / 2);
+                    scrollContainer.scrollLeft = targetScrollLeft;
+                }
+            }, 0);
 
             // Function to generate Task DOM element
             function createTaskElement(task) {
