@@ -2351,6 +2351,42 @@
         </div>
     </div>
 
+    <div id="musicModal" class="modal-backdrop">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="musicModalHeader">新增音樂</h2>
+                <button class="close-btn" onclick="closeMusicModal()">&times;</button>
+            </div>
+            <input type="hidden" id="musicModalId">
+            <div class="form-group">
+                <label>標題 (Title) *</label>
+                <input type="text" id="musicModalTitle" placeholder="音樂標題">
+            </div>
+            <div class="form-group">
+                <label>網址 (YouTube 或 Spotify URL) *</label>
+                <input type="text" id="musicModalUrl" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>封面圖片 (URL 或上傳)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="musicModalPhotoUrl" placeholder="圖片網址" style="flex: 1;">
+                    <input type="file" id="musicModalPhotoFile" accept="image/*" style="width: 90px;" onchange="
+                        if(this.files && this.files[0]) {
+                            const reader = new FileReader();
+                            reader.onload = e => document.getElementById('musicModalPhotoUrl').value = e.target.result;
+                            reader.readAsDataURL(this.files[0]);
+                        }
+                    ">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>情境群組 (Group)</label>
+                <input type="text" id="musicModalGroup" placeholder="例如: 咖啡廳, 圖書館, 大自然...">
+            </div>
+            <button class="btn btn-primary" onclick="saveMusicModal()" style="width: 100%;">儲存</button>
+        </div>
+    </div>
+
     <script>
         // --- Firebase Integration ---
         const firebaseConfig = {
@@ -2714,12 +2750,25 @@
                 { id: 1, title: "晨跑 3 公里 (Morning Run)", attributeRewards: [{ attribute: "agility", exp: 20 }], completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
                 { id: 2, title: "閱讀 30 分鐘 (Read Book)", attributeRewards: [{ attribute: "intelligence", exp: 15 }], completed: false, rewardExp: 15, rewardGold: 5, groupId: 'learning', tags: ['longterm'] }
             ],
-            featuredTaskId: null
+            featuredTaskId: null,
+            focusMusic: [
+                {
+                    id: 'music_1',
+                    title: 'Lofi Girl - Chill Beats',
+                    url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk',
+                    photo: 'https://img.youtube.com/vi/jfKfPfyJRdk/0.jpg',
+                    group: 'Cafe',
+                    type: 'youtube'
+                }
+            ]
         };
 
         let state = JSON.parse(localStorage.getItem('sl_data')) || defaultState;
 
         // --- Data Migration / Safety Check ---
+        if (!state.focusMusic) {
+            state.focusMusic = defaultState.focusMusic;
+        }
         // Ensure groups and tags exist if loading from old local storage
         if (!state.player.groups) {
             state.player.groups = defaultState.player.groups;
@@ -3059,6 +3108,189 @@
         let focusTimelineScale = 'month';
         let projectTimelineScale = 'month';
 
+        // --- Focus Music Functions ---
+        window.currentActiveMusicId = null;
+
+        function renderFocusMusicHTML() {
+            let html = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">🎧 專注音樂庫 (Focus Music Gallery)</h3>
+                    <button class="btn btn-primary" onclick="openFocusMusicModal()" style="font-size: 0.8rem; padding: 5px 12px;">＋ 新增音樂</button>
+                </div>
+            `;
+
+            if (!state.focusMusic || state.focusMusic.length === 0) {
+                return html + `<div style="text-align: center; opacity: 0.5; padding: 50px 0;">目前沒有音樂。點擊右上角新增。</div>`;
+            }
+
+            // Group musics
+            const groups = {};
+            state.focusMusic.forEach(music => {
+                const g = music.group || '未分類';
+                if (!groups[g]) groups[g] = [];
+                groups[g].push(music);
+            });
+
+            for (const g in groups) {
+                html += `<h4 style="margin: 15px 0 10px 0; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">${g}</h4>`;
+                html += `<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">`;
+
+                groups[g].forEach(music => {
+                    const isPlaying = window.currentActiveMusicId === music.id;
+                    const ringStyle = isPlaying ? 'border: 2px solid #FFD700; box-shadow: 0 0 15px rgba(255,215,0,0.5);' : 'border: 1px solid rgba(255,255,255,0.1);';
+                    
+                    html += `
+                        <div class="glass glass-card" style="padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; ${ringStyle}">
+                            <button onclick="deleteFocusMusic('${music.id}')" style="position: absolute; top: 5px; right: 5px; background: rgba(255,0,0,0.6); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; z-index: 10; display: flex; justify-content: center; align-items: center; font-size: 0.8rem;" title="Delete">×</button>
+                            <div style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 6px; overflow: hidden; cursor: pointer; position: relative;" onclick="playFocusMusic('${music.id}')" title="Play ${music.title}">
+                                ${music.photo ? `<img src="${music.photo}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">` : `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white;">🎵</div>`}
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: rgba(0,0,0,0.6); border-radius: 50%; display: flex; justify-content: center; align-items: center; pointer-events: none; opacity: ${isPlaying ? '1' : '0'}; transition: opacity 0.2s;">
+                                    ${isPlaying ? '<span style="color: #FFD700; font-size: 1.2rem;">▶</span>' : '<span style="font-size: 1.2rem;">▶</span>'}
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-size: 0.95rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; flex: 1;" onclick="openFocusMusicModal('${music.id}')" title="Edit ${music.title}">${music.title} ✏️</div>
+                            </div>
+                            <div style="font-size: 0.75rem; opacity: 0.7; display: flex; justify-content: space-between;">
+                                <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px;">${music.type === 'youtube' ? 'YouTube' : music.type === 'spotify' ? 'Spotify' : 'Link'}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // Active player area
+            if (window.currentActiveMusicId) {
+                const activeMusic = state.focusMusic.find(m => m.id === window.currentActiveMusicId);
+                if (activeMusic) {
+                    let embedUrl = activeMusic.url;
+                    let isEmbeddable = false;
+                    if (activeMusic.type === 'youtube') {
+                        const listMatch = activeMusic.url.match(/[?&]list=([^&]+)/);
+                        const videoMatch = activeMusic.url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+                        
+                        if (listMatch) {
+                            embedUrl = `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1`;
+                            isEmbeddable = true;
+                        } else if (videoMatch && videoMatch[1]) {
+                            embedUrl = `https://www.youtube.com/embed/${videoMatch[1]}?autoplay=1`;
+                            isEmbeddable = true;
+                        }
+                    } else if (activeMusic.type === 'spotify') {
+                        const match = activeMusic.url.match(/spotify\.com\/(track|album|playlist|artist|episode|show)\/([a-zA-Z0-9]+)/);
+                        if (match && match[1] && match[2]) {
+                            embedUrl = `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;
+                            isEmbeddable = true;
+                        }
+                    }
+
+                    if (isEmbeddable) {
+                        html += `
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); position: relative;">
+                                <button onclick="window.currentActiveMusicId = null; render();" style="position: absolute; top: 15px; right: 0; background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; z-index: 10;">關閉播放器</button>
+                                <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">▶️ 播放中：${activeMusic.title}</h4>
+                                <div style="width: 100%; aspect-ratio: 16/9; max-height: 400px; background: #000; border-radius: 8px; overflow: hidden; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                                    <iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; position: relative;">
+                                <button onclick="window.currentActiveMusicId = null; render();" style="position: absolute; top: 15px; right: 0; background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; z-index: 10;">關閉播放器</button>
+                                <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">▶️ 目前選擇：${activeMusic.title}</h4>
+                                <div style="padding: 20px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                                    <a href="${activeMusic.url}" target="_blank" class="btn btn-primary" style="text-decoration: none; display: inline-block; padding: 10px 20px; margin-bottom: 10px;">🎧 在新分頁中開啟聆聽</a>
+                                    <p style="margin: 0; font-size: 0.8rem; opacity: 0.7;">此連結無法直接嵌入，請點擊按鈕在新視窗開啟。</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+
+            return html;
+        }
+
+        function playFocusMusic(id) {
+            window.currentActiveMusicId = id;
+            render();
+        }
+
+        function deleteFocusMusic(id) {
+            if (confirm('確定要刪除這個音樂連結嗎？')) {
+                state.focusMusic = state.focusMusic.filter(m => m.id !== id);
+                if (window.currentActiveMusicId === id) window.currentActiveMusicId = null;
+                saveState();
+                render();
+            }
+        }
+
+        function openFocusMusicModal(id = null) {
+            document.getElementById('musicModalHeader').innerText = id ? '編輯音樂' : '新增音樂';
+            const modal = document.getElementById('musicModal');
+            document.getElementById('musicModalId').value = id || '';
+            
+            if (id) {
+                const music = state.focusMusic.find(m => m.id === id);
+                if (music) {
+                    document.getElementById('musicModalTitle').value = music.title || '';
+                    document.getElementById('musicModalUrl').value = music.url || '';
+                    document.getElementById('musicModalPhotoUrl').value = music.photo || '';
+                    document.getElementById('musicModalGroup').value = music.group || '';
+                }
+            } else {
+                document.getElementById('musicModalTitle').value = '';
+                document.getElementById('musicModalUrl').value = '';
+                document.getElementById('musicModalPhotoUrl').value = '';
+                document.getElementById('musicModalGroup').value = '';
+            }
+            
+            modal.classList.add('show');
+        }
+
+        function closeMusicModal() {
+            document.getElementById('musicModal').classList.remove('show');
+        }
+
+        function saveMusicModal() {
+            const id = document.getElementById('musicModalId').value;
+            const title = document.getElementById('musicModalTitle').value.trim();
+            const url = document.getElementById('musicModalUrl').value.trim();
+            const photo = document.getElementById('musicModalPhotoUrl').value.trim();
+            const group = document.getElementById('musicModalGroup').value.trim();
+
+            if (!title || !url) {
+                alert('標題和網址為必填項目');
+                return;
+            }
+
+            let type = 'link';
+            if (url.includes('youtube.com') || url.includes('youtu.be')) type = 'youtube';
+            else if (url.includes('spotify.com')) type = 'spotify';
+
+            const musicData = {
+                id: id || Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                title,
+                url,
+                photo,
+                group,
+                type
+            };
+
+            if (id) {
+                const idx = state.focusMusic.findIndex(m => m.id === id);
+                if (idx !== -1) state.focusMusic[idx] = musicData;
+            } else {
+                state.focusMusic.push(musicData);
+            }
+
+            saveState();
+            closeMusicModal();
+            render();
+        }
+
         function renderFocusPage() {
             contentDiv.innerHTML = ''; // Prevent duplication
             const title = document.createElement('h2');
@@ -3158,7 +3390,14 @@
             leftCol.appendChild(reminderCard);
             leftCol.appendChild(timerCard);
 
+            // Music Gallery Row
+            const musicCol = document.createElement('div');
+            musicCol.className = 'glass glass-card';
+            musicCol.style.padding = '20px';
+            musicCol.innerHTML = renderFocusMusicHTML();
+
             focusLayout.appendChild(leftCol); // Timer on bottom
+            focusLayout.appendChild(musicCol); // Music Gallery
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(focusLayout);
