@@ -3357,6 +3357,18 @@
             return html + timelineArea;
         }
 
+        window.expandedProjectTimelines = window.expandedProjectTimelines || [];
+        window.toggleProjectTimelineTasks = function(event, projectId) {
+            if (event) event.stopPropagation();
+            const idx = window.expandedProjectTimelines.indexOf(projectId);
+            if (idx > -1) {
+                window.expandedProjectTimelines.splice(idx, 1);
+            } else {
+                window.expandedProjectTimelines.push(projectId);
+            }
+            renderProjectsPage();
+        };
+
         function renderProjectTimelineHTML() {
             const tlProjects = state.player.tags.filter(p => p.startDate && p.endDate && new Date(p.startDate) <= new Date(p.endDate) && !isProjectCompleted(p));
 
@@ -3380,8 +3392,19 @@
                 return new Date(parts[0], parts[1] - 1, parts[2]); // local midnight
             };
 
-            const dates = tlProjects.map(p => [parseLocalDate(p.startDate).getTime(), parseLocalDate(p.endDate).getTime()]).flat();
-            
+            let dates = tlProjects.map(p => [parseLocalDate(p.startDate).getTime(), parseLocalDate(p.endDate).getTime()]).flat();
+
+            // Include task dates if the project is expanded
+            tlProjects.forEach(p => {
+                if (window.expandedProjectTimelines && window.expandedProjectTimelines.includes(p.id)) {
+                    const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(p.id) && t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate));
+                    projectTasks.forEach(t => {
+                        dates.push(parseLocalDate(t.startDate).getTime());
+                        dates.push(parseLocalDate(t.dueDate).getTime());
+                    });
+                }
+            });
+
             const now = new Date();
             // Include 'now' to ensure current time is always visible
             let minDate = new Date(Math.min(...dates, now.getTime()));
@@ -3465,32 +3488,31 @@
 
             tlProjects.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
 
-            let rows = [];
-            tlProjects.forEach(task => {
-                const s = parseLocalDate(task.startDate).getTime();
-                const e = parseLocalDate(task.endDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+            let projectRows = [];
+            tlProjects.forEach(p => {
+                const s = parseLocalDate(p.startDate).getTime();
+                const e = parseLocalDate(p.endDate).getTime() + (24 * 60 * 60 * 1000 - 1);
 
-                let rowIndex = rows.findIndex(row => {
-                    return row.every(rowTask => {
-                        const rs = parseLocalDate(rowTask.startDate).getTime();
-                        const re = parseLocalDate(rowTask.endDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+                let rowIndex = projectRows.findIndex(row => {
+                    return row.projects.every(rowP => {
+                        const rs = parseLocalDate(rowP.startDate).getTime();
+                        const re = parseLocalDate(rowP.endDate).getTime() + (24 * 60 * 60 * 1000 - 1);
                         return Math.max(s, rs) > Math.min(e, re); // No overlap check
                     });
                 });
 
                 if (rowIndex !== -1) {
-                    rows[rowIndex].push(task);
+                    projectRows[rowIndex].projects.push(p);
                 } else {
-                    rows.push([task]);
+                    projectRows.push({ projects: [p] });
                 }
             });
 
-            rows.forEach(row => {
+            projectRows.forEach(row => {
                 timelineArea += `<div style="position: relative; height: 32px; margin-bottom: 8px;">`;
-                row.forEach(task => {
+                row.projects.forEach(task => {
                     let startT = parseLocalDate(task.startDate);
                     let endT = parseLocalDate(task.endDate);
-                    // endT should cover the whole day for width calculation
                     endT.setHours(23, 59, 59, 999);
 
                     if (startT < minDate) startT = new Date(minDate);
@@ -3505,12 +3527,14 @@
                     let titlePrefix = '';
                     let progressStyle = '';
                     
+                    const isExpanded = window.expandedProjectTimelines && window.expandedProjectTimelines.includes(task.id);
+                    const expandIcon = isExpanded ? '📂' : '📁';
+
                     if (isProjectCompleted(task)) {
                         opacityStyle = 'opacity: 0.4;';
                         titlePrefix = '✅ ';
                         progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
                     } else {
-                        // get total tasks and completed tasks for project progress
                         const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(task.id));
                         if(projectTasks.length > 0) {
                             const completedTasks = projectTasks.filter(t => t.completed).length;
@@ -3522,14 +3546,82 @@
                         }
                     }
 
+                    const editBtnHtml = `<div onclick="openProjectModal('${task.id}'); event.stopPropagation();" style="position: absolute; right: 5px; z-index: 2; font-size: 0.8rem; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 5px; margin-top: 1px;" title="Edit Project">✏️</div>`;
+
                     timelineArea += `
-                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; color: rgba(0,0,0,0.8); ${opacityStyle}" title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="openProjectModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
+                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; color: rgba(0,0,0,0.8); ${opacityStyle}" title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
                             ${progressStyle}
-                            <span style="position: relative; z-index: 1;">${titlePrefix}${task.name}</span>
+                            <span style="position: relative; z-index: 1;">${expandIcon} ${titlePrefix}${task.name}</span>
+                            ${editBtnHtml}
                         </div>
                     `;
                 });
                 timelineArea += `</div>`;
+
+                let expandedTasks = [];
+                row.projects.forEach(p => {
+                    if (window.expandedProjectTimelines && window.expandedProjectTimelines.includes(p.id)) {
+                        const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(p.id) && t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate));
+                        projectTasks.forEach(t => {
+                            expandedTasks.push({
+                                ...t,
+                                _projectColor: p.color
+                            });
+                        });
+                    }
+                });
+
+                if (expandedTasks.length > 0) {
+                    expandedTasks.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
+                    
+                    let taskRows = [];
+                    expandedTasks.forEach(t => {
+                        const s = parseLocalDate(t.startDate).getTime();
+                        const e = parseLocalDate(t.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+                        
+                        let rIdx = taskRows.findIndex(tr => {
+                            return tr.every(rt => {
+                                const rs = parseLocalDate(rt.startDate).getTime();
+                                const re = parseLocalDate(rt.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
+                                return Math.max(s, rs) > Math.min(e, re);
+                            });
+                        });
+                        
+                        if (rIdx !== -1) {
+                            taskRows[rIdx].push(t);
+                        } else {
+                            taskRows.push([t]);
+                        }
+                    });
+
+                    taskRows.forEach(tr => {
+                        timelineArea += `<div style="position: relative; height: 22px; margin-bottom: 6px;">`;
+                        tr.forEach(t => {
+                            let startT = parseLocalDate(t.startDate);
+                            let endT = parseLocalDate(t.dueDate);
+                            endT.setHours(23, 59, 59, 999);
+
+                            if (startT < minDate) startT = new Date(minDate);
+                            if (endT > maxDate) endT = new Date(maxDate);
+
+                            const leftOffset = Math.max(0, (startT - minDate) / (1000 * 60 * 60 * 24)) * dayWidth;
+                            const width = Math.ceil((endT - startT) / (1000 * 60 * 60 * 24)) * dayWidth;
+
+                            let barColor = t._projectColor ? t._projectColor : 'rgba(74, 144, 226, 0.5)';
+                            let opacityStyle = t.completed ? 'opacity: 0.5;' : 'opacity: 0.9;';
+                            let titlePrefix = t.completed ? '✅ ' : '🔸 ';
+                            
+                            timelineArea += `
+                                <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.7rem; font-weight: normal; cursor: pointer; color: rgba(0,0,0,0.8); ${opacityStyle} filter: brightness(1.2);" title="${t.title} (${t.startDate} ~ ${t.dueDate})" onclick="openTaskModal('${t.id}')">
+                                    <span style="position: relative; z-index: 1;">${titlePrefix}${t.title}</span>
+                                </div>
+                            `;
+                        });
+                        timelineArea += `</div>`;
+                    });
+                    
+                    timelineArea += `<div style="height: 6px;"></div>`;
+                }
             });
 
             timelineArea += `
