@@ -3135,7 +3135,7 @@
         // --- Focus Music Functions ---
         window.currentActiveMusicId = null;
 
-        function renderFocusMusicHTML() {
+        function renderFocusMusicGalleryHTML() {
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="margin: 0; font-size: 1.1rem;">🎧 專注音樂庫 (Focus Music Gallery)</h3>
@@ -3183,8 +3183,11 @@
                 });
                 html += `</div>`;
             }
+            return html;
+        }
 
-            // Active player area
+        function renderFocusMusicPlayerHTML() {
+            let html = '';
             if (window.currentActiveMusicId) {
                 const activeMusic = state.focusMusic.find(m => m.id === window.currentActiveMusicId);
                 if (activeMusic) {
@@ -3211,29 +3214,39 @@
 
                     if (isEmbeddable) {
                         html += `
-                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); position: relative;">
-                                <button onclick="window.currentActiveMusicId = null; render();" style="position: absolute; top: 15px; right: 0; background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; z-index: 10;">關閉播放器</button>
-                                <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">▶️ 播放中：${activeMusic.title}</h4>
-                                <div style="width: 100%; aspect-ratio: 16/9; max-height: 400px; background: #000; border-radius: 8px; overflow: hidden; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                            <div style="position: relative; height: 100%; display: flex; flex-direction: column;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <h4 style="margin: 0; font-size: 1rem;">▶️ 播放中：${activeMusic.title}</h4>
+                                    <button onclick="window.currentActiveMusicId = null; render();" style="background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; font-size: 0.8rem;">關閉</button>
+                                </div>
+                                <div style="width: 100%; flex: 1; min-height: 250px; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
                                     <iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
                                 </div>
                             </div>
                         `;
                     } else {
                         html += `
-                            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center; position: relative;">
-                                <button onclick="window.currentActiveMusicId = null; render();" style="position: absolute; top: 15px; right: 0; background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; z-index: 10;">關閉播放器</button>
-                                <h4 style="margin: 0 0 10px 0; font-size: 0.95rem;">▶️ 目前選擇：${activeMusic.title}</h4>
-                                <div style="padding: 20px; background: rgba(0,0,0,0.3); border-radius: 8px;">
+                            <div style="position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                                <button onclick="window.currentActiveMusicId = null; render();" style="position: absolute; top: 0; right: 0; background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; font-size: 0.8rem;">關閉</button>
+                                <h4 style="margin: 0 0 15px 0; font-size: 1.1rem;">▶️ 目前選擇：${activeMusic.title}</h4>
+                                <div style="padding: 20px; background: rgba(0,0,0,0.3); border-radius: 8px; width: 100%;">
                                     <a href="${activeMusic.url}" target="_blank" class="btn btn-primary" style="text-decoration: none; display: inline-block; padding: 10px 20px; margin-bottom: 10px;">🎧 在新分頁中開啟聆聽</a>
-                                    <p style="margin: 0; font-size: 0.8rem; opacity: 0.7;">此連結無法直接嵌入，請點擊按鈕在新視窗開啟。</p>
+                                    <p style="margin: 0; font-size: 0.85rem; opacity: 0.7;">此連結無法直接嵌入，請點擊按鈕在新視窗開啟。</p>
                                 </div>
                             </div>
                         `;
                     }
                 }
+            } else {
+                // Empty state for player when nothing is selected
+                html += `
+                    <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5; min-height: 250px; background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.2);">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🎵</div>
+                        <p style="margin: 0; font-size: 1rem; font-weight: bold;">尚未選擇音樂</p>
+                        <p style="margin: 5px 0 0 0; font-size: 0.85rem;">請從下方的專注音樂庫中點選播放</p>
+                    </div>
+                `;
             }
-
             return html;
         }
 
@@ -3334,13 +3347,21 @@
             focusLayout.style.flexDirection = 'column';
             focusLayout.style.gap = '20px';
 
-            // Timer & Task Selector (Top)
+            // Top Row (Timer & Music Player)
+            const topRow = document.createElement('div');
+            topRow.style.display = 'grid';
+            topRow.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
+            topRow.style.gap = '20px';
+
+            // Timer & Task Selector (Left)
             const incompleteTasks = state.tasks.filter(t => !t.completed);
             
             const timerCard = document.createElement('div');
             timerCard.className = 'glass glass-card';
             timerCard.style.textAlign = 'center';
             timerCard.style.padding = '20px 15px';
+            timerCard.style.display = 'flex';
+            timerCard.style.flexDirection = 'column';
             timerCard.innerHTML = `
                 <!-- Select Task -->
                 <div style="text-align: left; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -3372,11 +3393,20 @@
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: center; gap: 10px;">
+                <div style="display: flex; justify-content: center; gap: 10px; margin-top: auto;">
                     <button class="btn btn-primary" style="padding: 8px 25px; font-size: 1rem;" onclick="toggleTimer()">${isTimerRunning ? '⏸ Pause' : '▶ Start'}</button>
                     <button class="btn" style="padding: 8px 15px; background: rgba(255,255,255,0.2);" onclick="resetTimer()">↺ Reset</button>
                 </div>
             `;
+
+            // Music Player (Right)
+            const playerCard = document.createElement('div');
+            playerCard.className = 'glass glass-card';
+            playerCard.style.padding = '20px';
+            playerCard.innerHTML = renderFocusMusicPlayerHTML();
+
+            topRow.appendChild(timerCard);
+            topRow.appendChild(playerCard);
 
             // --- Focus Time History Chart ---
             const chartCard = document.createElement('div');
@@ -3413,9 +3443,9 @@
             const musicCol = document.createElement('div');
             musicCol.className = 'glass glass-card';
             musicCol.style.padding = '20px';
-            musicCol.innerHTML = renderFocusMusicHTML();
+            musicCol.innerHTML = renderFocusMusicGalleryHTML();
 
-            focusLayout.appendChild(timerCard); // Timer on top
+            focusLayout.appendChild(topRow); // Top row: Timer & Player
             focusLayout.appendChild(chartCard); // Chart in middle
             focusLayout.appendChild(musicCol); // Music Gallery on bottom
 
