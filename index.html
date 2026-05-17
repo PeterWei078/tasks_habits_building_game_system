@@ -1609,6 +1609,10 @@
                     <span class="nav-icon">⚔️</span>
                     <span class="nav-text">任務 (Tasks)</span>
                 </li>
+                <li class="nav-item" id="nav-reminders" onclick="switchTab('reminders')">
+                    <span class="nav-icon">💥</span>
+                    <span class="nav-text">提醒 (Reminders)</span>
+                </li>
                 <li class="nav-item" id="nav-focus" onclick="switchTab('focus')">
                     <span class="nav-icon">⏱️</span>
                     <span class="nav-text">專注 (Focus)</span>
@@ -2743,7 +2747,8 @@
                     'activity': "Welcome to **Activity**!\n\nReview your historical task completions and analyze your productivity heatmap.",
                     'statistics': "Welcome to **Statistics**!\n\nAnalyze your attribute growth over time using the interactive radar charts.",
                     'reflections': "Welcome to **Reflections**!\n\nWrite daily journal entries to track your thoughts and lessons learned.",
-                    'patch': "Welcome to **Patches**!\n\nDraft new projects or task lists here before officially moving them to your Projects board."
+                    'patch': "Welcome to **Patches**!\n\nDraft new projects or task lists here before officially moving them to your Projects board.",
+                    'reminders': "Welcome to **Reminders**!\n\nHere you can create multiple reminder boards for different categories. Customize them with colors and formatting to keep important information visible."
                 }
             },
             tasks: [
@@ -2760,6 +2765,9 @@
                     group: 'Cafe',
                     type: 'youtube'
                 }
+            ],
+            reminders: [
+                { id: 'rem_default', title: '預設提醒', content: '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。' }
             ]
         };
 
@@ -2778,6 +2786,15 @@
         }
         if (!state.player.patches) {
             state.player.patches = [];
+        }
+        if (!state.reminders) {
+            state.reminders = [
+                { 
+                    id: 'rem_' + Date.now(), 
+                    title: '預設提醒', 
+                    content: state.focusReminder || '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。' 
+                }
+            ];
         }
         if (!state.player.timerSettings) {
             state.player.timerSettings = defaultState.player.timerSettings;
@@ -3088,6 +3105,7 @@
             else if (currentTab === 'status') renderStatusPage();
             else if (currentTab === 'occupation') renderOccupationPage();
             else if (currentTab === 'focus') renderFocusPage();
+            else if (currentTab === 'reminders') renderRemindersPage();
             else if (currentTab === 'projects') renderProjectsPage();
             else if (currentTab === 'patch') renderPatchPage();
             else if (currentTab === 'statistics') renderStatisticsPage();
@@ -3313,41 +3331,7 @@
             focusLayout.style.flexDirection = 'column';
             focusLayout.style.gap = '20px';
 
-            // Bottom Row: Task & Timer
-            const leftCol = document.createElement('div');
-            leftCol.style.display = 'grid';
-            leftCol.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
-            leftCol.style.gap = '20px';
-            leftCol.style.alignItems = 'start';
-
-            // Reminder Board (Left)
-            const reminderCard = document.createElement('div');
-            reminderCard.className = 'glass glass-card';
-            reminderCard.style.padding = '20px 15px';
-            reminderCard.style.display = 'flex';
-            reminderCard.style.flexDirection = 'column';
-
-            const savedReminder = state.focusReminder || '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。';
-
-            // Prevent focus loss when clicking toolbar buttons
-            const preventFocus = 'onmousedown="event.preventDefault()"';
-
-            reminderCard.innerHTML = `
-                <h3 style="margin-bottom: 15px; font-size: 1.1rem;">💥重要提醒</h3>
-                <div style="display: flex; gap: 8px; margin-bottom: 10px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 6px; flex-wrap: wrap;">
-                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('fontSize', false, '3')" title="一般大小">A</button>
-                    <button class="btn" style="padding: 2px 8px; font-size: 0.9rem; background: rgba(0,0,0,0.2); font-weight: bold;" ${preventFocus} onclick="document.execCommand('fontSize', false, '5')" title="放大字體">A+</button>
-                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2); font-weight: bold;" ${preventFocus} onclick="document.execCommand('bold', false, null)" title="粗體">B</button>
-                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2); color: #FF6B6B;" ${preventFocus} onclick="document.execCommand('foreColor', false, '#FF6B6B')" title="紅色字體">A</button>
-                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('hiliteColor', false, '#FFFF00')" title="黃色螢光筆">🖍️</button>
-                    <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('removeFormat', false, null)" title="清除格式">🚫</button>
-                </div>
-                <div id="reminderBoardContent" contenteditable="true" style="flex: 1; outline: none; padding: 10px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; min-height: 250px; line-height: 1.6;" onblur="state.focusReminder = this.innerHTML; saveState();" oninput="state.focusReminder = this.innerHTML; saveState();">
-                    ${savedReminder}
-                </div>
-            `;
-
-            // Timer & Task Selector (Merged, Right)
+            // Timer & Task Selector (Top)
             const incompleteTasks = state.tasks.filter(t => !t.completed);
             
             const timerCard = document.createElement('div');
@@ -3391,9 +3375,6 @@
                 </div>
             `;
 
-            leftCol.appendChild(reminderCard);
-            leftCol.appendChild(timerCard);
-
             // --- Focus Time History Chart ---
             const chartCard = document.createElement('div');
             chartCard.className = 'glass glass-card';
@@ -3431,7 +3412,7 @@
             musicCol.style.padding = '20px';
             musicCol.innerHTML = renderFocusMusicHTML();
 
-            focusLayout.appendChild(leftCol); // Timer on top
+            focusLayout.appendChild(timerCard); // Timer on top
             focusLayout.appendChild(chartCard); // Chart in middle
             focusLayout.appendChild(musicCol); // Music Gallery on bottom
 
@@ -3443,6 +3424,93 @@
             // Initial Render of Chart (Daily)
             setTimeout(() => renderFocusChart('daily'), 0);
         }
+
+        function renderRemindersPage() {
+            contentDiv.innerHTML = '';
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.style.display = 'flex';
+            title.style.justifyContent = 'space-between';
+            title.style.alignItems = 'center';
+            title.innerHTML = `
+                💥 重要提醒 (Reminders)
+                <div>
+                    <button class="btn btn-primary" onclick="addReminderBoard()" style="font-size: 0.9rem; padding: 6px 12px; margin-right: 10px;">+ 新增提醒板</button>
+                    <button onclick="openPageInfoModal('reminders', '重要提醒 (Reminders)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+                </div>
+            `;
+
+            const gridLayout = document.createElement('div');
+            gridLayout.style.display = 'grid';
+            gridLayout.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+            gridLayout.style.gap = '20px';
+
+            const preventFocus = 'onmousedown="event.preventDefault()"';
+
+            state.reminders.forEach((rem) => {
+                const card = document.createElement('div');
+                card.className = 'glass glass-card';
+                card.style.padding = '20px 15px';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <input type="text" value="${rem.title}" onchange="updateReminderTitle('${rem.id}', this.value)" style="font-size: 1.1rem; font-weight: bold; background: transparent; border: none; color: inherit; width: 60%; outline: none; border-bottom: 1px dashed rgba(255,255,255,0.3);">
+                        <button class="btn" onclick="deleteReminderBoard('${rem.id}')" style="background: rgba(255,0,0,0.2); color: #FF6B6B; padding: 4px 8px; font-size: 0.8rem;">刪除</button>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px; background: rgba(255,255,255,0.1); padding: 5px; border-radius: 6px; flex-wrap: wrap;">
+                        <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('fontSize', false, '3')" title="一般大小">A</button>
+                        <button class="btn" style="padding: 2px 8px; font-size: 0.9rem; background: rgba(0,0,0,0.2); font-weight: bold;" ${preventFocus} onclick="document.execCommand('fontSize', false, '5')" title="放大字體">A+</button>
+                        <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2); font-weight: bold;" ${preventFocus} onclick="document.execCommand('bold', false, null)" title="粗體">B</button>
+                        <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2); color: #FF6B6B;" ${preventFocus} onclick="document.execCommand('foreColor', false, '#FF6B6B')" title="紅色字體">A</button>
+                        <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('hiliteColor', false, '#FFFF00')" title="黃色螢光筆">🖍️</button>
+                        <button class="btn" style="padding: 2px 8px; font-size: 0.8rem; background: rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('removeFormat', false, null)" title="清除格式">🚫</button>
+                    </div>
+                    <div id="rem_${rem.id}" contenteditable="true" style="flex: 1; outline: none; padding: 10px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 8px; min-height: 250px; line-height: 1.6;" onblur="updateReminderContent('${rem.id}', this.innerHTML)" oninput="updateReminderContent('${rem.id}', this.innerHTML)">
+                        ${rem.content}
+                    </div>
+                `;
+                gridLayout.appendChild(card);
+            });
+
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(gridLayout);
+        }
+
+        window.addReminderBoard = function() {
+            state.reminders.push({
+                id: 'rem_' + Date.now(),
+                title: '新提醒板',
+                content: '點擊此處開始輸入重要提醒...'
+            });
+            saveState();
+            render();
+        };
+
+        window.deleteReminderBoard = function(id) {
+            if (confirm('確定要刪除這個提醒板嗎？')) {
+                state.reminders = state.reminders.filter(r => r.id !== id);
+                saveState();
+                render();
+            }
+        };
+
+        window.updateReminderTitle = function(id, title) {
+            const rem = state.reminders.find(r => r.id === id);
+            if (rem) {
+                rem.title = title;
+                saveState();
+            }
+        };
+
+        window.updateReminderContent = function(id, content) {
+            const rem = state.reminders.find(r => r.id === id);
+            if (rem) {
+                rem.content = content;
+                saveState();
+            }
+        };
 
         function renderTimelineHTML() {
             const tlTasks = state.tasks.filter(t => t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate));
