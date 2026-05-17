@@ -2941,6 +2941,9 @@
         migrateCharacterGallery();
 
         function migrateCharacterGallery() {
+            if (!state.focusMusic) {
+                state.focusMusic = defaultState.focusMusic || [];
+            }
             if (!state.player.characterGallery) {
                 state.player.characterGallery = JSON.parse(JSON.stringify(defaultState.player.characterGallery));
             }
@@ -3283,6 +3286,7 @@
                 const idx = state.focusMusic.findIndex(m => m.id === id);
                 if (idx !== -1) state.focusMusic[idx] = musicData;
             } else {
+                if (!state.focusMusic) state.focusMusic = [];
                 state.focusMusic.push(musicData);
             }
 
