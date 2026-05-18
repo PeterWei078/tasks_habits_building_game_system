@@ -1989,40 +1989,48 @@
                 </div>
 
                 <div id="manageStoreSection" style="display: none;">
-                    <!-- Store Items List -->
-                    <div id="manageStoreList" style="margin-bottom: 20px;"></div>
-
-                    <!-- Add New Item Form -->
-                    <div
-                        style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
-                        <h3 style="margin-bottom: 15px;">Add New Item</h3>
-                        <div class="form-row" style="margin-bottom: 10px;">
-                            <input type="text" id="newShopTitle" placeholder="Item Name (e.g. Pizza)"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                            <input type="number" id="newShopPrice" placeholder="Price (Gold)"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                        </div>
-                        <input type="url" id="newShopUrl" placeholder="URL Link (Optional)"
-                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
-                        <div class="form-row" style="margin-bottom: 10px;">
-                            <select id="newShopCategory"
-                                style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                                <!-- Options will be populated dynamically -->
-                            </select>
-                            <select id="newShopTier" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                                <option value="">No Tier</option>
-                                <option value="bronze">Bronze (黃銅級, 50+ Gold)</option>
-                                <option value="silver">Silver (白銀級, 300+ Gold)</option>
-                                <option value="gold">Legendary (傳說級, 2000+ Gold)</option>
-                            </select>
-                            <input type="text" id="newShopIcon" placeholder="Icon (Emoji)" value="🎁"
-                                style="grid-column: span 2; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                        </div>
-                        <input type="text" id="newShopDesc" placeholder="Description"
-                            style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 10px;">
-                        <button class="btn btn-primary" style="width: 100%;" onclick="addShopItem()">Add
-                            Item</button>
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="newShopTitle" placeholder="Item Name (e.g. 電影票)">
                     </div>
+                    <div class="form-group">
+                        <label>Price (Gold)</label>
+                        <input type="number" id="newShopPrice" placeholder="Price (Gold)">
+                    </div>
+                    <div class="form-group">
+                        <label>URL Link</label>
+                        <input type="url" id="newShopUrl" placeholder="Optional URL">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="newShopCategory">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Item Tier (Visual Style)</label>
+                        <select id="newShopTier">
+                            <option value="">No Tier</option>
+                            <option value="bronze">Bronze (黃銅級, 50+ Gold)</option>
+                            <option value="silver">Silver (白銀級, 300+ Gold)</option>
+                            <option value="gold">Legendary (傳說級, 2000+ Gold)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>照片 / 圖示</label>
+                        <div id="newShopIconPreview" style="width:100%;min-height:80px;border-radius:12px;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:10px;font-size:2.8rem;">🎁</div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" id="newShopIcon" style="flex:1;font-size:0.82rem;" placeholder="Emoji 或 /badges/name.webp" value="🎁" oninput="updateNewShopIconPreview()">
+                            <label for="newShopPhotoUpload" style="background:linear-gradient(135deg,#38A169,#276749);color:white;border:none;padding:9px 13px;border-radius:10px;cursor:pointer;white-space:nowrap;font-size:0.82rem;font-weight:700;box-shadow:0 3px 10px rgba(56,161,105,0.35);display:flex;align-items:center;gap:5px;">📷 上傳</label>
+                            <input type="file" id="newShopPhotoUpload" accept="image/*" style="display:none" onchange="handleNewShopPhotoUpload(this)">
+                            <button type="button" onclick="openBadgeGallery('newShopIcon','newShopIconPreview')" style="background:linear-gradient(135deg,var(--accent-color),#805AD5);color:white;border:none;padding:9px 13px;border-radius:10px;cursor:pointer;white-space:nowrap;font-size:0.82rem;font-weight:700;box-shadow:0 3px 10px rgba(107,70,193,0.3);">🖼 圖庫</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="newShopDesc" rows="3" placeholder="商品描述"></textarea>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="addShopItem()">➕ Add Item</button>
                 </div>
 
                 <div id="manageStoreCategoriesSection" style="display: none;">
@@ -4236,7 +4244,7 @@
                     <div style="display: flex; gap: 5px;">
                         <button onclick="openStoreInfoModal()" title="Store Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
                         <button onclick="openManagementModal('storeCategories')" title="Manage Categories" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">🏷️</button>
-                        <button onclick="openManagementModal('store')" title="Manage Store Items" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.transform='rotate(90deg)'" onmouseout="this.style.transform='rotate(0deg)'">⚙️</button>
+                        <button onclick="openManagementModal('store')" title="New Store Item" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">➕</button>
                     </div>
                 </div>
                 `;
@@ -4576,6 +4584,33 @@
                 }
             };
             reader.readAsDataURL(file);
+        }
+
+        function handleNewShopPhotoUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const iconInput = document.getElementById('newShopIcon');
+                if (iconInput) {
+                    iconInput.value = e.target.result;
+                    updateNewShopIconPreview();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateNewShopIconPreview() {
+            const icon = document.getElementById('newShopIcon')?.value?.trim() || '';
+            const preview = document.getElementById('newShopIconPreview');
+            if (!preview) return;
+            if (icon.startsWith('data:image/') || icon.startsWith('/') || icon.startsWith('http')) {
+                preview.innerHTML = `<img src="${icon}" style="width:100%;height:auto;object-fit:contain;display:block;border-radius:10px;" draggable="false" />`;
+                preview.style.minHeight = '';
+            } else {
+                preview.innerHTML = `<span style="font-size:2.2rem;line-height:1;">${icon || '🎁'}</span>`;
+                preview.style.minHeight = '80px';
+            }
         }
 
         function updateShopIconPreview() {
@@ -8588,7 +8623,7 @@
                 modal.classList.add('show');
 
                 if (mode === 'store') {
-                    modalTitle.textContent = 'Manage Store Items';
+                    modalTitle.textContent = 'New Store Item';
                     if (storeSection) storeSection.style.display = 'block';
                     renderManageStoreItems();
                 } else if (mode === 'storeCategories') {
@@ -8813,46 +8848,16 @@
         // --- Store Management ---
         function renderManageStoreItems() {
             try {
-                const list = document.getElementById('manageStoreList');
-                if (!list) return;
-
-                if (!state.player.shopItems || !Array.isArray(state.player.shopItems)) {
-                    state.player.shopItems = []; // Auto-fix
-                }
-
-                const regularItems = state.player.shopItems.filter(i => i.category !== 'Badge');
-
-                const renderCard = (item) => `
-                        <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <span style="font-size: 1.5rem;">${item.icon || '📦'}</span>
-                                <div>
-                                    <div style="font-weight: bold;">${item.title || 'Untitled'}</div>
-                                    <div style="font-size: 0.8rem; opacity: 0.7;">${item.category || 'General'} • 💰 ${item.price || 0}</div>
-                                    ${item.url ? `<div style="font-size: 0.75rem; color: var(--accent-color); margin-top: 2px;">🔗 ${item.url.substring(0, 30)}${item.url.length > 30 ? '...' : ''}</div>` : ''}
-                                </div>
-                            </div>
-                            <button class="btn btn-secondary" onclick="deleteShopItem('${item.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
-                        </div>
-                    `;
-
-                let htmlContent = regularItems.length > 0
-                    ? regularItems.map(renderCard).join('')
-                    : `<div style="text-align: center; opacity: 0.5; padding: 20px;">No items in the store yet.</div>`;
-
-                list.innerHTML = htmlContent;
-
-                // Update Add Item Category Dropdown (no Badge option here)
                 const newShopCategory = document.getElementById('newShopCategory');
                 if (newShopCategory) {
                     let catOptions = state.player.shopCategories.map(c => `<option value="${c.name}">${c.name} ${c.icon}</option>`).join('');
                     catOptions += `<option value="Other">Other 📦</option>`;
                     newShopCategory.innerHTML = catOptions;
                 }
-
+                // Reset preview to default emoji
+                updateNewShopIconPreview();
             } catch (e) {
                 console.error("Error rendering store items:", e);
-                document.getElementById('manageStoreList').innerHTML = '<div style="color:red">Error loading items</div>';
             }
         }
 
@@ -8861,12 +8866,12 @@
             const price = parseInt(document.getElementById('newShopPrice').value) || 0;
             const category = document.getElementById('newShopCategory').value || 'Other';
             const tier = document.getElementById('newShopTier').value || '';
-            const icon = document.getElementById('newShopIcon').value || '🎁';
-            const desc = document.getElementById('newShopDesc').value;
-            const url = document.getElementById('newShopUrl').value;
+            const icon = document.getElementById('newShopIcon').value.trim() || '🎁';
+            const desc = document.getElementById('newShopDesc').value.trim();
+            const url = document.getElementById('newShopUrl').value.trim();
 
             if (!title || price <= 0) {
-                alert('Please enter a valid title and price.');
+                showToast('請輸入商品名稱與價格。', 'error');
                 return;
             }
 
@@ -8877,10 +8882,19 @@
                 icon, description: desc, url
             });
             saveState();
-            renderManageStoreItems();
+            renderStorePage();
+            // Reset form
             document.getElementById('newShopTitle').value = '';
             document.getElementById('newShopPrice').value = '';
+            document.getElementById('newShopUrl').value = '';
             document.getElementById('newShopTier').value = '';
+            document.getElementById('newShopIcon').value = '🎁';
+            document.getElementById('newShopDesc').value = '';
+            const photoUpload = document.getElementById('newShopPhotoUpload');
+            if (photoUpload) photoUpload.value = '';
+            updateNewShopIconPreview();
+            closeManagementModal();
+            showToast('商品已新增！', 'success');
         }
 
         function addBadgeItem() {
