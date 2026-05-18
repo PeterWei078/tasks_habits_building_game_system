@@ -4222,6 +4222,7 @@
         // --- Store & Inventory ---
         let currentStoreTab = 'shop'; // 'shop' or 'inventory'
         let currentCategoryFilter = 'All';
+        let currentInventoryCategoryFilter = 'All';
 
         function renderStorePage() {
             contentDiv.innerHTML = ''; // Prevent duplication
@@ -4261,6 +4262,12 @@
 
         function switchStoreTab(tab) {
             currentStoreTab = tab;
+            currentInventoryCategoryFilter = 'All';
+            renderStorePage();
+        }
+
+        function filterInventoryCategory(cat) {
+            currentInventoryCategoryFilter = cat;
             renderStorePage();
         }
 
@@ -4814,56 +4821,57 @@
         }
 
         function renderInventoryTab() {
+            // Build grouped items from all non-badge, non-used inventory
+            const allGroupedItems = [];
+            state.player.inventory.forEach((invItem, index) => {
+                if (invItem.isUsed || invItem.isDeleted) return;
+                const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId)
+                    || { title: 'Unknown', icon: '❓', description: 'Item removed from shop', category: 'Unknown' };
+                if (originalItem.category === 'Badge') return;
+
+                const itemTier = originalItem.itemTier || invItem.snapshot?.tier || '';
+                const isNoTier = !itemTier || itemTier === 'none' || itemTier === '';
+
+                if (isNoTier) {
+                    const existingGroup = allGroupedItems.find(g => g.itemId === invItem.itemId && g.isNoTier);
+                    if (existingGroup) {
+                        existingGroup.indices.push(index);
+                        existingGroup.count++;
+                    } else {
+                        allGroupedItems.push({ itemId: invItem.itemId, indices: [index], count: 1, originalItem, invItem, isNoTier: true, itemTier });
+                    }
+                } else {
+                    allGroupedItems.push({ itemId: invItem.itemId, indices: [index], count: 1, originalItem, invItem, isNoTier: false, itemTier });
+                }
+            });
+
+            // Collect categories present in inventory
+            const invCategoryNames = new Set(allGroupedItems.map(g => g.originalItem.category).filter(Boolean));
+            const invCategories = ['All', ...Array.from(invCategoryNames)];
+
+            // Category chip bar
+            const categoryScroll = document.createElement('div');
+            categoryScroll.className = 'category-scroll';
+            categoryScroll.innerHTML = invCategories.map(cat => `
+                <div class="category-chip ${currentInventoryCategoryFilter === cat ? 'active' : ''}" onclick="filterInventoryCategory('${cat}')">
+                    ${getCategoryIcon(cat)} ${cat}
+                </div>
+            `).join('');
+            contentDiv.appendChild(categoryScroll);
+
+            // Filter by selected category
+            const groupedItems = currentInventoryCategoryFilter === 'All'
+                ? allGroupedItems
+                : allGroupedItems.filter(g => g.originalItem.category === currentInventoryCategoryFilter);
+
             const grid = document.createElement('div');
             grid.className = 'shop-grid';
 
-            if (state.player.inventory.filter(i => {
-                if (i.isUsed || i.isDeleted) return false;
-                const item = state.player.shopItems.find(s => s.id === i.itemId);
-                return item && item.category !== 'Badge';
-            }).length === 0) {
-                grid.innerHTML = `<div style = "grid-column: 1/-1; text-align: center; opacity: 0.7; padding: 50px;"> Target Empty... Go buy something!</div> `;
+            if (allGroupedItems.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;opacity:0.7;padding:50px;">目前庫存是空的，去商店逛逛吧！</div>`;
+            } else if (groupedItems.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;opacity:0.7;padding:50px;">此分類沒有已購買的商品。</div>`;
             } else {
-                const groupedItems = [];
-                state.player.inventory.forEach((invItem, index) => {
-                    if (invItem.isUsed || invItem.isDeleted) return;
-
-                    const originalItem = state.player.shopItems.find(i => i.id === invItem.itemId) || { title: 'Unknown', icon: '❓', description: 'Item removed from shop', category: 'Unknown' };
-
-                    if (originalItem.category === 'Badge') return;
-
-                    const itemTier = originalItem.itemTier || invItem.snapshot?.tier || '';
-                    const isNoTier = !itemTier || itemTier === 'none' || itemTier === '';
-
-                    if (isNoTier) {
-                        const existingGroup = groupedItems.find(g => g.itemId === invItem.itemId && g.isNoTier);
-                        if (existingGroup) {
-                            existingGroup.indices.push(index);
-                            existingGroup.count++;
-                        } else {
-                            groupedItems.push({
-                                itemId: invItem.itemId,
-                                indices: [index],
-                                count: 1,
-                                originalItem: originalItem,
-                                invItem: invItem,
-                                isNoTier: true,
-                                itemTier: itemTier
-                            });
-                        }
-                    } else {
-                        groupedItems.push({
-                            itemId: invItem.itemId,
-                            indices: [index],
-                            count: 1,
-                            originalItem: originalItem,
-                            invItem: invItem,
-                            isNoTier: false,
-                            itemTier: itemTier
-                        });
-                    }
-                });
-
                 grid.innerHTML = groupedItems.map(group => {
                     const originalItem = group.originalItem;
                     const invItem = group.invItem;
@@ -4881,19 +4889,18 @@
                     const targetIndex = group.indices[0];
 
                     return `
-                <div class="store-item-card ${tierClass}" style="position:relative;">
-                    ${countBadge}
-                    <div class="item-photo-wrapper">${getShopItemIconHtml(originalItem.icon)}</div>
-                    <h4>${originalItem.title}</h4>
-                    <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
-                    ${originalItem.url ? `<a href="${originalItem.url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;font-size:0.8rem;color:var(--accent-color);margin-bottom:5px;text-decoration:underline;background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:12px;">🔗 Link</a>` : ''}
-                    <div style="font-size:0.75rem;margin-bottom:15px;opacity:0.6;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
-                    <div style="display:flex;gap:10px;">
-                        <button class="btn-use" onclick="useItem(${targetIndex})" style="flex:1;">Use Item</button>
-                        <button class="btn-use" onclick="deleteInventoryItem(${targetIndex})" style="background:rgba(255,99,132,0.2);color:#ff6384;border:1px solid #ff6384;flex:0 0 40px;display:flex;align-items:center;justify-content:center;">🗑️</button>
-                    </div>
-                </div>
-                `;
+                    <div class="store-item-card ${tierClass}" style="position:relative;">
+                        ${countBadge}
+                        <div class="item-photo-wrapper">${getShopItemIconHtml(originalItem.icon)}</div>
+                        <h4>${originalItem.title}</h4>
+                        <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
+                        ${originalItem.url ? `<a href="${originalItem.url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;font-size:0.8rem;color:var(--accent-color);margin-bottom:5px;text-decoration:underline;background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:12px;">🔗 Link</a>` : ''}
+                        <div style="font-size:0.75rem;margin-bottom:15px;opacity:0.6;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
+                        <div style="display:flex;gap:10px;">
+                            <button class="btn-use" onclick="useItem(${targetIndex})" style="flex:1;">Use Item</button>
+                            <button class="btn-use" onclick="deleteInventoryItem(${targetIndex})" style="background:rgba(255,99,132,0.2);color:#ff6384;border:1px solid #ff6384;flex:0 0 40px;display:flex;align-items:center;justify-content:center;">🗑️</button>
+                        </div>
+                    </div>`;
                 }).join('');
             }
 
