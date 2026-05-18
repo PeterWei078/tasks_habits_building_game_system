@@ -4870,39 +4870,29 @@
                     const itemTier = group.itemTier;
 
                     let tierClass = '';
-                    let cornerIcon = '';
-                    if (itemTier === 'gold' || itemTier === 'Legendary') {
-                        tierClass = 'tier-gold';
-                        cornerIcon = '<div class="item-corner-icon">☀️</div>';
-                    } else if (itemTier === 'silver' || itemTier === 'Silver') {
-                        tierClass = 'tier-silver';
-                        cornerIcon = '<div class="item-corner-icon">🌙</div>';
-                    } else if (itemTier === 'bronze' || itemTier === 'Bronze') {
-                        tierClass = 'tier-bronze';
-                        cornerIcon = '<div class="item-corner-icon">⭐</div>';
-                    }
+                    if (itemTier === 'gold' || itemTier === 'Legendary') tierClass = 'tier-gold';
+                    else if (itemTier === 'silver' || itemTier === 'Silver') tierClass = 'tier-silver';
+                    else if (itemTier === 'bronze' || itemTier === 'Bronze') tierClass = 'tier-bronze';
 
-                    let countBadge = '';
-                    if (group.isNoTier && group.count >= 1) {
-                        countBadge = `<div style = "position: absolute; top: 15px; right: 15px; border: 3px solid #ff4d4f; color: #ff4d4f; font-weight: bold; padding: 4px 12px; font-size: 1.1rem; border-radius: 4px; background: rgba(255, 255, 255, 0.9); z-index: 5; box-shadow: 2px 2px 5px rgba(0,0,0,0.1);"> x ${group.count}</div> `;
-                    }
+                    const countBadge = (group.isNoTier && group.count >= 1)
+                        ? `<div style="position:absolute;top:8px;right:8px;border:2px solid #ff4d4f;color:#ff4d4f;font-weight:bold;padding:3px 10px;font-size:0.95rem;border-radius:4px;background:rgba(255,255,255,0.92);z-index:5;box-shadow:2px 2px 5px rgba(0,0,0,0.1);">x ${group.count}</div>`
+                        : '';
 
                     const targetIndex = group.indices[0];
 
                     return `
-                <div class="store-item-card ${tierClass}" style = "position: relative;">
-                    ${cornerIcon}
-                            ${countBadge}
-                            <div class="item-icon-wrapper">${originalItem.icon}</div>
-                            <h4>${originalItem.title}</h4>
-                            <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
-                            ${originalItem.url ? `<a href="${originalItem.url}" target="_blank" onclick="event.stopPropagation()" style="display: inline-block; font-size: 0.8rem; color: var(--accent-color); margin-bottom: 5px; text-decoration: underline; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 12px;">🔗 Link</a>` : ''}
-                            <div style="font-size: 0.75rem; margin-bottom: 15px; opacity: 0.6;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
-                            <div style="display: flex; gap: 10px;">
-                                <button class="btn-use" onclick="useItem(${targetIndex})" style="flex: 1;">Use Item</button>
-                                <button class="btn-use" onclick="deleteInventoryItem(${targetIndex})" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384; flex: 0 0 40px; display: flex; align-items: center; justify-content: center;">🗑️</button>
-                            </div>
-                        </div>
+                <div class="store-item-card ${tierClass}" style="position:relative;">
+                    ${countBadge}
+                    <div class="item-photo-wrapper">${getShopItemIconHtml(originalItem.icon)}</div>
+                    <h4>${originalItem.title}</h4>
+                    <p class="desc" style="margin-bottom:5px;">${originalItem.description}</p>
+                    ${originalItem.url ? `<a href="${originalItem.url}" target="_blank" onclick="event.stopPropagation()" style="display:inline-block;font-size:0.8rem;color:var(--accent-color);margin-bottom:5px;text-decoration:underline;background:rgba(0,0,0,0.05);padding:2px 8px;border-radius:12px;">🔗 Link</a>` : ''}
+                    <div style="font-size:0.75rem;margin-bottom:15px;opacity:0.6;">Purchased: ${new Date(invItem.purchaseDate).toLocaleDateString()}</div>
+                    <div style="display:flex;gap:10px;">
+                        <button class="btn-use" onclick="useItem(${targetIndex})" style="flex:1;">Use Item</button>
+                        <button class="btn-use" onclick="deleteInventoryItem(${targetIndex})" style="background:rgba(255,99,132,0.2);color:#ff6384;border:1px solid #ff6384;flex:0 0 40px;display:flex;align-items:center;justify-content:center;">🗑️</button>
+                    </div>
+                </div>
                 `;
                 }).join('');
             }
