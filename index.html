@@ -4264,6 +4264,12 @@
                         });
                         saveState();
                     }
+                    // Reset timeLeft to full duration so the next Start press doesn't
+                    // immediately re-trigger completion (timeLeft would still be 0 otherwise)
+                    if (timerMode === 'pomodoro') timeLeft = state.player.timerSettings.pomodoro * 60;
+                    else if (timerMode === 'short') timeLeft = state.player.timerSettings.short * 60;
+                    else if (timerMode === 'long') timeLeft = state.player.timerSettings.long * 60;
+                    if (currentTab === 'focus') render();
                 }
             }, 1000);
         }
