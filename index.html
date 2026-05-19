@@ -2505,7 +2505,8 @@
                 const appModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js");
                 const authModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js");
                 const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
-                
+                const storageModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js");
+
                 const auth = authModule.getAuth;
                 const db = firestoreModule.getFirestore;
                 const doc = firestoreModule.doc;
@@ -2523,6 +2524,11 @@
                 window.firebaseDb = db(app);
                 window.firebaseDoc = doc;
                 window.firebaseSetDoc = setDoc;
+                window.firebaseStorage = storageModule.getStorage(app);
+                window.firebaseStorageRef = storageModule.ref;
+                window.firebaseStorageUploadString = storageModule.uploadString;
+                window.firebaseStorageGetDownloadURL = storageModule.getDownloadURL;
+                window.firebaseStorageDeleteObject = storageModule.deleteObject;
 
                 // Handle redirect result on mobile (page reloads after Google redirect)
                 getRedirectResult(authInstance).catch(e => {
@@ -6032,19 +6038,21 @@
             container.dataset.photos = JSON.stringify(photos);
         }
 
-        function addProjectPhoto() {
+        async function addProjectPhoto() {
             const input = document.getElementById('projPhotoInput');
             if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const url = e.target.result; // Base64
+                try {
+                    let url = await compressImage(input.files[0]);
+                    if (window.firebaseUserUid) {
+                        const storageUrl = await uploadImageToStorage(url, `photos/${window.firebaseUserUid}/proj_${Date.now()}.jpg`);
+                        if (storageUrl) url = storageUrl;
+                    }
                     const container = document.getElementById('projPhotosContainer');
-                    // Enforce Single Photo: Replace entire array
-                    const currentPhotos = [url];
-                    renderProjectPhotos(currentPhotos);
-                    input.value = ''; // Reset
-                };
-                reader.readAsDataURL(input.files[0]);
+                    renderProjectPhotos([url]);
+                    input.value = '';
+                } catch (e) {
+                    showToast('Upload Failed', 'Could not process the image.');
+                }
             }
         }
 
@@ -7439,6 +7447,10 @@
                 if (photoFile) {
                     try {
                         photoData = await compressImage(photoFile);
+                        if (window.firebaseUserUid) {
+                            const url = await uploadImageToStorage(photoData, `photos/${window.firebaseUserUid}/task_${Date.now()}.jpg`);
+                            if (url) photoData = url;
+                        }
                     } catch (e) {
                         console.error("Image processing failed", e);
                     }
@@ -7584,6 +7596,18 @@
                 };
                 reader.readAsDataURL(file);
             });
+        }
+
+        async function uploadImageToStorage(base64DataUrl, storagePath) {
+            if (!window.firebaseUserUid || !window.firebaseStorage) return null;
+            try {
+                const ref = window.firebaseStorageRef(window.firebaseStorage, storagePath);
+                await window.firebaseStorageUploadString(ref, base64DataUrl, 'data_url');
+                return await window.firebaseStorageGetDownloadURL(ref);
+            } catch (e) {
+                console.error('Storage upload failed:', e);
+                return null;
+            }
         }
 
         // --- Photo Library ---
@@ -7867,10 +7891,17 @@
             const file = input.files[0];
             if (!file) { showToast('No File', 'Please select an image first.'); return; }
             try {
-                const data = await compressImage(file);
+                const base64 = await compressImage(file);
+                const id = 'lib_' + Date.now();
                 const name = nameInput.value.trim() || file.name.replace(/\.[^.]+$/, '');
+                let data = base64;
+                if (window.firebaseUserUid) {
+                    showToast('上傳中', '正在上傳至雲端...');
+                    const url = await uploadImageToStorage(base64, `photos/${window.firebaseUserUid}/${id}.jpg`);
+                    if (url) data = url;
+                }
                 if (!state.player.photoLibrary) state.player.photoLibrary = [];
-                state.player.photoLibrary.push({ id: 'lib_' + Date.now(), name, data, addedAt: new Date().toISOString() });
+                state.player.photoLibrary.push({ id, name, data, addedAt: new Date().toISOString() });
                 saveState();
                 input.value = '';
                 nameInput.value = '';
@@ -7881,8 +7912,18 @@
             }
         }
 
-        function deleteFromPhotoLibrary(id) {
+        async function deleteFromPhotoLibrary(id) {
             if (!confirm('Remove this photo from the library?')) return;
+            const photo = (state.player.photoLibrary || []).find(p => p.id === id);
+            if (photo && photo.data && photo.data.startsWith('https://firebasestorage') && window.firebaseStorage) {
+                try {
+                    const path = decodeURIComponent(photo.data.split('/o/')[1].split('?')[0]);
+                    const ref = window.firebaseStorageRef(window.firebaseStorage, path);
+                    await window.firebaseStorageDeleteObject(ref);
+                } catch (e) {
+                    console.error('Failed to delete from Storage:', e);
+                }
+            }
             state.player.photoLibrary = (state.player.photoLibrary || []).filter(p => p.id !== id);
             saveState();
             renderPhotoLibraryGrid();
