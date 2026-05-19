@@ -2815,6 +2815,7 @@
                 { id: 1, title: "晨跑 3 公里 (Morning Run)", attributeRewards: [{ attribute: "agility", exp: 20 }], completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
                 { id: 2, title: "閱讀 30 分鐘 (Read Book)", attributeRewards: [{ attribute: "intelligence", exp: 15 }], completed: false, rewardExp: 15, rewardGold: 5, groupId: 'learning', tags: ['longterm'] }
             ],
+            archivedTasks: [],
             featuredTaskId: null,
             focusMusic: [
                 {
@@ -2846,6 +2847,9 @@
             }
             if (!state.player.patches) {
                 state.player.patches = [];
+            }
+            if (!state.archivedTasks) {
+                state.archivedTasks = [];
             }
             if (!state.reminders) {
                 state.reminders = [
@@ -3607,6 +3611,9 @@
 
         function renderTimelineHTML() {
             const tlTasks = state.tasks.filter(t => t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate));
+            // Include archived tasks (moved here by Delete Completed) — shown faded and non-clickable
+            const tlArchived = (state.archivedTasks || []).filter(t => t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate)).map(t => ({ ...t, _archived: true }));
+            const allTlTasks = [...tlTasks, ...tlArchived];
 
             let html = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -3618,8 +3625,8 @@
                 </div>
             `;
 
-            if (tlTasks.length === 0) {
-                return html + `<div style="text-align: center; opacity: 0.5; padding: 50px 0;">目前沒有設定開始與結束日期的未完成任務。</div>`;
+            if (allTlTasks.length === 0) {
+                return html + `<div style="text-align: center; opacity: 0.5; padding: 50px 0;">目前沒有設定開始與結束日期的任務。</div>`;
             }
 
             const parseLocalDate = (dateStr) => {
@@ -3627,7 +3634,7 @@
                 return new Date(parts[0], parts[1] - 1, parts[2]); // local midnight
             };
 
-            const dates = tlTasks.map(t => [parseLocalDate(t.startDate).getTime(), parseLocalDate(t.dueDate).getTime()]).flat();
+            const dates = allTlTasks.map(t => [parseLocalDate(t.startDate).getTime(), parseLocalDate(t.dueDate).getTime()]).flat();
             let minDate = new Date(Math.min(...dates));
             let maxDate = new Date(Math.max(...dates));
 
@@ -3692,11 +3699,11 @@
                         <div style="position: relative; margin-top: 20px; display: flex; flex-direction: column; padding: 0 10px;">
             `;
 
-            tlTasks.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
+            allTlTasks.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
 
             // Packing algorithm: distribute tasks into rows to minimize vertical space and fill gaps
             let rows = [];
-            tlTasks.forEach(task => {
+            allTlTasks.forEach(task => {
                 const s = parseLocalDate(task.startDate).getTime();
                 const e = parseLocalDate(task.dueDate).getTime() + (24 * 60 * 60 * 1000 - 1);
 
@@ -3744,7 +3751,7 @@
                     let titlePrefix = '';
                     let progressStyle = '';
 
-                    if (task.completed) {
+                    if (task._archived || task.completed) {
                         opacityStyle = 'opacity: 0.4;';
                         titlePrefix = '✅ ';
                         progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
@@ -3758,9 +3765,17 @@
                         }
                     }
 
+                    const isArchived = !!task._archived;
+                    const interactStyle = isArchived
+                        ? 'cursor: default;'
+                        : 'cursor: pointer; transition: transform 0.2s, filter 0.2s;';
+                    const interactHandlers = isArchived
+                        ? `title="${task.title} (${task.startDate} ~ ${task.dueDate}) — 已完成並歸檔"`
+                        : `title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';"`;
+
                     // Use width - 2 to add a 2px gap between adjacent bars for better visual distinction
                     timelineArea += `
-                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; ${opacityStyle}" title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
+                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; ${interactStyle} ${opacityStyle}" ${interactHandlers}>
                             ${progressStyle}
                             <span style="position: relative; z-index: 1;">${titlePrefix}${task.title}</span>
                         </div>
@@ -3791,7 +3806,8 @@
         };
 
         function renderProjectTimelineHTML() {
-            const tlProjects = state.player.tags.filter(p => p.startDate && p.endDate && new Date(p.startDate) <= new Date(p.endDate) && !isProjectCompleted(p));
+            // Include all projects with date ranges — completed ones shown faded and non-editable
+            const tlProjects = state.player.tags.filter(p => p.startDate && p.endDate && new Date(p.startDate) <= new Date(p.endDate));
 
             let html = `
                 <div class="glass glass-card" style="padding: 15px; margin-bottom: 20px;">
@@ -3805,7 +3821,7 @@
             `;
 
             if (tlProjects.length === 0) {
-                return html + `<div style="text-align: center; opacity: 0.5; padding: 50px 0;">目前沒有設定開始與結束日期的未完成專案。</div></div>`;
+                return html + `<div style="text-align: center; opacity: 0.5; padding: 50px 0;">目前沒有設定開始與結束日期的專案。</div></div>`;
             }
 
             const parseLocalDate = (dateStr) => {
@@ -3967,10 +3983,17 @@
                         }
                     }
 
-                    const editBtnHtml = `<div onclick="openProjectModal('${task.id}'); event.stopPropagation();" style="position: absolute; right: 5px; z-index: 2; font-size: 0.8rem; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 5px; margin-top: 1px;" title="Edit Project">✏️</div>`;
+                    const projCompleted = isProjectCompleted(task);
+                    const editBtnHtml = projCompleted ? '' : `<div onclick="openProjectModal('${task.id}'); event.stopPropagation();" style="position: absolute; right: 5px; z-index: 2; font-size: 0.8rem; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 5px; margin-top: 1px;" title="Edit Project">✏️</div>`;
+                    const projInteract = projCompleted
+                        ? `cursor: default;`
+                        : `cursor: pointer; transition: transform 0.2s, filter 0.2s;`;
+                    const projHandlers = projCompleted
+                        ? `title="${task.name} (${task.startDate} ~ ${task.endDate}) — 已完成"`
+                        : `title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';"`;
 
                     timelineArea += `
-                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; cursor: pointer; transition: transform 0.2s, filter 0.2s; color: rgba(0,0,0,0.8); ${opacityStyle}" title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';">
+                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; ${projInteract} color: rgba(0,0,0,0.8); ${opacityStyle}" ${projHandlers}>
                             ${progressStyle}
                             <span style="position: relative; z-index: 1;">${expandIcon} ${titlePrefix}${task.name}</span>
                             ${editBtnHtml}
@@ -3983,7 +4006,8 @@
                 row.projects.forEach(p => {
                     if (window.expandedProjectTimelines && window.expandedProjectTimelines.includes(p.id)) {
                         const projectTasks = state.tasks.filter(t => t.tags && t.tags.includes(p.id) && t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate));
-                        projectTasks.forEach(t => {
+                        const archivedProjectTasks = (state.archivedTasks || []).filter(t => t.tags && t.tags.includes(p.id) && t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate)).map(t => ({ ...t, _archived: true }));
+                        [...projectTasks, ...archivedProjectTasks].forEach(t => {
                             expandedTasks.push({
                                 ...t,
                                 _projectColor: p.color
@@ -4029,11 +4053,16 @@
                             const width = Math.ceil((endT - startT) / (1000 * 60 * 60 * 24)) * dayWidth;
 
                             let barColor = t._projectColor ? t._projectColor : 'rgba(74, 144, 226, 0.5)';
-                            let opacityStyle = t.completed ? 'opacity: 0.5;' : 'opacity: 0.9;';
-                            let titlePrefix = t.completed ? '✅ ' : '🔸 ';
-                            
+                            const tArchived = !!t._archived;
+                            let opacityStyle = (t.completed || tArchived) ? 'opacity: 0.5;' : 'opacity: 0.9;';
+                            let titlePrefix = (t.completed || tArchived) ? '✅ ' : '🔸 ';
+                            const tCursor = tArchived ? 'cursor: default;' : 'cursor: pointer;';
+                            const tHandlers = tArchived
+                                ? `title="${t.title} (${t.startDate} ~ ${t.dueDate}) — 已完成並歸檔"`
+                                : `title="${t.title} (${t.startDate} ~ ${t.dueDate})" onclick="openTaskModal('${t.id}')"`;
+
                             timelineArea += `
-                                <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.7rem; font-weight: normal; cursor: pointer; color: rgba(0,0,0,0.8); ${opacityStyle} filter: brightness(1.2);" title="${t.title} (${t.startDate} ~ ${t.dueDate})" onclick="openTaskModal('${t.id}')">
+                                <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.7rem; font-weight: normal; ${tCursor} color: rgba(0,0,0,0.8); ${opacityStyle} filter: brightness(1.2);" ${tHandlers}>
                                     <span style="position: relative; z-index: 1;">${titlePrefix}${t.title}</span>
                                 </div>
                             `;
@@ -6280,15 +6309,30 @@
         };
 
         window.triggerDeleteCompletedTasks = async function () {
-            const completedCount = state.tasks.filter(t => t.completed).length;
-            if (completedCount === 0) {
-                alert("No completed tasks to delete!");
+            // Active project IDs: projects that are NOT fully completed
+            const activeProjectIds = new Set(
+                state.player.tags.filter(p => !p.completed && !isProjectCompleted(p)).map(p => p.id)
+            );
+
+            // Deletable = completed, not an achievement, and not belonging to an active project
+            const toDelete = state.tasks.filter(t =>
+                t.completed &&
+                !t.isAchievement &&
+                !(t.tags && t.tags.some(tid => activeProjectIds.has(tid)))
+            );
+
+            if (toDelete.length === 0) {
+                alert("No completed tasks to delete!\n\n(Achievement tasks and tasks in active projects are always preserved.)");
                 return;
             }
-            const confirmed = await uiConfirm(`Are you sure you want to permanently delete ${completedCount} completed task(s)?\n\nNote: This will clean up your list, but you will KEEP all EXP, Coins, and activity history earned from these tasks.`);
+            const confirmed = await uiConfirm(`Are you sure you want to delete ${toDelete.length} completed task(s)?\n\nNote: Achievement tasks and tasks in active projects will NOT be deleted. You will KEEP all EXP, Coins, and activity history earned from these tasks.\n\nCompleted tasks with a timeline date range will remain visible (faded) in the timelines.`);
             if (confirmed) {
-                // Filter keeping ONLY tasks that are NOT completed
-                state.tasks = state.tasks.filter(t => !t.completed);
+                const toDeleteIds = new Set(toDelete.map(t => t.id));
+                // Move tasks that had timeline dates to archivedTasks so they remain visible in timelines
+                const toArchive = toDelete.filter(t => t.startDate && t.dueDate);
+                state.archivedTasks = [...(state.archivedTasks || []), ...toArchive];
+                // Remove from active task list
+                state.tasks = state.tasks.filter(t => !toDeleteIds.has(t.id));
                 saveState();
                 renderTasksPage();
             }
