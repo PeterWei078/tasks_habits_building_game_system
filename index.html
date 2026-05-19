@@ -1728,6 +1728,34 @@
         </main>
     </div>
 
+    <!-- Persistent Floating Music Player (lives outside #app-content so it survives tab switches) -->
+    <div id="floating-music-player" style="
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9998;
+        width: 300px;
+        background: rgba(15, 15, 30, 0.95);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        display: none;
+        backdrop-filter: blur(12px);
+        transition: all 0.3s ease;
+    ">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(255,255,255,0.07); border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <span id="floating-music-title-text" style="color: rgba(255,255,255,0.9); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">🎵 播放中</span>
+            <div style="display: flex; gap: 4px; margin-left: 8px; flex-shrink: 0;">
+                <button id="floating-minimize-btn" onclick="toggleFloatingPlayerSize()" title="最小化" style="background: rgba(255,255,255,0.12); border: none; border-radius: 4px; padding: 2px 7px; color: white; cursor: pointer; font-size: 0.75rem;">⬇</button>
+                <button onclick="stopFocusMusic()" title="關閉音樂" style="background: rgba(220,50,50,0.5); border: none; border-radius: 4px; padding: 2px 7px; color: white; cursor: pointer; font-size: 0.75rem;">✕</button>
+            </div>
+        </div>
+        <div id="floating-music-iframe-container" style="width: 100%; aspect-ratio: 16/9; overflow: hidden;">
+            <!-- YouTube / Spotify iframe injected here by playFocusMusic() -->
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast">
         <div class="toast-icon">✨</div>
@@ -3251,78 +3279,132 @@
         }
 
         function renderFocusMusicPlayerHTML() {
-            let html = '';
+            // The actual iframe lives in #floating-music-player (persistent, survives tab switches).
+            // This card just shows status/controls for the Focus page.
             if (window.currentActiveMusicId) {
                 const activeMusic = state.focusMusic.find(m => m.id === window.currentActiveMusicId);
                 if (activeMusic) {
-                    let embedUrl = activeMusic.url;
-                    let isEmbeddable = false;
-                    if (activeMusic.type === 'youtube') {
-                        const listMatch = activeMusic.url.match(/[?&]list=([^&]+)/);
-                        const videoMatch = activeMusic.url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
-                        
-                        if (listMatch) {
-                            embedUrl = `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1`;
-                            isEmbeddable = true;
-                        } else if (videoMatch && videoMatch[1]) {
-                            embedUrl = `https://www.youtube.com/embed/${videoMatch[1]}?autoplay=1`;
-                            isEmbeddable = true;
-                        }
-                    } else if (activeMusic.type === 'spotify') {
-                        const match = activeMusic.url.match(/spotify\.com\/(track|album|playlist|artist|episode|show)\/([a-zA-Z0-9]+)/);
-                        if (match && match[1] && match[2]) {
-                            embedUrl = `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;
-                            isEmbeddable = true;
-                        }
-                    }
-
+                    const isEmbeddable = activeMusic.type === 'youtube' || activeMusic.type === 'spotify';
                     if (isEmbeddable) {
-                        html += `
-                            <div style="position: relative; height: 100%; display: flex; flex-direction: column;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        return `
+                            <div style="height: 100%; display: flex; flex-direction: column; gap: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <h4 style="margin: 0; font-size: 1rem;">▶️ 播放中：${activeMusic.title}</h4>
-                                    <button onclick="window.currentActiveMusicId = null; render();" style="background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; font-size: 0.8rem;">關閉</button>
+                                    <button onclick="stopFocusMusic()" style="background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; font-size: 0.8rem;">關閉</button>
                                 </div>
-                                <div style="width: 100%; flex: 1; min-height: 250px; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
-                                    <iframe src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>
+                                ${activeMusic.photo ? `<div style="width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.4);"><img src="${activeMusic.photo}" style="width: 100%; height: 100%; object-fit: cover;"></div>` : ''}
+                                <div style="padding: 12px; background: rgba(255,255,255,0.06); border-radius: 8px; font-size: 0.85rem; opacity: 0.85; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
+                                    🎵 音樂正在右下角播放器中播放<br>
+                                    <span style="font-size: 0.78rem; opacity: 0.7;">切換頁面後音樂仍會繼續播放</span>
                                 </div>
                             </div>
                         `;
                     } else {
-                        html += `
-                            <div style="position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-                                <button onclick="window.currentActiveMusicId = null; render();" style="position: absolute; top: 0; right: 0; background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; font-size: 0.8rem;">關閉</button>
-                                <h4 style="margin: 0 0 15px 0; font-size: 1.1rem;">▶️ 目前選擇：${activeMusic.title}</h4>
+                        return `
+                            <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 12px;">
+                                <h4 style="margin: 0; font-size: 1.1rem;">▶️ 目前選擇：${activeMusic.title}</h4>
                                 <div style="padding: 20px; background: rgba(0,0,0,0.3); border-radius: 8px; width: 100%;">
                                     <a href="${activeMusic.url}" target="_blank" class="btn btn-primary" style="text-decoration: none; display: inline-block; padding: 10px 20px; margin-bottom: 10px;">🎧 在新分頁中開啟聆聽</a>
                                     <p style="margin: 0; font-size: 0.85rem; opacity: 0.7;">此連結無法直接嵌入，請點擊按鈕在新視窗開啟。</p>
                                 </div>
+                                <button onclick="stopFocusMusic()" style="background: rgba(255,255,255,0.2); border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; color: white; font-size: 0.8rem;">關閉</button>
                             </div>
                         `;
                     }
                 }
-            } else {
-                // Empty state for player when nothing is selected
-                html += `
-                    <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5; min-height: 250px; background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.2);">
-                        <div style="font-size: 3rem; margin-bottom: 10px;">🎵</div>
-                        <p style="margin: 0; font-size: 1rem; font-weight: bold;">尚未選擇音樂</p>
-                        <p style="margin: 5px 0 0 0; font-size: 0.85rem;">請從下方的專注音樂庫中點選播放</p>
-                    </div>
-                `;
             }
-            return html;
+            return `
+                <div style="height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0.5; min-height: 250px; background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.2);">
+                    <div style="font-size: 3rem; margin-bottom: 10px;">🎵</div>
+                    <p style="margin: 0; font-size: 1rem; font-weight: bold;">尚未選擇音樂</p>
+                    <p style="margin: 5px 0 0 0; font-size: 0.85rem;">請從下方的專注音樂庫中點選播放</p>
+                </div>
+            `;
+        }
+
+        function updateMusicPlayerVisibility() {
+            const floatingPlayer = document.getElementById('floating-music-player');
+            if (!floatingPlayer) return;
+            if (window.currentActiveMusicId) {
+                floatingPlayer.style.display = 'block';
+                const activeMusic = state.focusMusic && state.focusMusic.find(m => m.id === window.currentActiveMusicId);
+                const titleEl = document.getElementById('floating-music-title-text');
+                if (titleEl && activeMusic) titleEl.textContent = '▶️ ' + activeMusic.title;
+            } else {
+                floatingPlayer.style.display = 'none';
+            }
+        }
+
+        function toggleFloatingPlayerSize() {
+            const container = document.getElementById('floating-music-iframe-container');
+            const btn = document.getElementById('floating-minimize-btn');
+            if (!container) return;
+            const isHidden = container.style.display === 'none';
+            container.style.display = isHidden ? 'block' : 'none';
+            if (btn) btn.textContent = isHidden ? '⬇' : '⬆';
+        }
+
+        function stopFocusMusic() {
+            window.currentActiveMusicId = null;
+            window.musicPausedByTimer = false;
+            const container = document.getElementById('floating-music-iframe-container');
+            if (container) container.innerHTML = '';
+            const floatingPlayer = document.getElementById('floating-music-player');
+            if (floatingPlayer) floatingPlayer.style.display = 'none';
+            render();
         }
 
         function playFocusMusic(id) {
             window.currentActiveMusicId = id;
+            window.musicPausedByTimer = false;
+            const activeMusic = state.focusMusic.find(m => m.id === id);
+            if (activeMusic) {
+                let embedUrl = '';
+                let isEmbeddable = false;
+                if (activeMusic.type === 'youtube') {
+                    const listMatch = activeMusic.url.match(/[?&]list=([^&]+)/);
+                    const videoMatch = activeMusic.url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
+                    if (listMatch) {
+                        embedUrl = `https://www.youtube.com/embed/videoseries?list=${listMatch[1]}&autoplay=1&enablejsapi=1`;
+                        isEmbeddable = true;
+                    } else if (videoMatch && videoMatch[1]) {
+                        embedUrl = `https://www.youtube.com/embed/${videoMatch[1]}?autoplay=1&enablejsapi=1`;
+                        isEmbeddable = true;
+                    }
+                } else if (activeMusic.type === 'spotify') {
+                    const match = activeMusic.url.match(/spotify\.com\/(track|album|playlist|artist|episode|show)\/([a-zA-Z0-9]+)/);
+                    if (match && match[1] && match[2]) {
+                        embedUrl = `https://open.spotify.com/embed/${match[1]}/${match[2]}?utm_source=generator`;
+                        isEmbeddable = true;
+                    }
+                }
+                if (isEmbeddable) {
+                    const container = document.getElementById('floating-music-iframe-container');
+                    if (container) {
+                        container.innerHTML = `<iframe id="music-iframe" src="${embedUrl}" width="100%" height="100%" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+                    }
+                    // Restore iframe container visibility in case it was minimized
+                    const iframeContainer = document.getElementById('floating-music-iframe-container');
+                    if (iframeContainer) iframeContainer.style.display = 'block';
+                    const minBtn = document.getElementById('floating-minimize-btn');
+                    if (minBtn) minBtn.textContent = '⬇';
+                }
+                updateMusicPlayerVisibility();
+            }
             render();
         }
 
         function deleteFocusMusic(id) {
             if (confirm('確定要刪除這個音樂連結嗎？')) {
                 state.focusMusic = state.focusMusic.filter(m => m.id !== id);
-                if (window.currentActiveMusicId === id) window.currentActiveMusicId = null;
+                if (window.currentActiveMusicId === id) {
+                    window.currentActiveMusicId = null;
+                    window.musicPausedByTimer = false;
+                    const container = document.getElementById('floating-music-iframe-container');
+                    if (container) container.innerHTML = '';
+                    const floatingPlayer = document.getElementById('floating-music-player');
+                    if (floatingPlayer) floatingPlayer.style.display = 'none';
+                }
                 saveState();
                 render();
             }
@@ -4134,6 +4216,19 @@
         function startTimer() {
             if (isTimerRunning) return;
             isTimerRunning = true;
+            // Resume YouTube music if it was paused by the timer
+            if (window.musicPausedByTimer && window.currentActiveMusicId) {
+                const activeMusic = state.focusMusic && state.focusMusic.find(m => m.id === window.currentActiveMusicId);
+                if (activeMusic && activeMusic.type === 'youtube') {
+                    const iframe = document.getElementById('music-iframe');
+                    if (iframe) {
+                        try {
+                            iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'playVideo', args: []}), '*');
+                        } catch(e) {}
+                    }
+                }
+                window.musicPausedByTimer = false;
+            }
             timerInterval = setInterval(() => {
                 if (timeLeft > 0) {
                     timeLeft--;
@@ -4184,6 +4279,19 @@
         function pauseTimer() {
             isTimerRunning = false;
             clearInterval(timerInterval);
+            // Pause YouTube music via postMessage when timer is paused
+            if (window.currentActiveMusicId) {
+                const activeMusic = state.focusMusic && state.focusMusic.find(m => m.id === window.currentActiveMusicId);
+                if (activeMusic && activeMusic.type === 'youtube') {
+                    const iframe = document.getElementById('music-iframe');
+                    if (iframe) {
+                        try {
+                            iframe.contentWindow.postMessage(JSON.stringify({event: 'command', func: 'pauseVideo', args: []}), '*');
+                            window.musicPausedByTimer = true;
+                        } catch(e) {}
+                    }
+                }
+            }
             saveState();
         }
 
