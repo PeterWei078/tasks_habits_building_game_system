@@ -1906,8 +1906,11 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Time Spent (min)</label>
-                        <input type="number" id="modalTimeSpent" value="0" style="width: 80px;" placeholder="Min">
+                        <label>🍅 番茄專注紀錄</label>
+                        <div id="modalPomoStats" style="padding: 7px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; font-size: 0.85rem; min-height: 36px; display: flex; align-items: center; border: 1px solid rgba(0,0,0,0.08);">
+                            ─ 尚未有番茄專注紀錄
+                        </div>
+                        <input type="hidden" id="modalTimeSpent" value="0">
                     </div>
                 </div>
 
@@ -2431,9 +2434,8 @@
                         <input type="number" id="modalGold" value="0" min="0">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Time Spent (Minutes)</label>
-                    <input type="number" id="modalTimeSpent" value="0" min="0">
+                <div class="form-group" style="display:none;">
+                    <input type="hidden" id="modalTimeSpent" value="0">
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
@@ -3352,6 +3354,11 @@
             const floatingPlayer = document.getElementById('floating-music-player');
             if (floatingPlayer) floatingPlayer.style.display = 'none';
             render();
+        }
+
+        function startFocusForTask(taskId) {
+            selectedFocusTaskId = taskId;
+            switchTab('focus');
         }
 
         function playFocusMusic(id) {
@@ -6814,6 +6821,7 @@
                 <!-- Controls Wrapper -->
                 <div class="task-actions" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; margin-left: 10px;">
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${String(state.featuredTaskId) === String(task.id) ? '1' : '0.3'}; filter: ${String(state.featuredTaskId) === String(task.id) ? 'drop-shadow(0 0 4px rgba(72,199,116,0.8))' : 'none'};" onclick="event.stopPropagation(); setFeaturedTask('${task.id}')" title="${String(state.featuredTaskId) === String(task.id) ? '取消 Featured Quest' : '設為 Featured Quest'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⭐</button>
+                    ${!task.completed ? `<button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); startFocusForTask('${task.id}')" title="開始番茄鐘專注此任務" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">🍅</button>` : ''}
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.pinned ? '1' : '0.35'}; filter: ${task.pinned ? 'drop-shadow(0 0 4px rgba(107,70,193,0.7))' : 'none'};" onclick="event.stopPropagation(); togglePinTask('${task.id}')" title="${task.pinned ? '取消置頂' : '優先置頂'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📌</button>
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.memo ? '1' : '0.4'}; text-shadow: ${task.memo ? '0 0 8px rgba(255,255,255,0.6)' : 'none'};" onclick="event.stopPropagation(); window.openTaskMemoModal('${task.id}')" title="${task.memo ? 'Edit Memo' : 'Add Memo'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📝</button>
                     ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5; font-size: 1.1rem; transition: transform 0.2s;" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Delete Task" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗑️</button>`}
@@ -6994,6 +7002,19 @@
                 document.getElementById('modalExp').value = task.rewardExp ?? 0;
                 document.getElementById('modalGold').value = task.rewardGold ?? 0;
                 document.getElementById('modalTimeSpent').value = Math.round((task.timeSpent || 0) / 60);
+                // Populate pomodoro stats display
+                const _taskPomos = (state.player.activities || []).filter(a => a.type === 'POMODORO_COMPLETE' && String(a.details?.taskId) === String(taskId));
+                const _pomoStatsEl = document.getElementById('modalPomoStats');
+                if (_pomoStatsEl) {
+                    if (_taskPomos.length > 0) {
+                        const _cnt = _taskPomos.length;
+                        const _mins = _taskPomos.reduce((s, a) => s + (a.details?.duration || 25), 0);
+                        const _icons = '🍅'.repeat(Math.min(_cnt, 10)) + (_cnt > 10 ? ` <span style="opacity:0.7;font-size:0.78rem;">+${_cnt - 10}</span>` : '');
+                        _pomoStatsEl.innerHTML = `<span style="letter-spacing:2px;">${_icons}</span>&nbsp;&nbsp;<span style="opacity:0.65;white-space:nowrap;">× ${_cnt} 個 · 共 ${typeof formatFocusTime === 'function' ? formatFocusTime(_mins) : _mins + ' 分'}</span>`;
+                    } else {
+                        _pomoStatsEl.innerHTML = '─ 尚未有番茄專注紀錄';
+                    }
+                }
                 document.getElementById('modalPinned').checked = !!task.pinned;
                 document.getElementById('modalIsAchievement').checked = !!task.isAchievement;
 
@@ -7029,6 +7050,8 @@
                 document.getElementById('modalExp').value = 0;
                 document.getElementById('modalGold').value = 0;
                 document.getElementById('modalTimeSpent').value = 0;
+                const _newPomoEl = document.getElementById('modalPomoStats');
+                if (_newPomoEl) _newPomoEl.innerHTML = '─ 新任務尚無番茄專注紀錄';
                 document.getElementById('modalPinned').checked = false;
                 document.getElementById('modalIsAchievement').checked = false;
 
