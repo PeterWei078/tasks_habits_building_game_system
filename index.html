@@ -4537,6 +4537,13 @@
                 path: '/badges/sleep_gold.webp',
                 name: '睡眠 · 金牌'
             },
+            // ── 創作 / 數位內容系列 ──
+            {
+                id: 'line_sticker_launch',
+                path: '/badges/badge_line_sticker_launch.webp',
+                name: 'LINE 貼圖首發上線',
+                match: t => /LINE.?貼圖|貼圖.?上線|sticker.?launch/i.test(t)
+            },
         ];
 
         // ── Occupation Registry ───────────────────────────────────────────
