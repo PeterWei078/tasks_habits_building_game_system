@@ -3554,36 +3554,12 @@
             topRow.appendChild(timerCard);
             topRow.appendChild(playerCard);
 
-            // --- Focus Time History Chart ---
-            const chartCard = document.createElement('div');
-            chartCard.className = 'glass glass-card';
-            chartCard.style.padding = '20px';
-
-            const chartHeader = document.createElement('div');
-            chartHeader.style.display = 'flex';
-            chartHeader.style.justifyContent = 'space-between';
-            chartHeader.style.alignItems = 'center';
-            chartHeader.style.marginBottom = '15px';
-
-            chartHeader.innerHTML = `
-                    <h3 style="margin:0;">Pomodoro Focus History</h3>
-                    <div style="display: flex; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 2px;">
-                        <button onclick="renderFocusChart('daily')" id="btn-chart-daily" class="btn-chart active" style="padding: 4px 12px; border: none; background: white; border-radius: 6px; cursor: pointer; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">Day</button>
-                        <button onclick="renderFocusChart('weekly')" id="btn-chart-weekly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Week</button>
-                        <button onclick="renderFocusChart('monthly')" id="btn-chart-monthly" class="btn-chart" style="padding: 4px 12px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.8rem; opacity: 0.7;">Month</button>
-                    </div>
-            `;
-
-            const chartBody = document.createElement('div');
-            chartBody.id = 'focus-chart-container';
-            chartBody.style.height = '150px';
-            chartBody.style.display = 'flex';
-            chartBody.style.alignItems = 'flex-end';
-            chartBody.style.gap = '8px';
-            chartBody.style.paddingTop = '20px';
-
-            chartCard.appendChild(chartHeader);
-            chartCard.appendChild(chartBody);
+            // --- Pomodoro History ---
+            const historyCard = document.createElement('div');
+            historyCard.id = 'pomo-history-card';
+            historyCard.className = 'glass glass-card';
+            historyCard.style.padding = '20px';
+            historyCard.innerHTML = renderPomoHistoryHTML('daily');
 
             // Music Gallery Row
             const musicCol = document.createElement('div');
@@ -3591,17 +3567,14 @@
             musicCol.style.padding = '20px';
             musicCol.innerHTML = renderFocusMusicGalleryHTML();
 
-            focusLayout.appendChild(topRow); // Top row: Timer & Player
-            focusLayout.appendChild(chartCard); // Chart in middle
-            focusLayout.appendChild(musicCol); // Music Gallery on bottom
+            focusLayout.appendChild(topRow);
+            focusLayout.appendChild(historyCard);
+            focusLayout.appendChild(musicCol);
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(focusLayout);
 
             updateTimerProgress();
-            
-            // Initial Render of Chart (Daily)
-            setTimeout(() => renderFocusChart('daily'), 0);
         }
 
         function renderRemindersPage() {
@@ -4270,6 +4243,18 @@
                                 showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
                             }
                         }
+                        // Record completed pomodoro session
+                        const focusedTask = selectedFocusTaskId ? state.tasks.find(t => t.id == selectedFocusTaskId) : null;
+                        if (!state.player.activities) state.player.activities = [];
+                        state.player.activities.push({
+                            type: 'POMODORO_COMPLETE',
+                            timestamp: Date.now(),
+                            details: {
+                                duration: state.player.timerSettings.pomodoro,
+                                taskId: selectedFocusTaskId || null,
+                                taskTitle: focusedTask ? focusedTask.title : '一般專注'
+                            }
+                        });
                         saveState();
                     }
                 }
@@ -5310,107 +5295,159 @@
 
 
         // --- Focus Chart Logic ---
-        function renderFocusChart(mode) {
-            const container = document.getElementById('focus-chart-container');
-            if (!container) return;
-
-            // Update Buttons
-            document.querySelectorAll('.btn-chart').forEach(btn => {
-                const isActive = btn.id === `btn - chart - ${mode} `;
-                btn.style.background = isActive ? 'white' : 'transparent';
-                btn.style.opacity = isActive ? '1' : '0.7';
-                btn.style.boxShadow = isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
-                btn.classList.toggle('active', isActive);
-            });
-
-            // Get Data
-            const data = getFocusData(mode);
-            const maxVal = Math.max(...data.map(d => d.value), 1); // Avoid div by zero
-
-            // Render Bars
-            container.innerHTML = data.map(d => {
-                const heightPercent = (d.value / maxVal) * 100;
-                const displayVal = d.value >= 60 ? (d.value / 60).toFixed(1) + 'h' : d.value + 'm';
-                const color = d.value > 0 ? 'var(--accent-color)' : 'rgba(0,0,0,0.05)';
-
-                return `
-                <div style = "flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; position: relative; group">
-                        <div style="flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center;">
-                             <div class="chart-bar" style="width: 80%; background: ${color}; height: ${heightPercent}%; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.3s; position: relative;" title="${displayVal}">
-                                <div class="tooltip" style="position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #2D3748; color: white; padding: 4px 6px; border-radius: 4px; font-size: 0.7rem; pointer-events: none; opacity: 0; transition: opacity 0.2s; white-space: nowrap; z-index: 10; margin-bottom: 5px;">${displayVal}</div>
-                                <style> .chart-bar:hover .tooltip { opacity: 1; } </style>
-                             </div>
-                        </div>
-                        <div style="font-size: 0.7rem; margin-top: 6px; opacity: 0.6;">${d.label}</div>
-                    </div>
-                `;
-            }).join('');
+        function switchPomoHistoryMode(mode) {
+            const card = document.getElementById('pomo-history-card');
+            if (card) card.innerHTML = renderPomoHistoryHTML(mode);
         }
 
-        function getFocusData(mode) {
-            // Aggregate from state.player.activities
-            // Filter only TASK_COMPLETE with timeSpent
-            const activities = (state.player.activities || []).filter(a => a.type === 'TASK_COMPLETE' && a.details && a.details.timeSpent);
+        function renderPomoHistoryHTML(mode) {
+            const data = getPomoData(mode);
+            if (mode === 'daily') return renderPomoHistoryDaily(data);
+            return renderPomoHistoryChart(data, mode);
+        }
 
+        function getPomoData(mode) {
+            const activities = (state.player.activities || []).filter(a => a.type === 'POMODORO_COMPLETE');
             const now = new Date();
             const data = [];
 
             if (mode === 'daily') {
-                // Last 7 Days
                 for (let i = 6; i >= 0; i--) {
-                    const d = new Date();
+                    const d = new Date(now);
                     d.setDate(now.getDate() - i);
-                    const dateStr = d.toLocaleDateString();
-                    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }); // Mon, Tue
-
-                    // Sum duration (seconds -> minutes)
-                    const totalSec = activities
-                        .filter(a => new Date(a.timestamp).toLocaleDateString() === dateStr)
-                        .reduce((sum, a) => sum + (a.details.timeSpent || 0), 0);
-
-                    data.push({ label: i === 0 ? 'Today' : dayName, value: Math.round(totalSec / 60) });
+                    d.setHours(0, 0, 0, 0);
+                    const nextDay = new Date(d);
+                    nextDay.setDate(d.getDate() + 1);
+                    const acts = activities.filter(a => { const t = new Date(a.timestamp); return t >= d && t < nextDay; });
+                    const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+                    const label = i === 0 ? '今天' : `週${dayNames[d.getDay()]}`;
+                    data.push({ label, pomos: acts.length, minutes: acts.reduce((s, a) => s + (a.details?.duration || 25), 0) });
                 }
             } else if (mode === 'weekly') {
-                // Last 8 Weeks
                 for (let i = 7; i >= 0; i--) {
-                    const startOfWeek = new Date(now);
-                    startOfWeek.setDate(now.getDate() - (i * 7) - now.getDay()); // Start of that week (Sun)
-                    startOfWeek.setHours(0, 0, 0, 0);
-
-                    const endOfWeek = new Date(startOfWeek);
-                    endOfWeek.setDate(startOfWeek.getDate() + 6);
-                    endOfWeek.setHours(23, 59, 59, 999);
-
-                    const totalSec = activities
-                        .filter(a => {
-                            const t = new Date(a.timestamp);
-                            return t >= startOfWeek && t <= endOfWeek;
-                        })
-                        .reduce((sum, a) => sum + (a.details.timeSpent || 0), 0);
-
-                    // Label: "W2" or date
-                    const label = i === 0 ? 'This Week' : `${startOfWeek.getMonth() + 1}/${startOfWeek.getDate()}`;
-                    data.push({ label, value: Math.round(totalSec / 60) });
+                    const start = new Date(now);
+                    start.setDate(now.getDate() - (i * 7) - now.getDay());
+                    start.setHours(0, 0, 0, 0);
+                    const end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    end.setHours(23, 59, 59, 999);
+                    const acts = activities.filter(a => { const t = new Date(a.timestamp); return t >= start && t <= end; });
+                    const label = i === 0 ? '本週' : `${start.getMonth()+1}/${start.getDate()}`;
+                    data.push({ label, pomos: acts.length, minutes: acts.reduce((s, a) => s + (a.details?.duration || 25), 0) });
                 }
             } else if (mode === 'monthly') {
-                // Last 6 Months
                 for (let i = 5; i >= 0; i--) {
                     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                    const month = d.getMonth();
-                    const year = d.getFullYear();
-
-                    const totalSec = activities
-                        .filter(a => {
-                            const t = new Date(a.timestamp);
-                            return t.getMonth() === month && t.getFullYear() === year;
-                        })
-                        .reduce((sum, a) => sum + (a.details.timeSpent || 0), 0);
-
-                    const label = d.toLocaleDateString('en-US', { month: 'short' }); // Jan, Feb
-                    data.push({ label, value: Math.round(totalSec / 60) });
+                    const acts = activities.filter(a => { const t = new Date(a.timestamp); return t.getMonth() === d.getMonth() && t.getFullYear() === d.getFullYear(); });
+                    const label = d.toLocaleDateString('zh-TW', { month: 'short' });
+                    data.push({ label, pomos: acts.length, minutes: acts.reduce((s, a) => s + (a.details?.duration || 25), 0) });
                 }
             }
             return data;
+        }
+
+        function formatFocusTime(minutes) {
+            if (!minutes) return '─';
+            if (minutes < 60) return `${minutes} 分`;
+            const h = Math.floor(minutes / 60), m = minutes % 60;
+            return m > 0 ? `${h} 時 ${m} 分` : `${h} 小時`;
+        }
+
+        function renderPomoHistoryDaily(data) {
+            const totalPomos = data.reduce((s, d) => s + d.pomos, 0);
+            const totalMins = data.reduce((s, d) => s + d.minutes, 0);
+            const summaryText = totalPomos > 0
+                ? `本週完成 <strong>${totalPomos}</strong> 個番茄 &nbsp;·&nbsp; 總計專注 <strong>${formatFocusTime(totalMins)}</strong>`
+                : '本週尚未完成任何番茄鐘，快來開始第一顆 🍅 吧！';
+
+            const dayCols = data.map(d => {
+                const isToday = d.label === '今天';
+                const MAX_SHOW = 8;
+                let tomatoHTML = '';
+                if (d.pomos === 0) {
+                    tomatoHTML = `<div style="font-size:1.5rem;opacity:0.18;line-height:1;">○</div>`;
+                } else {
+                    const shown = Math.min(d.pomos, MAX_SHOW);
+                    // arrange in 2-column grid
+                    const pairs = Math.ceil(shown / 2);
+                    let rows = '';
+                    for (let r = 0; r < pairs; r++) {
+                        const left = r * 2;
+                        const right = r * 2 + 1;
+                        rows += `<div style="display:flex;gap:1px;">`;
+                        rows += `<span style="font-size:1.1rem;line-height:1.15;">🍅</span>`;
+                        rows += right < shown ? `<span style="font-size:1.1rem;line-height:1.15;">🍅</span>` : `<span style="font-size:1.1rem;line-height:1.15;opacity:0;pointer-events:none;">🍅</span>`;
+                        rows += `</div>`;
+                    }
+                    tomatoHTML = rows;
+                    if (d.pomos > MAX_SHOW) {
+                        tomatoHTML += `<div style="font-size:0.65rem;background:var(--accent-color);color:white;border-radius:8px;padding:1px 5px;margin-top:2px;">+${d.pomos - MAX_SHOW}</div>`;
+                    }
+                }
+
+                return `
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+                                padding:10px 3px 8px;border-radius:12px;
+                                background:${isToday ? 'rgba(255,255,255,0.12)' : 'transparent'};
+                                border:1px solid ${isToday ? 'rgba(255,255,255,0.25)' : 'transparent'};
+                                transition:background 0.2s;">
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;min-height:88px;justify-content:flex-end;">
+                            ${tomatoHTML}
+                        </div>
+                        <div style="font-size:0.72rem;font-weight:${isToday?'700':'400'};opacity:${isToday?'1':'0.65'};margin-top:6px;white-space:nowrap;">${d.label}</div>
+                        <div style="font-size:0.68rem;opacity:0.5;">${d.pomos > 0 ? formatFocusTime(d.minutes) : '─'}</div>
+                    </div>`;
+            }).join('');
+
+            return `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <h3 style="margin:0;font-size:1.05rem;">🍅 番茄專注紀錄</h3>
+                    <div style="display:flex;background:rgba(0,0,0,0.12);border-radius:8px;padding:2px;gap:1px;">
+                        <button onclick="switchPomoHistoryMode('daily')" style="padding:4px 12px;border:none;background:white;border-radius:6px;cursor:pointer;font-size:0.8rem;box-shadow:0 1px 3px rgba(0,0,0,0.15);color:#333;font-weight:600;">日</button>
+                        <button onclick="switchPomoHistoryMode('weekly')" style="padding:4px 12px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:0.8rem;opacity:0.65;color:inherit;">週</button>
+                        <button onclick="switchPomoHistoryMode('monthly')" style="padding:4px 12px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:0.8rem;opacity:0.65;color:inherit;">月</button>
+                    </div>
+                </div>
+                <div style="font-size:0.85rem;opacity:0.8;margin-bottom:16px;padding:10px 14px;background:rgba(255,255,255,0.07);border-radius:10px;border:1px solid rgba(255,255,255,0.1);">${summaryText}</div>
+                <div style="display:flex;gap:4px;align-items:stretch;">${dayCols}</div>`;
+        }
+
+        function renderPomoHistoryChart(data, mode) {
+            const maxPomos = Math.max(...data.map(d => d.pomos), 1);
+            const totalPomos = data.reduce((s, d) => s + d.pomos, 0);
+            const totalMins = data.reduce((s, d) => s + d.minutes, 0);
+            const periodLabel = mode === 'weekly' ? '近8週' : '近6個月';
+            const summaryText = totalPomos > 0
+                ? `${periodLabel}完成 <strong>${totalPomos}</strong> 個番茄 &nbsp;·&nbsp; 總計專注 <strong>${formatFocusTime(totalMins)}</strong>`
+                : `${periodLabel}尚未完成任何番茄鐘，快來開始第一顆 🍅 吧！`;
+
+            const bars = data.map(d => {
+                const h = Math.max((d.pomos / maxPomos) * 100, d.pomos > 0 ? 6 : 3);
+                const color = d.pomos > 0 ? 'var(--accent-color)' : 'rgba(255,255,255,0.08)';
+                return `
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;position:relative;">
+                        <div style="flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center;">
+                            <div style="width:72%;background:${color};height:${h}%;border-radius:6px 6px 0 0;min-height:4px;transition:height 0.4s ease;position:relative;">
+                                ${d.pomos > 0 ? `<div style="position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:0.65rem;white-space:nowrap;opacity:0.85;">${d.pomos}🍅</div>` : ''}
+                            </div>
+                        </div>
+                        <div style="font-size:0.68rem;margin-top:5px;opacity:0.6;white-space:nowrap;">${d.label}</div>
+                    </div>`;
+            }).join('');
+
+            const wActive = mode === 'weekly';
+            const mActive = mode === 'monthly';
+            return `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                    <h3 style="margin:0;font-size:1.05rem;">🍅 番茄專注紀錄</h3>
+                    <div style="display:flex;background:rgba(0,0,0,0.12);border-radius:8px;padding:2px;gap:1px;">
+                        <button onclick="switchPomoHistoryMode('daily')" style="padding:4px 12px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:0.8rem;opacity:0.65;color:inherit;">日</button>
+                        <button onclick="switchPomoHistoryMode('weekly')" style="padding:4px 12px;border:none;background:${wActive?'white':'transparent'};border-radius:6px;cursor:pointer;font-size:0.8rem;${wActive?'box-shadow:0 1px 3px rgba(0,0,0,0.15);color:#333;font-weight:600;':'opacity:0.65;color:inherit;'}">週</button>
+                        <button onclick="switchPomoHistoryMode('monthly')" style="padding:4px 12px;border:none;background:${mActive?'white':'transparent'};border-radius:6px;cursor:pointer;font-size:0.8rem;${mActive?'box-shadow:0 1px 3px rgba(0,0,0,0.15);color:#333;font-weight:600;':'opacity:0.65;color:inherit;'}">月</button>
+                    </div>
+                </div>
+                <div style="font-size:0.85rem;opacity:0.8;margin-bottom:16px;padding:10px 14px;background:rgba(255,255,255,0.07);border-radius:10px;border:1px solid rgba(255,255,255,0.1);">${summaryText}</div>
+                <div style="display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:24px;">${bars}</div>`;
         }
 
 
