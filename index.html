@@ -1661,6 +1661,10 @@
                     <span class="nav-icon">⚔️</span>
                     <span class="nav-text">任務 (Tasks)</span>
                 </li>
+                <li class="nav-item" id="nav-habits" onclick="switchTab('habits')">
+                    <span class="nav-icon">🔄</span>
+                    <span class="nav-text">習慣 (Habits)</span>
+                </li>
                 <li class="nav-item" id="nav-reminders" onclick="switchTab('reminders')">
                     <span class="nav-icon">💥</span>
                     <span class="nav-text">提醒 (Reminders)</span>
@@ -2865,6 +2869,12 @@
             ],
             reminders: [
                 { id: 'rem_default', title: '預設提醒', content: '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。' }
+            ],
+            habits: [
+                { id: 'habit_medicine',   title: '按時服藥',           icon: '💊', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'vitality', exp: 5 }], exp: 5, gold: 2 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
+                { id: 'habit_sleep',      title: '00:00前上床睡覺',    icon: '😪', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'vitality', exp: 8 }], exp: 8, gold: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
+                { id: 'habit_exercise',   title: '有氧/核心運動20分鐘', icon: '💪', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'strength', exp: 10 }, { attribute: 'agility', exp: 5 }], exp: 10, gold: 5 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
+                { id: 'habit_hygiene',    title: '提早完成盥洗',        icon: '🛁', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'willpower', exp: 5 }], exp: 5, gold: 2 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() }
             ]
         };
 
@@ -2889,13 +2899,24 @@
             }
             if (!state.reminders) {
                 state.reminders = [
-                    { 
-                        id: 'rem_' + Date.now(), 
-                        title: '預設提醒', 
-                        content: state.focusReminder || '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。' 
+                    {
+                        id: 'rem_' + Date.now(),
+                        title: '預設提醒',
+                        content: state.focusReminder || '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。'
                     }
                 ];
             }
+            if (!state.habits) {
+                state.habits = JSON.parse(JSON.stringify(defaultState.habits));
+            }
+            // Ensure all habit fields exist (for older saves with partial habit data)
+            state.habits.forEach(h => {
+                if (!h.completions) h.completions = {};
+                if (!h.streakReward) h.streakReward = { attributes: [], exp: 0, gold: 0 };
+                if (typeof h.milestoneReached === 'undefined') h.milestoneReached = false;
+                if (typeof h.hidden === 'undefined') h.hidden = false;
+                if (typeof h.breakNotifiedDate === 'undefined') h.breakNotifiedDate = null;
+            });
             if (!state.player.timerSettings) {
                 state.player.timerSettings = defaultState.player.timerSettings;
             }
@@ -3205,6 +3226,7 @@
             console.log("Rendering Tab:", currentTab); // DEBUG
             contentDiv.innerHTML = '';
             if (currentTab === 'tasks') renderTasksPage();
+            else if (currentTab === 'habits') renderHabitsPage();
             else if (currentTab === 'status') renderStatusPage();
             else if (currentTab === 'occupation') renderOccupationPage();
             else if (currentTab === 'focus') renderFocusPage();
@@ -3676,6 +3698,547 @@
                 saveState();
             }
         };
+
+        // =====================================================
+        // --- HABITS PAGE ---
+        // =====================================================
+
+        function getTodayDateStr() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function getDateStrOffset(daysAgo) {
+            const d = new Date();
+            d.setDate(d.getDate() - daysAgo);
+            return d.toISOString().split('T')[0];
+        }
+
+        function getHabitStreak(habit) {
+            let streak = 0;
+            const today = getTodayDateStr();
+            let d = new Date();
+            if (!habit.completions[today]) {
+                d.setDate(d.getDate() - 1);
+            }
+            for (let i = 0; i < 365; i++) {
+                const ds = d.toISOString().split('T')[0];
+                if (habit.completions[ds]) {
+                    streak++;
+                    d.setDate(d.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
+        function wasHabitRewardDay(habit, dateStr) {
+            if (!habit.completions[dateStr]) return false;
+            let streak = 0;
+            const d = new Date(dateStr + 'T12:00:00');
+            for (let i = 0; i < 365; i++) {
+                const ds = d.toISOString().split('T')[0];
+                if (habit.completions[ds]) {
+                    streak++;
+                    d.setDate(d.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            return streak >= 8;
+        }
+
+        window.habitCharts = {};
+        window.habitChartScales = {};
+
+        window.setHabitChartScale = function(habitId, scale) {
+            window.habitChartScales[habitId] = scale;
+            renderHabitChart(habitId);
+            // Update toggle button styles
+            ['day','week','month'].forEach(s => {
+                const btn = document.getElementById(`habit-scale-${habitId}-${s}`);
+                if (btn) {
+                    btn.style.background = scale === s ? 'rgba(107,70,193,0.5)' : 'rgba(255,255,255,0.08)';
+                    btn.style.fontWeight = scale === s ? 'bold' : 'normal';
+                }
+            });
+        };
+
+        function renderHabitChart(habitId) {
+            const habit = state.habits.find(h => h.id === habitId);
+            if (!habit) return;
+            const scale = window.habitChartScales[habitId] || 'day';
+            const canvas = document.getElementById(`habit-chart-${habitId}`);
+            if (!canvas) return;
+
+            if (window.habitCharts[habitId]) {
+                window.habitCharts[habitId].destroy();
+                delete window.habitCharts[habitId];
+            }
+
+            let labels = [], data = [], colors = [];
+
+            if (scale === 'day') {
+                for (let i = 29; i >= 0; i--) {
+                    const ds = getDateStrOffset(i);
+                    const pd = new Date();
+                    pd.setDate(pd.getDate() - i);
+                    labels.push(`${pd.getMonth()+1}/${pd.getDate()}`);
+                    const done = habit.completions[ds] ? 1 : 0;
+                    data.push(done);
+                    if (done && wasHabitRewardDay(habit, ds)) {
+                        colors.push('rgba(251,191,36,0.9)');
+                    } else if (done) {
+                        colors.push('rgba(72,187,120,0.85)');
+                    } else {
+                        colors.push('rgba(200,200,200,0.2)');
+                    }
+                }
+            } else if (scale === 'week') {
+                for (let w = 11; w >= 0; w--) {
+                    let count = 0;
+                    for (let d2 = 0; d2 < 7; d2++) {
+                        const ds = getDateStrOffset(w * 7 + d2);
+                        if (habit.completions[ds]) count++;
+                    }
+                    const ws = new Date();
+                    ws.setDate(ws.getDate() - (w * 7 + 6));
+                    labels.push(`${ws.getMonth()+1}/${ws.getDate()}`);
+                    data.push(count);
+                    colors.push(count >= 6 ? 'rgba(251,191,36,0.9)' : count >= 4 ? 'rgba(72,187,120,0.85)' : 'rgba(99,102,241,0.55)');
+                }
+            } else {
+                for (let m = 11; m >= 0; m--) {
+                    const d3 = new Date();
+                    d3.setDate(1);
+                    d3.setMonth(d3.getMonth() - m);
+                    const yr = d3.getFullYear(), mo = d3.getMonth();
+                    let count = 0;
+                    const dim = new Date(yr, mo + 1, 0).getDate();
+                    for (let day = 1; day <= dim; day++) {
+                        const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                        if (habit.completions[ds]) count++;
+                    }
+                    labels.push(`${yr}/${String(mo+1).padStart(2,'0')}`);
+                    data.push(count);
+                    colors.push(count >= 20 ? 'rgba(251,191,36,0.9)' : count >= 12 ? 'rgba(72,187,120,0.85)' : 'rgba(99,102,241,0.55)');
+                }
+            }
+
+            window.habitCharts[habitId] = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        data,
+                        backgroundColor: colors,
+                        borderRadius: 4,
+                        barPercentage: 0.75
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => scale === 'day'
+                                    ? (ctx.raw === 1 ? '✅ 完成' : '❌ 未完成')
+                                    : `完成 ${ctx.raw} 天`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: scale === 'day' ? 1 : undefined,
+                            ticks: { stepSize: scale === 'day' ? 1 : undefined, color: 'rgba(255,255,255,0.65)', font: { size: 10 } },
+                            grid: { color: 'rgba(255,255,255,0.08)' }
+                        },
+                        x: {
+                            ticks: { color: 'rgba(255,255,255,0.65)', font: { size: 9 }, maxRotation: 45 },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderHabitsPage() {
+            contentDiv.innerHTML = '';
+            const today = getTodayDateStr();
+
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+            title.innerHTML = `
+                🔄 習慣 (Habits)
+                <button class="btn btn-primary" onclick="openHabitEditModal(null)" style="font-size:0.9rem;padding:6px 14px;">+ 新增習慣</button>
+            `;
+            contentDiv.appendChild(title);
+
+            const visibleHabits = (state.habits || []).filter(h => !h.hidden);
+
+            if (visibleHabits.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'glass glass-card';
+                empty.style.cssText = 'text-align:center;padding:60px 20px;opacity:0.7;';
+                empty.innerHTML = `<div style="font-size:3rem;margin-bottom:16px;">🌱</div><div style="font-size:1.1rem;">還沒有習慣，點擊「+ 新增習慣」開始吧！</div>`;
+                contentDiv.appendChild(empty);
+            } else {
+                const grid = document.createElement('div');
+                grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:20px;';
+
+                visibleHabits.forEach(habit => {
+                    const streak = getHabitStreak(habit);
+                    const done = !!habit.completions[today];
+                    const scale = window.habitChartScales[habit.id] || 'day';
+                    const scaleMap = { day: '日', week: '週', month: '月' };
+                    const hasReward = habit.streakReward && (habit.streakReward.exp > 0 || habit.streakReward.gold > 0 || (habit.streakReward.attributes || []).length > 0);
+
+                    const card = document.createElement('div');
+                    card.className = 'glass glass-card';
+                    card.style.padding = '20px';
+
+                    card.innerHTML = `
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                            <span style="font-size:2rem;flex-shrink:0;">${habit.icon}</span>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:1.05rem;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${habit.title}</div>
+                                ${habit.description ? `<div style="font-size:0.78rem;opacity:0.65;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${habit.description}</div>` : ''}
+                            </div>
+                            <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
+                                ${streak > 0 ? `<span style="background:${streak>=7?'rgba(251,191,36,0.25)':'rgba(72,187,120,0.2)'};border:1px solid ${streak>=7?'rgba(251,191,36,0.5)':'rgba(72,187,120,0.5)'};color:${streak>=7?'#FBBF24':'#48BB78'};padding:3px 9px;border-radius:20px;font-size:0.78rem;font-weight:bold;white-space:nowrap;">🔥 ${streak} 天</span>` : ''}
+                                <button onclick="openHabitEditModal('${habit.id}')" title="編輯" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:7px;padding:4px 8px;cursor:pointer;color:inherit;font-size:0.82rem;">✏️</button>
+                                <button onclick="toggleHabitHidden('${habit.id}')" title="隱藏" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:7px;padding:4px 8px;cursor:pointer;color:inherit;font-size:0.82rem;">👁️</button>
+                                <button onclick="deleteHabit('${habit.id}')" title="刪除" style="background:rgba(255,50,50,0.1);border:1px solid rgba(255,100,100,0.25);border-radius:7px;padding:4px 8px;cursor:pointer;color:#FF6B6B;font-size:0.82rem;">🗑️</button>
+                            </div>
+                        </div>
+
+                        <div onclick="toggleHabitCompletion('${habit.id}')" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:11px 14px;background:${done?'rgba(72,187,120,0.15)':'rgba(255,255,255,0.07)'};border-radius:10px;border:1px solid ${done?'rgba(72,187,120,0.4)':'rgba(255,255,255,0.15)'};cursor:pointer;transition:all 0.2s;user-select:none;">
+                            <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${done?'#48BB78':'rgba(255,255,255,0.35)'};background:${done?'#48BB78':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;">
+                                ${done ? '<span style="color:white;font-size:0.85rem;line-height:1;">✓</span>' : ''}
+                            </div>
+                            <span style="font-size:0.92rem;${done?'text-decoration:line-through;opacity:0.65;':''}">今日完成</span>
+                            <span style="margin-left:auto;font-size:0.76rem;opacity:0.5;">${today}</span>
+                        </div>
+
+                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+                            ${['day','week','month'].map(s => `<button id="habit-scale-${habit.id}-${s}" onclick="setHabitChartScale('${habit.id}','${s}')" style="padding:3px 11px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;color:inherit;font-size:0.78rem;background:${scale===s?'rgba(107,70,193,0.5)':'rgba(255,255,255,0.07)'};font-weight:${scale===s?'bold':'normal'};">${scaleMap[s]}</button>`).join('')}
+                            ${scale === 'day' ? `<span style="margin-left:auto;font-size:0.72rem;opacity:0.55;"><span style="color:#FBBF24;">■</span> 達獎日&nbsp;<span style="color:#48BB78;">■</span> 完成</span>` : ''}
+                        </div>
+
+                        <div style="height:130px;position:relative;">
+                            <canvas id="habit-chart-${habit.id}"></canvas>
+                        </div>
+
+                        ${hasReward ? `
+                        <div style="margin-top:11px;padding:8px 12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.22);border-radius:8px;font-size:0.78rem;opacity:0.85;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                            <span style="opacity:0.75;">🏅 7日連續後每日獎勵：</span>
+                            ${habit.streakReward.exp > 0 ? `<span style="color:#FBBF24;font-weight:bold;">+${habit.streakReward.exp} EXP</span>` : ''}
+                            ${habit.streakReward.gold > 0 ? `<span style="color:#F6AD55;font-weight:bold;">+${habit.streakReward.gold} 💰</span>` : ''}
+                            ${(habit.streakReward.attributes||[]).filter(a=>a.exp>0).map(a=>`<span style="opacity:0.75;">+${a.exp} ${({strength:'力量',intelligence:'智力',agility:'敏捷',vitality:'活力',charisma:'魅力',dexterity:'靈巧',luck:'幸運',willpower:'意志'})[a.attribute]||a.attribute}</span>`).join('')}
+                        </div>` : ''}
+                    `;
+                    grid.appendChild(card);
+                });
+                contentDiv.appendChild(grid);
+            }
+
+            const hiddenHabits = (state.habits || []).filter(h => h.hidden);
+            if (hiddenHabits.length > 0) {
+                const btn = document.createElement('div');
+                btn.style.cssText = 'margin-top:14px;text-align:center;';
+                btn.innerHTML = `<button onclick="showHiddenHabitsPanel()" style="background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.28);border-radius:10px;padding:8px 20px;cursor:pointer;color:inherit;font-size:0.83rem;opacity:0.65;">👁️‍🗨️ ${hiddenHabits.length} 個已隱藏習慣</button>`;
+                contentDiv.appendChild(btn);
+            }
+
+            requestAnimationFrame(() => {
+                visibleHabits.forEach(h => renderHabitChart(h.id));
+            });
+        }
+
+        window.showHiddenHabitsPanel = function() {
+            const hidden = (state.habits || []).filter(h => h.hidden);
+            if (hidden.length === 0) return;
+            const existing = document.getElementById('hiddenHabitsOverlay');
+            if (existing) existing.remove();
+            const overlay = document.createElement('div');
+            overlay.id = 'hiddenHabitsOverlay';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+            overlay.innerHTML = `
+                <div class="glass" style="border-radius:16px;padding:24px;max-width:440px;width:90%;max-height:80vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <h3 style="margin:0;font-size:1.1rem;">已隱藏的習慣</h3>
+                        <button onclick="document.getElementById('hiddenHabitsOverlay').remove()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:inherit;opacity:0.7;">✕</button>
+                    </div>
+                    ${hidden.map(h => `
+                        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,255,255,0.08);border-radius:8px;margin-bottom:8px;">
+                            <span style="font-size:1.4rem;">${h.icon}</span>
+                            <span style="flex:1;font-size:0.9rem;">${h.title}</span>
+                            <button onclick="toggleHabitHidden('${h.id}');document.getElementById('hiddenHabitsOverlay').remove();" style="background:rgba(72,187,120,0.2);border:1px solid rgba(72,187,120,0.4);border-radius:6px;padding:4px 10px;cursor:pointer;color:#48BB78;font-size:0.8rem;">顯示</button>
+                            <button onclick="deleteHabit('${h.id}');document.getElementById('hiddenHabitsOverlay').remove();" style="background:rgba(255,50,50,0.1);border:1px solid rgba(255,100,100,0.3);border-radius:6px;padding:4px 8px;cursor:pointer;color:#FF6B6B;font-size:0.8rem;">刪除</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        };
+
+        window.toggleHabitCompletion = function(habitId) {
+            const habit = state.habits.find(h => h.id === habitId);
+            if (!habit) return;
+            const today = getTodayDateStr();
+            const wasCompleted = !!habit.completions[today];
+
+            if (wasCompleted) {
+                delete habit.completions[today];
+                saveState();
+                renderHabitsPage();
+                return;
+            }
+
+            habit.completions[today] = true;
+            const streak = getHabitStreak(habit);
+
+            if (streak === 7 && !habit.milestoneReached) {
+                habit.milestoneReached = true;
+                saveState();
+                renderHabitsPage();
+                setTimeout(() => showHabitMilestoneNotification(habit), 300);
+                return;
+            }
+
+            if (streak >= 8 && habit.milestoneReached) {
+                const reward = habit.streakReward || {};
+                if (reward.exp > 0) state.player.exp += reward.exp;
+                if (reward.gold > 0) state.player.gold += reward.gold;
+                if (reward.attributes && reward.attributes.length > 0) {
+                    reward.attributes.forEach(a => {
+                        const attr = state.player.attributes[a.attribute];
+                        if (!attr) return;
+                        attr.exp += a.exp;
+                        while (attr.exp >= 50 + attr.level * 50) {
+                            attr.exp -= (50 + attr.level * 50);
+                            attr.level++;
+                        }
+                    });
+                }
+                // Check player level up
+                const expNeeded = state.player.level * 100;
+                if (state.player.exp >= expNeeded) {
+                    state.player.level++;
+                    state.player.exp -= expNeeded;
+                }
+                const rewardParts = [];
+                if (reward.exp > 0) rewardParts.push(`+${reward.exp} EXP`);
+                if (reward.gold > 0) rewardParts.push(`+${reward.gold} 💰`);
+                if (rewardParts.length > 0) showToast(`🏅 習慣連續獎勵！`, `${habit.icon} ${rewardParts.join(', ')}（連續${streak}日）`);
+            }
+
+            saveState();
+            renderHabitsPage();
+        };
+
+        window.toggleHabitHidden = function(habitId) {
+            const habit = state.habits.find(h => h.id === habitId);
+            if (!habit) return;
+            habit.hidden = !habit.hidden;
+            saveState();
+            renderHabitsPage();
+        };
+
+        window.deleteHabit = function(habitId) {
+            if (!confirm('確定要刪除這個習慣嗎？所有紀錄將一併清除。')) return;
+            state.habits = state.habits.filter(h => h.id !== habitId);
+            saveState();
+            renderHabitsPage();
+        };
+
+        // --- Habit Edit Modal ---
+        let editingHabitId = null;
+
+        window.openHabitEditModal = function(habitId) {
+            editingHabitId = habitId;
+            const modal = document.getElementById('habitEditModal');
+            const habit = habitId ? state.habits.find(h => h.id === habitId) : null;
+
+            document.getElementById('habitEditTitle').value      = habit ? habit.title       : '';
+            document.getElementById('habitEditIcon').value       = habit ? habit.icon        : '⭐';
+            document.getElementById('habitEditDescription').value= habit ? (habit.description||'') : '';
+            document.getElementById('habitEditRewardExp').value  = habit ? (habit.streakReward?.exp||0)  : 0;
+            document.getElementById('habitEditRewardGold').value = habit ? (habit.streakReward?.gold||0) : 0;
+            renderHabitAttrRewardRows(habit ? (habit.streakReward?.attributes||[]) : []);
+
+            document.getElementById('habitEditModalTitle').textContent = habit ? `✏️ 編輯習慣` : `＋ 新增習慣`;
+            modal.classList.add('show');
+        };
+
+        window.closeHabitEditModal = function() {
+            document.getElementById('habitEditModal').classList.remove('show');
+            editingHabitId = null;
+        };
+
+        function renderHabitAttrRewardRows(attrs) {
+            const container = document.getElementById('habitAttrRewardList');
+            const attrKeys   = ['strength','intelligence','agility','vitality','charisma','dexterity','luck','willpower'];
+            const attrLabels = { strength:'力量',intelligence:'智力',agility:'敏捷',vitality:'活力',charisma:'魅力',dexterity:'靈巧',luck:'幸運',willpower:'意志' };
+            const rows = attrs && attrs.length > 0 ? attrs : [];
+            container.innerHTML = rows.map((a, i) => `
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;" data-row="${i}">
+                    <select class="habit-attr-select" style="flex:1;padding:6px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:inherit;font-size:0.88rem;">
+                        ${attrKeys.map(k=>`<option value="${k}"${a.attribute===k?' selected':''}>${attrLabels[k]}</option>`).join('')}
+                    </select>
+                    <input type="number" class="habit-attr-exp" value="${a.exp}" min="0" max="9999" style="width:68px;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:inherit;text-align:center;" placeholder="EXP">
+                    <span style="font-size:0.78rem;opacity:0.55;">EXP</span>
+                    <button onclick="removeHabitAttrRow(${i})" style="background:rgba(255,50,50,0.12);border:1px solid rgba(255,100,100,0.3);border-radius:6px;padding:3px 8px;cursor:pointer;color:#FF6B6B;font-size:0.82rem;">✕</button>
+                </div>
+            `).join('') + `
+                <button onclick="addHabitAttrRow()" style="background:rgba(107,70,193,0.18);border:1px solid rgba(107,70,193,0.35);border-radius:7px;padding:5px 14px;cursor:pointer;color:inherit;font-size:0.82rem;margin-top:4px;">+ 新增屬性獎勵</button>
+            `;
+        }
+
+        window.addHabitAttrRow = function() {
+            const attrs = getHabitAttrRowValues();
+            attrs.push({ attribute: 'vitality', exp: 5 });
+            renderHabitAttrRewardRows(attrs);
+        };
+
+        window.removeHabitAttrRow = function(idx) {
+            const attrs = getHabitAttrRowValues();
+            attrs.splice(idx, 1);
+            renderHabitAttrRewardRows(attrs);
+        };
+
+        function getHabitAttrRowValues() {
+            const selects = document.querySelectorAll('#habitAttrRewardList .habit-attr-select');
+            const exps    = document.querySelectorAll('#habitAttrRewardList .habit-attr-exp');
+            const attrs   = [];
+            selects.forEach((sel, i) => attrs.push({ attribute: sel.value, exp: parseInt(exps[i].value) || 0 }));
+            return attrs;
+        }
+
+        window.saveHabitEdit = function() {
+            const title = document.getElementById('habitEditTitle').value.trim();
+            if (!title) { alert('請輸入習慣名稱'); return; }
+            const icon        = document.getElementById('habitEditIcon').value.trim() || '⭐';
+            const description = document.getElementById('habitEditDescription').value.trim();
+            const exp         = parseInt(document.getElementById('habitEditRewardExp').value)  || 0;
+            const gold        = parseInt(document.getElementById('habitEditRewardGold').value) || 0;
+            const attributes  = getHabitAttrRowValues().filter(a => a.exp > 0);
+
+            if (editingHabitId) {
+                const habit = state.habits.find(h => h.id === editingHabitId);
+                if (habit) {
+                    habit.title = title; habit.icon = icon; habit.description = description;
+                    habit.streakReward = { attributes, exp, gold };
+                }
+            } else {
+                state.habits.push({
+                    id: 'habit_' + Date.now(), title, icon, description,
+                    hidden: false, completions: {},
+                    streakReward: { attributes, exp, gold },
+                    milestoneReached: false, breakNotifiedDate: null,
+                    createdAt: new Date().toISOString()
+                });
+            }
+            saveState();
+            closeHabitEditModal();
+            renderHabitsPage();
+        };
+
+        // --- Habit Notifications ---
+        function playHabitCelebrationSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                [523,659,784,1047].forEach((freq, i) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.value = freq; osc.type = 'sine';
+                    const t = ctx.currentTime + i * 0.18;
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.3, t + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+                    osc.start(t); osc.stop(t + 0.6);
+                });
+            } catch(e) {}
+        }
+
+        function playHabitBreakSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                [523,494,440,392].forEach((freq, i) => {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.value = freq; osc.type = 'sine';
+                    const t = ctx.currentTime + i * 0.28;
+                    gain.gain.setValueAtTime(0, t);
+                    gain.gain.linearRampToValueAtTime(0.22, t + 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.65);
+                    osc.start(t); osc.stop(t + 0.7);
+                });
+            } catch(e) {}
+        }
+
+        function showHabitMilestoneNotification(habit) {
+            playHabitCelebrationSound();
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+            const hasReward = habit.streakReward && (habit.streakReward.exp > 0 || habit.streakReward.gold > 0);
+            overlay.innerHTML = `
+                <div style="background:linear-gradient(135deg,rgba(107,70,193,0.97),rgba(49,130,206,0.97));border-radius:24px;padding:40px 36px;text-align:center;max-width:380px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.25);">
+                    <div style="font-size:3.5rem;margin-bottom:10px;">${habit.icon}</div>
+                    <div style="font-size:2.2rem;margin-bottom:10px;">🎉✨🎊</div>
+                    <h2 style="color:#fff;margin:0 0 10px;font-size:1.6rem;text-shadow:0 2px 8px rgba(0,0,0,0.3);">準備開始領獎呦！</h2>
+                    <p style="color:rgba(255,255,255,0.88);margin:0 0 6px;font-size:0.95rem;">「${habit.title}」已連續完成 <strong>7 天</strong>！</p>
+                    <p style="color:rgba(251,191,36,0.95);margin:0 0 22px;font-size:0.88rem;">🌟 從明天起，每日完成即可獲得獎勵！</p>
+                    ${hasReward ? `<div style="background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 18px;color:#fff;font-size:0.9rem;margin-bottom:20px;font-weight:bold;">
+                        ${habit.streakReward.exp > 0 ? `+${habit.streakReward.exp} EXP` : ''}
+                        ${habit.streakReward.gold > 0 ? ` &nbsp;+${habit.streakReward.gold} 💰` : ''}
+                    </div>` : ''}
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.45);border-radius:14px;padding:10px 32px;color:#fff;cursor:pointer;font-size:1rem;font-weight:bold;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.22)'">太棒了！ 🎯</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 10000);
+        }
+
+        function showHabitBreakNotification(habitNames) {
+            playHabitBreakSound();
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.48);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px);';
+            overlay.innerHTML = `
+                <div style="background:linear-gradient(135deg,rgba(74,60,90,0.97),rgba(50,50,72,0.97));border-radius:22px;padding:36px 32px;text-align:center;max-width:360px;width:90%;box-shadow:0 18px 52px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.12);">
+                    <div style="font-size:3rem;margin-bottom:12px;">😔</div>
+                    <h3 style="color:#fff;margin:0 0 10px;font-size:1.3rem;">可惜，下次再努力！</h3>
+                    <p style="color:rgba(255,200,120,0.9);margin:0 0 8px;font-size:0.9rem;font-weight:bold;">${habitNames}</p>
+                    <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin:0 0 22px;">連續天數已重置，再堅持 7 天就能重新解鎖每日獎勵！</p>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.28);border-radius:12px;padding:9px 26px;color:#fff;cursor:pointer;font-size:0.95rem;" onmouseover="this.style.background='rgba(255,255,255,0.22)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">繼續加油！ 💪</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 12000);
+        }
+
+        function checkHabitBreaks() {
+            if (!state.habits || state.habits.length === 0) return;
+            const today     = getTodayDateStr();
+            const yesterday = getDateStrOffset(1);
+            const broken    = [];
+            state.habits.forEach(habit => {
+                if (habit.hidden || !habit.milestoneReached) return;
+                if (!habit.completions[yesterday] && habit.breakNotifiedDate !== today) {
+                    habit.milestoneReached   = false;
+                    habit.breakNotifiedDate  = today;
+                    broken.push(`${habit.icon} ${habit.title}`);
+                }
+            });
+            if (broken.length > 0) {
+                saveState();
+                setTimeout(() => showHabitBreakNotification(broken.join('、')), 1800);
+            }
+        }
 
         function renderTimelineHTML() {
             const tlTasks = state.tasks.filter(t => t.startDate && t.dueDate && new Date(t.startDate) <= new Date(t.dueDate));
@@ -11162,9 +11725,61 @@
 
         // --- Init ---
         console.log("System Version: 1.5 - Shop & Inventory Live");
+        checkHabitBreaks();
         render();
 
     </script>
+
+    <!-- Habit Edit Modal -->
+    <div id="habitEditModal" class="modal-backdrop">
+        <div class="modal-content" style="max-width:540px;padding:28px;color:var(--text-primary);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;">
+                <h2 id="habitEditModalTitle" style="margin:0;font-size:1.35rem;">＋ 新增習慣</h2>
+                <button onclick="closeHabitEditModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;opacity:0.65;color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.65'">✕</button>
+            </div>
+
+            <!-- Title & Icon -->
+            <div style="display:flex;gap:10px;margin-bottom:14px;">
+                <div style="flex:1;">
+                    <label style="font-size:0.82rem;opacity:0.7;display:block;margin-bottom:5px;">習慣名稱</label>
+                    <input id="habitEditTitle" type="text" placeholder="例：每天喝水 2000ml" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.15);font-size:0.95rem;background:rgba(255,255,255,0.7);color:#333;">
+                </div>
+                <div style="width:80px;">
+                    <label style="font-size:0.82rem;opacity:0.7;display:block;margin-bottom:5px;">圖示 (Emoji)</label>
+                    <input id="habitEditIcon" type="text" placeholder="⭐" maxlength="4" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.15);font-size:1.4rem;text-align:center;background:rgba(255,255,255,0.7);color:#333;">
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div style="margin-bottom:18px;">
+                <label style="font-size:0.82rem;opacity:0.7;display:block;margin-bottom:5px;">備注說明（選填）</label>
+                <textarea id="habitEditDescription" placeholder="補充說明..." rows="2" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.15);font-size:0.88rem;resize:vertical;background:rgba(255,255,255,0.7);color:#333;"></textarea>
+            </div>
+
+            <!-- Streak Reward Section -->
+            <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.22);border-radius:12px;padding:16px;margin-bottom:18px;">
+                <div style="font-size:0.88rem;font-weight:bold;margin-bottom:12px;opacity:0.9;">🏅 連續 7 日後每日獎勵（第 8 日起生效）</div>
+                <div style="display:flex;gap:12px;margin-bottom:12px;">
+                    <div style="flex:1;">
+                        <label style="font-size:0.78rem;opacity:0.65;display:block;margin-bottom:4px;">EXP 獎勵</label>
+                        <input id="habitEditRewardExp" type="number" value="0" min="0" max="9999" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.7);color:#333;font-size:0.9rem;text-align:center;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.78rem;opacity:0.65;display:block;margin-bottom:4px;">GOLD 獎勵 💰</label>
+                        <input id="habitEditRewardGold" type="number" value="0" min="0" max="9999" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.7);color:#333;font-size:0.9rem;text-align:center;">
+                    </div>
+                </div>
+                <div style="font-size:0.78rem;opacity:0.65;margin-bottom:8px;">屬性 EXP 獎勵（每次獲獎同時分配）</div>
+                <div id="habitAttrRewardList"></div>
+            </div>
+
+            <!-- Save / Cancel -->
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+                <button onclick="closeHabitEditModal()" class="btn" style="padding:9px 20px;">取消</button>
+                <button onclick="saveHabitEdit()" class="btn btn-primary" style="padding:9px 24px;">儲存習慣</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Task Memo Modal -->
     <div id="taskMemoModal" class="modal-backdrop">
