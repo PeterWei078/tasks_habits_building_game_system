@@ -3764,6 +3764,14 @@
             });
         };
 
+        // Deterministic accent color per habit (stable across reorders)
+        function getHabitAccent(habitId) {
+            const palette = ['#6B46C1','#D53F8C','#2B6CB0','#276749','#C05621','#2C7A7B','#744210','#553C9A'];
+            let hash = 0;
+            for (let i = 0; i < habitId.length; i++) hash = (hash * 31 + habitId.charCodeAt(i)) & 0xffffffff;
+            return palette[Math.abs(hash) % palette.length];
+        }
+
         function renderHabitChart(habitId) {
             const habit = state.habits.find(h => h.id === habitId);
             if (!habit) return;
@@ -3776,89 +3784,73 @@
                 delete window.habitCharts[habitId];
             }
 
+            const accent = getHabitAccent(habitId);
             let labels = [], data = [], colors = [];
 
             if (scale === 'day') {
                 for (let i = 29; i >= 0; i--) {
                     const ds = getDateStrOffset(i);
-                    const pd = new Date();
-                    pd.setDate(pd.getDate() - i);
+                    const pd = new Date(); pd.setDate(pd.getDate() - i);
                     labels.push(`${pd.getMonth()+1}/${pd.getDate()}`);
                     const done = habit.completions[ds] ? 1 : 0;
                     data.push(done);
                     if (done && wasHabitRewardDay(habit, ds)) {
-                        colors.push('rgba(251,191,36,0.9)');
+                        colors.push('rgba(217,119,6,0.85)');   // amber-600 for reward days
                     } else if (done) {
-                        colors.push('rgba(72,187,120,0.85)');
+                        colors.push(accent + 'cc');             // habit accent
                     } else {
-                        colors.push('rgba(200,200,200,0.2)');
+                        colors.push('rgba(180,180,200,0.3)');
                     }
                 }
             } else if (scale === 'week') {
                 for (let w = 11; w >= 0; w--) {
                     let count = 0;
-                    for (let d2 = 0; d2 < 7; d2++) {
-                        const ds = getDateStrOffset(w * 7 + d2);
-                        if (habit.completions[ds]) count++;
-                    }
-                    const ws = new Date();
-                    ws.setDate(ws.getDate() - (w * 7 + 6));
+                    for (let d2 = 0; d2 < 7; d2++) { if (habit.completions[getDateStrOffset(w*7+d2)]) count++; }
+                    const ws = new Date(); ws.setDate(ws.getDate() - (w*7+6));
                     labels.push(`${ws.getMonth()+1}/${ws.getDate()}`);
                     data.push(count);
-                    colors.push(count >= 6 ? 'rgba(251,191,36,0.9)' : count >= 4 ? 'rgba(72,187,120,0.85)' : 'rgba(99,102,241,0.55)');
+                    colors.push(count >= 6 ? 'rgba(217,119,6,0.85)' : count >= 3 ? accent + 'cc' : 'rgba(180,180,200,0.35)');
                 }
             } else {
                 for (let m = 11; m >= 0; m--) {
-                    const d3 = new Date();
-                    d3.setDate(1);
-                    d3.setMonth(d3.getMonth() - m);
+                    const d3 = new Date(); d3.setDate(1); d3.setMonth(d3.getMonth() - m);
                     const yr = d3.getFullYear(), mo = d3.getMonth();
                     let count = 0;
-                    const dim = new Date(yr, mo + 1, 0).getDate();
+                    const dim = new Date(yr, mo+1, 0).getDate();
                     for (let day = 1; day <= dim; day++) {
-                        const ds = `${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                        if (habit.completions[ds]) count++;
+                        if (habit.completions[`${yr}-${String(mo+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`]) count++;
                     }
                     labels.push(`${yr}/${String(mo+1).padStart(2,'0')}`);
                     data.push(count);
-                    colors.push(count >= 20 ? 'rgba(251,191,36,0.9)' : count >= 12 ? 'rgba(72,187,120,0.85)' : 'rgba(99,102,241,0.55)');
+                    colors.push(count >= 20 ? 'rgba(217,119,6,0.85)' : count >= 10 ? accent + 'cc' : 'rgba(180,180,200,0.35)');
                 }
             }
 
             window.habitCharts[habitId] = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
-                data: {
-                    labels,
-                    datasets: [{
-                        data,
-                        backgroundColor: colors,
-                        borderRadius: 4,
-                        barPercentage: 0.75
-                    }]
-                },
+                data: { labels, datasets: [{ data, backgroundColor: colors, borderRadius: 5, barPercentage: 0.72 }] },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false },
                         tooltip: {
-                            callbacks: {
-                                label: ctx => scale === 'day'
-                                    ? (ctx.raw === 1 ? '✅ 完成' : '❌ 未完成')
-                                    : `完成 ${ctx.raw} 天`
-                            }
+                            backgroundColor: 'rgba(30,20,60,0.92)',
+                            titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)',
+                            callbacks: { label: ctx => scale === 'day' ? (ctx.raw === 1 ? '✅ 完成' : '—') : `完成 ${ctx.raw} 天` }
                         }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
                             max: scale === 'day' ? 1 : undefined,
-                            ticks: { stepSize: scale === 'day' ? 1 : undefined, color: 'rgba(255,255,255,0.65)', font: { size: 10 } },
-                            grid: { color: 'rgba(255,255,255,0.08)' }
+                            ticks: { stepSize: scale === 'day' ? 1 : undefined, color: 'rgba(50,30,80,0.65)', font: { size: 10 } },
+                            grid: { color: 'rgba(100,80,160,0.1)' },
+                            border: { display: false }
                         },
                         x: {
-                            ticks: { color: 'rgba(255,255,255,0.65)', font: { size: 9 }, maxRotation: 45 },
-                            grid: { display: false }
+                            ticks: { color: 'rgba(50,30,80,0.6)', font: { size: 9 }, maxRotation: 45 },
+                            grid: { display: false },
+                            border: { display: false }
                         }
                     }
                 }
@@ -3868,95 +3860,177 @@
         function renderHabitsPage() {
             contentDiv.innerHTML = '';
             const today = getTodayDateStr();
+            const allHabits     = state.habits || [];
+            const visibleHabits = allHabits.filter(h => !h.hidden);
+            const doneToday     = visibleHabits.filter(h => !!h.completions[today]).length;
+            const totalVisible  = visibleHabits.length;
+            const pct           = totalVisible > 0 ? Math.round(doneToday / totalVisible * 100) : 0;
 
-            const title = document.createElement('h2');
-            title.className = 'page-title';
-            title.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
-            title.innerHTML = `
-                🔄 習慣 (Habits)
-                <button class="btn btn-primary" onclick="openHabitEditModal(null)" style="font-size:0.9rem;padding:6px 14px;">+ 新增習慣</button>
+            // ── Page Header ──────────────────────────────────────────
+            const header = document.createElement('div');
+            header.style.cssText = 'margin-bottom:24px;';
+            header.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+                    <div>
+                        <h2 class="page-title" style="margin:0 0 4px;">🔄 習慣 (Habits)</h2>
+                        <p style="margin:0;font-size:0.88rem;color:rgba(60,40,120,0.7);font-weight:500;">養成好習慣，每天進步一點點</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="openHabitEditModal(null)" style="font-size:0.88rem;padding:8px 18px;flex-shrink:0;">+ 新增習慣</button>
+                </div>
+
+                ${totalVisible > 0 ? `
+                <div style="background:rgba(255,255,255,0.55);border:1px solid rgba(107,70,193,0.2);border-radius:16px;padding:16px 20px;backdrop-filter:blur(8px);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                        <span style="font-size:0.9rem;font-weight:700;color:#3B2074;">📅 今日進度</span>
+                        <span style="font-size:0.95rem;font-weight:800;color:${pct===100?'#276749':pct>=50?'#6B46C1':'#718096'};">${doneToday} / ${totalVisible} 完成 &nbsp;·&nbsp; ${pct}%</span>
+                    </div>
+                    <div style="height:10px;border-radius:99px;background:rgba(107,70,193,0.12);overflow:hidden;">
+                        <div style="height:100%;width:${pct}%;background:${pct===100?'linear-gradient(90deg,#276749,#48BB78)':'linear-gradient(90deg,#6B46C1,#9F7AEA)'};border-radius:99px;transition:width 0.5s ease;"></div>
+                    </div>
+                    ${pct === 100 ? `<div style="margin-top:8px;font-size:0.82rem;color:#276749;font-weight:600;text-align:center;">🎉 今天所有習慣都完成了！超棒！</div>` : ''}
+                </div>` : ''}
             `;
-            contentDiv.appendChild(title);
+            contentDiv.appendChild(header);
 
-            const visibleHabits = (state.habits || []).filter(h => !h.hidden);
-
+            // ── Empty State ──────────────────────────────────────────
             if (visibleHabits.length === 0) {
                 const empty = document.createElement('div');
-                empty.className = 'glass glass-card';
-                empty.style.cssText = 'text-align:center;padding:60px 20px;opacity:0.7;';
-                empty.innerHTML = `<div style="font-size:3rem;margin-bottom:16px;">🌱</div><div style="font-size:1.1rem;">還沒有習慣，點擊「+ 新增習慣」開始吧！</div>`;
+                empty.style.cssText = 'background:rgba(255,255,255,0.55);border:1px solid rgba(107,70,193,0.15);border-radius:20px;text-align:center;padding:60px 20px;backdrop-filter:blur(8px);';
+                empty.innerHTML = `
+                    <div style="font-size:3.5rem;margin-bottom:14px;">🌱</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#3B2074;margin-bottom:8px;">還沒有習慣</div>
+                    <div style="font-size:0.88rem;color:rgba(60,40,120,0.6);">點擊右上角「+ 新增習慣」開始吧！</div>
+                `;
                 contentDiv.appendChild(empty);
             } else {
+                // ── Habit Grid ───────────────────────────────────────
                 const grid = document.createElement('div');
-                grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(460px,1fr));gap:20px;';
+                grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:18px;';
+
+                const ATTR_LABELS = { strength:'力量', intelligence:'智力', agility:'敏捷', vitality:'活力', charisma:'魅力', dexterity:'靈巧', luck:'幸運', willpower:'意志' };
 
                 visibleHabits.forEach(habit => {
-                    const streak = getHabitStreak(habit);
-                    const done = !!habit.completions[today];
-                    const scale = window.habitChartScales[habit.id] || 'day';
-                    const scaleMap = { day: '日', week: '週', month: '月' };
-                    const hasReward = habit.streakReward && (habit.streakReward.exp > 0 || habit.streakReward.gold > 0 || (habit.streakReward.attributes || []).length > 0);
+                    const streak    = getHabitStreak(habit);
+                    const done      = !!habit.completions[today];
+                    const scale     = window.habitChartScales[habit.id] || 'day';
+                    const scaleMap  = { day:'日', week:'週', month:'月' };
+                    const accent    = getHabitAccent(habit.id);
+                    const hasReward = habit.streakReward && (habit.streakReward.exp > 0 || habit.streakReward.gold > 0 || (habit.streakReward.attributes||[]).length > 0);
+
+                    // Streak state styling
+                    const streakBg    = streak >= 7 ? 'rgba(217,119,6,0.15)'  : streak > 0 ? 'rgba(72,187,120,0.15)' : 'transparent';
+                    const streakBdr   = streak >= 7 ? 'rgba(217,119,6,0.5)'   : streak > 0 ? 'rgba(72,187,120,0.5)'  : 'transparent';
+                    const streakColor = streak >= 7 ? '#92400E' : '#276749';
 
                     const card = document.createElement('div');
-                    card.className = 'glass glass-card';
-                    card.style.padding = '20px';
+                    card.style.cssText = `
+                        background: rgba(255,255,255,0.72);
+                        backdrop-filter: blur(14px);
+                        -webkit-backdrop-filter: blur(14px);
+                        border: 1px solid rgba(107,70,193,0.18);
+                        border-radius: 20px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 24px rgba(80,50,160,0.10), 0 1px 4px rgba(80,50,160,0.08);
+                        transition: transform 0.2s, box-shadow 0.2s;
+                    `;
+                    card.onmouseenter = () => { card.style.transform='translateY(-3px)'; card.style.boxShadow='0 10px 36px rgba(80,50,160,0.16), 0 2px 8px rgba(80,50,160,0.1)'; };
+                    card.onmouseleave = () => { card.style.transform=''; card.style.boxShadow='0 4px 24px rgba(80,50,160,0.10), 0 1px 4px rgba(80,50,160,0.08)'; };
 
                     card.innerHTML = `
-                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                            <span style="font-size:2rem;flex-shrink:0;">${habit.icon}</span>
-                            <div style="flex:1;min-width:0;">
-                                <div style="font-size:1.05rem;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${habit.title}</div>
-                                ${habit.description ? `<div style="font-size:0.78rem;opacity:0.65;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${habit.description}</div>` : ''}
+                        <!-- Accent top bar -->
+                        <div style="height:5px;background:linear-gradient(90deg,${accent},${accent}88);"></div>
+
+                        <div style="padding:18px 18px 16px;">
+                            <!-- Header row -->
+                            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                                <div style="width:48px;height:48px;border-radius:14px;background:${accent}1a;border:1.5px solid ${accent}44;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">
+                                    ${habit.icon}
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:1.02rem;font-weight:800;color:#1E1040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${habit.title}</div>
+                                    ${habit.description ? `<div style="font-size:0.78rem;color:rgba(60,40,100,0.6);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${habit.description}</div>` : ''}
+                                </div>
+                                <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;">
+                                    <button onclick="openHabitEditModal('${habit.id}')" title="編輯" style="background:rgba(107,70,193,0.1);border:1px solid rgba(107,70,193,0.25);border-radius:7px;padding:5px 9px;cursor:pointer;color:#4C2E8A;font-size:0.82rem;font-weight:600;transition:background 0.15s;" onmouseover="this.style.background='rgba(107,70,193,0.2)'" onmouseout="this.style.background='rgba(107,70,193,0.1)'">✏️</button>
+                                    <button onclick="toggleHabitHidden('${habit.id}')" title="隱藏" style="background:rgba(107,70,193,0.1);border:1px solid rgba(107,70,193,0.25);border-radius:7px;padding:5px 9px;cursor:pointer;color:#4C2E8A;font-size:0.82rem;transition:background 0.15s;" onmouseover="this.style.background='rgba(107,70,193,0.2)'" onmouseout="this.style.background='rgba(107,70,193,0.1)'">👁️</button>
+                                    <button onclick="deleteHabit('${habit.id}')" title="刪除" style="background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.25);border-radius:7px;padding:5px 9px;cursor:pointer;color:#B91C1C;font-size:0.82rem;transition:background 0.15s;" onmouseover="this.style.background='rgba(220,38,38,0.18)'" onmouseout="this.style.background='rgba(220,38,38,0.08)'">🗑️</button>
+                                </div>
                             </div>
-                            <div style="display:flex;gap:5px;align-items:center;flex-shrink:0;">
-                                ${streak > 0 ? `<span style="background:${streak>=7?'rgba(251,191,36,0.25)':'rgba(72,187,120,0.2)'};border:1px solid ${streak>=7?'rgba(251,191,36,0.5)':'rgba(72,187,120,0.5)'};color:${streak>=7?'#FBBF24':'#48BB78'};padding:3px 9px;border-radius:20px;font-size:0.78rem;font-weight:bold;white-space:nowrap;">🔥 ${streak} 天</span>` : ''}
-                                <button onclick="openHabitEditModal('${habit.id}')" title="編輯" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:7px;padding:4px 8px;cursor:pointer;color:inherit;font-size:0.82rem;">✏️</button>
-                                <button onclick="toggleHabitHidden('${habit.id}')" title="隱藏" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:7px;padding:4px 8px;cursor:pointer;color:inherit;font-size:0.82rem;">👁️</button>
-                                <button onclick="deleteHabit('${habit.id}')" title="刪除" style="background:rgba(255,50,50,0.1);border:1px solid rgba(255,100,100,0.25);border-radius:7px;padding:4px 8px;cursor:pointer;color:#FF6B6B;font-size:0.82rem;">🗑️</button>
+
+                            <!-- Streak badge (full-width when active) -->
+                            ${streak > 0 ? `
+                            <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:${streakBg};border:1.5px solid ${streakBdr};border-radius:10px;margin-bottom:12px;">
+                                <span style="font-size:1.1rem;">🔥</span>
+                                <span style="font-size:0.88rem;font-weight:700;color:${streakColor};">連續 ${streak} 天！${streak>=7?' 🏆 獎勵啟動中':'　努力達成 7 天！'}</span>
+                                <div style="margin-left:auto;background:${accent};color:#fff;border-radius:99px;padding:2px 10px;font-size:0.76rem;font-weight:700;">${streak} 🔥</div>
+                            </div>` : ''}
+
+                            <!-- Today checklist -->
+                            <div onclick="toggleHabitCompletion('${habit.id}')"
+                                 style="display:flex;align-items:center;gap:10px;padding:12px 14px;
+                                        background:${done?'rgba(39,103,73,0.12)':'rgba(107,70,193,0.05)'};
+                                        border:1.5px solid ${done?'rgba(39,103,73,0.4)':'rgba(107,70,193,0.2)'};
+                                        border-radius:12px;cursor:pointer;transition:all 0.18s;user-select:none;margin-bottom:14px;"
+                                 onmouseover="this.style.background='${done?'rgba(39,103,73,0.18)':'rgba(107,70,193,0.1)'}'"
+                                 onmouseout="this.style.background='${done?'rgba(39,103,73,0.12)':'rgba(107,70,193,0.05)'}'">
+                                <div style="width:24px;height:24px;border-radius:7px;border:2.5px solid ${done?'#276749':'rgba(107,70,193,0.5)'};background:${done?'#276749':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.18s;">
+                                    ${done ? '<span style="color:white;font-size:0.95rem;line-height:1;font-weight:900;">✓</span>' : ''}
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-size:0.92rem;font-weight:700;color:${done?'#276749':'#3B2074'};${done?'text-decoration:line-through;':''}">${done ? '今日已完成 ✨' : '點此打卡今日完成'}</div>
+                                    <div style="font-size:0.74rem;color:rgba(60,40,100,0.55);margin-top:1px;">${today}</div>
+                                </div>
+                                ${!done ? `<div style="background:${accent};color:#fff;border-radius:8px;padding:4px 12px;font-size:0.78rem;font-weight:700;flex-shrink:0;">打卡</div>` : ''}
                             </div>
-                        </div>
 
-                        <div onclick="toggleHabitCompletion('${habit.id}')" style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:11px 14px;background:${done?'rgba(72,187,120,0.15)':'rgba(255,255,255,0.07)'};border-radius:10px;border:1px solid ${done?'rgba(72,187,120,0.4)':'rgba(255,255,255,0.15)'};cursor:pointer;transition:all 0.2s;user-select:none;">
-                            <div style="width:22px;height:22px;border-radius:6px;border:2px solid ${done?'#48BB78':'rgba(255,255,255,0.35)'};background:${done?'#48BB78':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;">
-                                ${done ? '<span style="color:white;font-size:0.85rem;line-height:1;">✓</span>' : ''}
+                            <!-- Chart scale toggle + legend -->
+                            <div style="display:flex;gap:5px;align-items:center;margin-bottom:10px;">
+                                ${['day','week','month'].map(s => `
+                                    <button id="habit-scale-${habit.id}-${s}" onclick="setHabitChartScale('${habit.id}','${s}')"
+                                        style="padding:4px 13px;border-radius:7px;border:1.5px solid ${scale===s?accent:'rgba(107,70,193,0.2)'};
+                                               cursor:pointer;font-size:0.78rem;font-weight:${scale===s?'700':'500'};
+                                               color:${scale===s?'#fff':accent};
+                                               background:${scale===s?accent:'rgba(107,70,193,0.06)'};
+                                               transition:all 0.15s;">${scaleMap[s]}</button>
+                                `).join('')}
+                                ${scale === 'day' ? `
+                                <span style="margin-left:auto;font-size:0.72rem;color:rgba(50,30,80,0.65);display:flex;align-items:center;gap:4px;">
+                                    <span style="width:10px;height:10px;background:rgba(217,119,6,0.85);border-radius:2px;display:inline-block;"></span>達獎日
+                                    <span style="width:10px;height:10px;background:${accent}cc;border-radius:2px;display:inline-block;margin-left:4px;"></span>完成
+                                </span>` : ''}
                             </div>
-                            <span style="font-size:0.92rem;${done?'text-decoration:line-through;opacity:0.65;':''}">今日完成</span>
-                            <span style="margin-left:auto;font-size:0.76rem;opacity:0.5;">${today}</span>
-                        </div>
 
-                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-                            ${['day','week','month'].map(s => `<button id="habit-scale-${habit.id}-${s}" onclick="setHabitChartScale('${habit.id}','${s}')" style="padding:3px 11px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);cursor:pointer;color:inherit;font-size:0.78rem;background:${scale===s?'rgba(107,70,193,0.5)':'rgba(255,255,255,0.07)'};font-weight:${scale===s?'bold':'normal'};">${scaleMap[s]}</button>`).join('')}
-                            ${scale === 'day' ? `<span style="margin-left:auto;font-size:0.72rem;opacity:0.55;"><span style="color:#FBBF24;">■</span> 達獎日&nbsp;<span style="color:#48BB78;">■</span> 完成</span>` : ''}
-                        </div>
+                            <!-- Chart canvas -->
+                            <div style="height:130px;position:relative;background:rgba(107,70,193,0.03);border-radius:10px;padding:4px 0;">
+                                <canvas id="habit-chart-${habit.id}"></canvas>
+                            </div>
 
-                        <div style="height:130px;position:relative;">
-                            <canvas id="habit-chart-${habit.id}"></canvas>
+                            <!-- Reward info bar -->
+                            ${hasReward ? `
+                            <div style="margin-top:12px;padding:10px 14px;background:rgba(217,119,6,0.08);border:1.5px solid rgba(217,119,6,0.25);border-radius:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                                <span style="font-size:0.8rem;font-weight:700;color:#92400E;">🏅 7日後每日獎勵</span>
+                                <span style="width:1px;height:14px;background:rgba(217,119,6,0.3);"></span>
+                                ${habit.streakReward.exp  > 0 ? `<span style="background:rgba(107,70,193,0.12);color:#4C2E8A;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">+${habit.streakReward.exp} EXP</span>` : ''}
+                                ${habit.streakReward.gold > 0 ? `<span style="background:rgba(217,119,6,0.15);color:#92400E;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">+${habit.streakReward.gold} 💰</span>` : ''}
+                                ${(habit.streakReward.attributes||[]).filter(a=>a.exp>0).map(a=>`<span style="background:rgba(39,103,73,0.12);color:#276749;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">+${a.exp} ${ATTR_LABELS[a.attribute]||a.attribute}</span>`).join('')}
+                            </div>` : ''}
                         </div>
-
-                        ${hasReward ? `
-                        <div style="margin-top:11px;padding:8px 12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.22);border-radius:8px;font-size:0.78rem;opacity:0.85;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-                            <span style="opacity:0.75;">🏅 7日連續後每日獎勵：</span>
-                            ${habit.streakReward.exp > 0 ? `<span style="color:#FBBF24;font-weight:bold;">+${habit.streakReward.exp} EXP</span>` : ''}
-                            ${habit.streakReward.gold > 0 ? `<span style="color:#F6AD55;font-weight:bold;">+${habit.streakReward.gold} 💰</span>` : ''}
-                            ${(habit.streakReward.attributes||[]).filter(a=>a.exp>0).map(a=>`<span style="opacity:0.75;">+${a.exp} ${({strength:'力量',intelligence:'智力',agility:'敏捷',vitality:'活力',charisma:'魅力',dexterity:'靈巧',luck:'幸運',willpower:'意志'})[a.attribute]||a.attribute}</span>`).join('')}
-                        </div>` : ''}
                     `;
                     grid.appendChild(card);
                 });
                 contentDiv.appendChild(grid);
             }
 
-            const hiddenHabits = (state.habits || []).filter(h => h.hidden);
+            // ── Hidden habits button ──────────────────────────────────
+            const hiddenHabits = allHabits.filter(h => h.hidden);
             if (hiddenHabits.length > 0) {
                 const btn = document.createElement('div');
-                btn.style.cssText = 'margin-top:14px;text-align:center;';
-                btn.innerHTML = `<button onclick="showHiddenHabitsPanel()" style="background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.28);border-radius:10px;padding:8px 20px;cursor:pointer;color:inherit;font-size:0.83rem;opacity:0.65;">👁️‍🗨️ ${hiddenHabits.length} 個已隱藏習慣</button>`;
+                btn.style.cssText = 'margin-top:16px;text-align:center;';
+                btn.innerHTML = `<button onclick="showHiddenHabitsPanel()" style="background:rgba(255,255,255,0.5);border:1.5px dashed rgba(107,70,193,0.35);border-radius:12px;padding:9px 22px;cursor:pointer;color:#4C2E8A;font-size:0.83rem;font-weight:600;transition:background 0.15s;" onmouseover="this.style.background='rgba(107,70,193,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.5)'">👁️‍🗨️ ${hiddenHabits.length} 個已隱藏習慣</button>`;
                 contentDiv.appendChild(btn);
             }
 
-            requestAnimationFrame(() => {
-                visibleHabits.forEach(h => renderHabitChart(h.id));
-            });
+            requestAnimationFrame(() => visibleHabits.forEach(h => renderHabitChart(h.id)));
         }
 
         window.showHiddenHabitsPanel = function() {
