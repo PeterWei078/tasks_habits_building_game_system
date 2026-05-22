@@ -1911,9 +1911,18 @@
                     </div>
                     <div class="form-group">
                         <label>🍅 番茄專注紀錄</label>
-                        <div id="modalPomoStats" style="padding: 7px 12px; background: rgba(0,0,0,0.05); border-radius: 8px; font-size: 0.85rem; min-height: 36px; display: flex; align-items: center; border: 1px solid rgba(0,0,0,0.08);">
-                            ─ 尚未有番茄專注紀錄
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <button type="button" onclick="adjustModalPomo(-1)"
+                                style="width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,0,0,0.18);background:rgba(0,0,0,0.06);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s;"
+                                onmouseover="this.style.background='rgba(0,0,0,0.14)'" onmouseout="this.style.background='rgba(0,0,0,0.06)'">－</button>
+                            <div id="modalPomoStats" style="flex:1;padding:7px 12px;background:rgba(0,0,0,0.05);border-radius:8px;font-size:0.85rem;min-height:36px;display:flex;align-items:center;border:1px solid rgba(0,0,0,0.08);">
+                                ─ 尚未有番茄專注紀錄
+                            </div>
+                            <button type="button" onclick="adjustModalPomo(+1)"
+                                style="width:32px;height:32px;border-radius:50%;border:1px solid rgba(0,0,0,0.18);background:rgba(0,0,0,0.06);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 0.15s;"
+                                onmouseover="this.style.background='rgba(0,0,0,0.14)'" onmouseout="this.style.background='rgba(0,0,0,0.06)'">＋</button>
                         </div>
+                        <div id="modalPomoHint" style="font-size:0.73rem;opacity:0.5;margin-top:4px;padding-left:2px;min-height:1em;"></div>
                         <input type="hidden" id="modalTimeSpent" value="0">
                     </div>
                 </div>
@@ -3387,6 +3396,34 @@
         function startFocusForTask(taskId) {
             selectedFocusTaskId = taskId;
             switchTab('focus');
+        }
+
+        function adjustModalPomo(delta) {
+            window.modalPomoCount = Math.max(0, (window.modalPomoCount || 0) + delta);
+            updateModalPomoDisplay();
+        }
+
+        function updateModalPomoDisplay() {
+            const cnt = window.modalPomoCount || 0;
+            const baseline = window.modalPomoBaseline || 0;
+            const statsEl = document.getElementById('modalPomoStats');
+            const hintEl = document.getElementById('modalPomoHint');
+
+            if (statsEl) {
+                if (cnt === 0) {
+                    statsEl.innerHTML = '<span style="opacity:0.45;">─ 0 個番茄</span>';
+                } else {
+                    const icons = '🍅'.repeat(Math.min(cnt, 10)) + (cnt > 10 ? `<span style="opacity:0.65;font-size:0.75rem;"> +${cnt - 10}</span>` : '');
+                    statsEl.innerHTML = `<span style="letter-spacing:2px;">${icons}</span>&nbsp;&nbsp;<span style="opacity:0.6;white-space:nowrap;">× ${cnt} 個 · 共 ${typeof formatFocusTime === 'function' ? formatFocusTime(cnt * (state.player?.timerSettings?.pomodoro || 25)) : cnt * 25 + ' 分'}</span>`;
+                }
+            }
+            if (hintEl) {
+                const diff = cnt - baseline;
+                if (diff === 0 && baseline > 0) hintEl.textContent = `計時器已記錄 ${baseline} 個`;
+                else if (diff === 0 && baseline === 0) hintEl.textContent = '';
+                else if (diff > 0) hintEl.textContent = `計時器記錄 ${baseline} 個 ＋ 手動新增 ${diff} 個`;
+                else hintEl.textContent = `計時器記錄 ${baseline} 個，手動移除 ${Math.abs(diff)} 個`;
+            }
         }
 
         function playFocusMusic(id) {
@@ -7660,19 +7697,12 @@
                 document.getElementById('modalExp').value = task.rewardExp ?? 0;
                 document.getElementById('modalGold').value = task.rewardGold ?? 0;
                 document.getElementById('modalTimeSpent').value = Math.round((task.timeSpent || 0) / 60);
-                // Populate pomodoro stats display
+                // Init pomodoro counter for manual adjustment
                 const _taskPomos = (state.player.activities || []).filter(a => a.type === 'POMODORO_COMPLETE' && String(a.details?.taskId) === String(taskId));
-                const _pomoStatsEl = document.getElementById('modalPomoStats');
-                if (_pomoStatsEl) {
-                    if (_taskPomos.length > 0) {
-                        const _cnt = _taskPomos.length;
-                        const _mins = _taskPomos.reduce((s, a) => s + (a.details?.duration || 25), 0);
-                        const _icons = '🍅'.repeat(Math.min(_cnt, 10)) + (_cnt > 10 ? ` <span style="opacity:0.7;font-size:0.78rem;">+${_cnt - 10}</span>` : '');
-                        _pomoStatsEl.innerHTML = `<span style="letter-spacing:2px;">${_icons}</span>&nbsp;&nbsp;<span style="opacity:0.65;white-space:nowrap;">× ${_cnt} 個 · 共 ${typeof formatFocusTime === 'function' ? formatFocusTime(_mins) : _mins + ' 分'}</span>`;
-                    } else {
-                        _pomoStatsEl.innerHTML = '─ 尚未有番茄專注紀錄';
-                    }
-                }
+                window.modalPomoCount = _taskPomos.length;
+                window.modalPomoBaseline = _taskPomos.length;
+                window.modalPomoTaskId = taskId;
+                updateModalPomoDisplay();
                 document.getElementById('modalPinned').checked = !!task.pinned;
                 document.getElementById('modalIsAchievement').checked = !!task.isAchievement;
 
@@ -7708,8 +7738,10 @@
                 document.getElementById('modalExp').value = 0;
                 document.getElementById('modalGold').value = 0;
                 document.getElementById('modalTimeSpent').value = 0;
-                const _newPomoEl = document.getElementById('modalPomoStats');
-                if (_newPomoEl) _newPomoEl.innerHTML = '─ 新任務尚無番茄專注紀錄';
+                window.modalPomoCount = 0;
+                window.modalPomoBaseline = 0;
+                window.modalPomoTaskId = null;
+                updateModalPomoDisplay();
                 document.getElementById('modalPinned').checked = false;
                 document.getElementById('modalIsAchievement').checked = false;
 
@@ -8133,6 +8165,8 @@
                     if (state.player.totalFocusTime < 0) state.player.totalFocusTime = 0;
                 }
 
+                let savedTaskId = editingTaskId;
+
                 if (editingTaskId) {
                     // Update Existing
                     // Use loose equality to match string IDs from HTML with potential numeric IDs in state
@@ -8178,7 +8212,35 @@
                         completed: false
                     };
                     state.tasks.unshift(newTask);
+                    savedTaskId = newTask.id;
                     showToast('Quest Created', `Accepted: ${title}`);
+                }
+
+                // Sync manual pomodoro adjustments to activities
+                const _pomoDiff = (window.modalPomoCount || 0) - (window.modalPomoBaseline || 0);
+                if (savedTaskId && _pomoDiff !== 0) {
+                    if (!state.player.activities) state.player.activities = [];
+                    if (_pomoDiff > 0) {
+                        for (let _pi = 0; _pi < _pomoDiff; _pi++) {
+                            state.player.activities.push({
+                                type: 'POMODORO_COMPLETE',
+                                timestamp: Date.now(),
+                                details: {
+                                    duration: state.player.timerSettings?.pomodoro || 25,
+                                    taskId: savedTaskId,
+                                    taskTitle: title,
+                                    manual: true
+                                }
+                            });
+                        }
+                    } else {
+                        // Remove most-recent POMODORO_COMPLETE entries for this task
+                        const _idxList = [];
+                        state.player.activities.forEach((a, i) => {
+                            if (a.type === 'POMODORO_COMPLETE' && String(a.details?.taskId) === String(savedTaskId)) _idxList.push(i);
+                        });
+                        _idxList.slice(_pomoDiff).reverse().forEach(i => state.player.activities.splice(i, 1));
+                    }
                 }
 
                 const saveResult = saveState();
