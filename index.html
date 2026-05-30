@@ -8166,12 +8166,15 @@
                 }
 
                 let savedTaskId = editingTaskId;
+                // Snapshot the task before mutation so we can roll back the photo if saveState() fails
+                let _taskSnapshotPhoto = null;
 
                 if (editingTaskId) {
                     // Update Existing
                     // Use loose equality to match string IDs from HTML with potential numeric IDs in state
                     const taskIndex = state.tasks.findIndex(t => t.id == editingTaskId);
                     if (taskIndex !== -1) {
+                        _taskSnapshotPhoto = state.tasks[taskIndex].photo || '';
                         state.tasks[taskIndex] = {
                             ...state.tasks[taskIndex],
                             title, description: desc, image: img, photo: photoData,
@@ -8243,7 +8246,24 @@
                     }
                 }
 
-                const saveResult = saveState();
+                let saveResult = saveState();
+
+                if (!saveResult && photoData && photoData.startsWith('data:')) {
+                    // Save failed because the base64 photo pushed state over the localStorage quota.
+                    // Strip the photo from state, retry, and warn the user.
+                    const _isBase64Photo = true;
+                    if (editingTaskId) {
+                        const _ri = state.tasks.findIndex(t => t.id == editingTaskId);
+                        if (_ri !== -1) state.tasks[_ri] = { ...state.tasks[_ri], photo: _taskSnapshotPhoto };
+                    } else {
+                        const _ni = state.tasks.findIndex(t => t.id == savedTaskId);
+                        if (_ni !== -1) state.tasks[_ni] = { ...state.tasks[_ni], photo: '' };
+                    }
+                    saveResult = saveState();
+                    if (saveResult) {
+                        showToast('⚠️ 照片未能儲存', '本機儲存空間不足，任務已儲存但略過了照片。請登入 Google 同步或至設定頁清除舊照片。', 5000);
+                    }
+                }
 
                 if (saveResult) {
                     // Intelligent Render/Close Logic
@@ -8260,7 +8280,7 @@
                     closeTaskModal();
                     editingTaskId = null;
                 } else {
-                    // Save failed (alert shown). Keep modal open.
+                    // Save failed (alert shown by saveState). Keep modal open.
                 }
             } catch (e) {
                 console.error("Critical error saving task:", e);
@@ -8270,10 +8290,12 @@
 
         // --- Helper: Image Compression ---
         function compressImage(file) {
-            return new Promise((resolve) => {
+            return new Promise((resolve, reject) => {
                 const reader = new FileReader();
+                reader.onerror = () => reject(new Error('File read failed'));
                 reader.onload = (e) => {
                     const img = new Image();
+                    img.onerror = () => reject(new Error('Image decode failed — unsupported format?'));
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
@@ -8601,7 +8623,13 @@
                 }
                 if (!state.player.photoLibrary) state.player.photoLibrary = [];
                 state.player.photoLibrary.push({ id, name, data, addedAt: new Date().toISOString() });
-                saveState();
+                const _libSaveOk = saveState();
+                if (!_libSaveOk) {
+                    // Revert: remove the entry we just pushed so state stays consistent
+                    state.player.photoLibrary.pop();
+                    showToast('⚠️ 上傳失敗', '本機儲存空間不足，無法新增照片。請登入 Google 同步或至設定頁清除舊照片。', 5000);
+                    return;
+                }
                 input.value = '';
                 nameInput.value = '';
                 renderPhotoLibraryGrid();
