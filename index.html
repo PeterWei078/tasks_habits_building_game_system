@@ -9374,10 +9374,10 @@
                             📸 Manage Photo Library
                         </button>
                         <button class="btn" style="background: rgba(229, 62, 62, 0.1); color: #E53E3E; border: 1px solid rgba(229, 62, 62, 0.3);" onclick="clearEntityImages('project')">
-                            🗑️ Clear Project Photos
+                            🗑️ Clear Completed Project Photos
                         </button>
                         <button class="btn" style="background: rgba(229, 62, 62, 0.1); color: #E53E3E; border: 1px solid rgba(229, 62, 62, 0.3);" onclick="clearEntityImages('task')">
-                            🗑️ Clear Task Images
+                            🗑️ Clear Completed Task Images
                         </button>
                     </div>
                 `;
@@ -9417,29 +9417,34 @@
         }
 
         function clearEntityImages(type) {
-            if (!confirm(`Are you sure you want to delete all ${type} images? This cannot be undone.`)) return;
+            const displayType = type === 'project' ? 'completed projects' : 'completed tasks';
+            if (!confirm(`Are you sure you want to delete photos/images from all ${displayType}? This cannot be undone.`)) return;
 
             let count = 0;
             if (type === 'project') {
                 state.player.tags.forEach(p => {
-                    if (p.photos && p.photos.length > 0) {
-                        p.photos = [];
-                        count++;
+                    if (isProjectCompleted(p)) {
+                        if (p.photos && p.photos.length > 0) {
+                            p.photos = [];
+                            count++;
+                        }
                     }
                 });
             } else if (type === 'task') {
                 state.tasks.forEach(t => {
-                    if (t.photo || t.image) {
-                        t.photo = null;
-                        t.image = null;
-                        count++;
+                    if (t.completed) {
+                        if (t.photo || t.image) {
+                            t.photo = null;
+                            t.image = null;
+                            count++;
+                        }
                     }
                 });
             }
 
             if (saveState()) {
                 renderStatusPage(); // Refresh to show new storage
-                showToast("Images Cleared", `Removed images from ${count} ${type}s.`);
+                showToast("Images Cleared", `Removed images from ${count} ${displayType}.`);
             } else {
                 alert("Error saving cleaned data.");
             }
