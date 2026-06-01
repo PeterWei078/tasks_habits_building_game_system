@@ -2317,6 +2317,14 @@
                             style="background: linear-gradient(135deg, #FFFAF0 0%, #FEEBC8 100%); color: #2D3748; flex: 1; min-width: 100px;">淺橘色</button>
                     </div>
                 </div>
+                <!-- Restore Hidden Presets -->
+                <div class="info-box" style="margin-top: 15px;">
+                    <h4 style="margin-bottom: 10px;">🔮 恢復隱藏的預設圖片</h4>
+                    <p style="margin-bottom: 15px; font-size: 0.9rem;">如果您曾隱藏過系統內建圖片庫的預設圖片，可以在此處一鍵復原。</p>
+                    <button class="btn btn-primary" onclick="restoreHiddenPresetPhotos()" style="width: 100%; padding: 12px; font-weight: bold; background: var(--accent-color, #4A90E2); border-color: var(--accent-color, #4A90E2);">
+                        ✨ 恢復所有隱藏的預設圖片
+                    </button>
+                </div>
             </div>
 
             <!-- Export Section -->
@@ -2834,6 +2842,7 @@
                 reflections: [], // New Reflections Data
                 theme: 'default', // UI Background Color Theme
                 photoLibrary: [], // [{id, name, data (base64), addedAt}]
+                hiddenPresetPhotos: [], // list of builtin preset IDs that the user has hidden/deleted
                 characterGallery: [
                     { id: 'char_lv1_student_m',     level: 1,  name: '菁英學院男學生', path: '/characters/char_lv1_student_m.webp',     occupation: null,           unlockedAt: new Date().toISOString() },
                     { id: 'char_lv1_student_f',     level: 1,  name: '菁英學院女學生', path: '/characters/char_lv1_student_f.webp',     occupation: null,           unlockedAt: new Date().toISOString() },
@@ -3084,6 +3093,9 @@
             if (typeof state.featuredTaskId === 'undefined') state.featuredTaskId = null;
             if (!state.player.theme) {
                 state.player.theme = defaultState.player.theme;
+            }
+            if (!state.player.hiddenPresetPhotos) {
+                state.player.hiddenPresetPhotos = [];
             }
             migrateCharacterGallery();
         }
@@ -8639,7 +8651,9 @@
 
             if (activePhotoLibraryTab === 'system') {
                 empty.style.display = 'none';
-                grid.innerHTML = BUILTIN_TASK_PHOTOS.map(photo => `
+                const hiddenIds = new Set(state.player.hiddenPresetPhotos || []);
+                const visiblePresets = BUILTIN_TASK_PHOTOS.filter(p => !hiddenIds.has(p.id));
+                grid.innerHTML = visiblePresets.map(photo => `
                     <div style="position:relative; border-radius:10px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s; cursor:${isSelecting ? 'pointer' : 'default'}; border:2px solid transparent; background:rgba(0,0,0,0.05);"
                          onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.18)'; this.style.borderColor='var(--accent-color,#4A90E2)';"
                          onmouseout="this.style.transform=''; this.style.boxShadow=''; this.style.borderColor='transparent';"
@@ -8650,6 +8664,10 @@
                             ${photo.name}
                         </div>
                         ${isSelecting ? `<div style="position:absolute; top:4px; left:4px; background:rgba(74,144,226,0.9); color:white; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:700; pointer-events:none;">USE</div>` : ''}
+                        <button onclick="event.stopPropagation(); hideBuiltinPhoto('${photo.id}')"
+                            style="position:absolute; top:4px; right:4px; background:rgba(229,62,62,0.85); color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; line-height:1; transition:background 0.15s;"
+                            onmouseover="this.style.background='rgba(229,62,62,1)'" onmouseout="this.style.background='rgba(229,62,62,0.85)'"
+                            title="Hide preset">✕</button>
                     </div>
                 `).join('');
             } else {
@@ -8677,6 +8695,29 @@
                             title="Remove from library">✕</button>
                     </div>
                 `).join('');
+            }
+        }
+
+        function hideBuiltinPhoto(id) {
+            if (!confirm('隱藏此預設圖片？之後可至設定與備份頁面恢復。\nHide this preset photo? You can restore it later in Settings & Data.')) return;
+            if (!state.player.hiddenPresetPhotos) state.player.hiddenPresetPhotos = [];
+            state.player.hiddenPresetPhotos.push(id);
+            saveState();
+            renderPhotoLibraryGrid();
+            showToast('已隱藏', '預設圖片已隱藏。');
+        }
+
+        function restoreHiddenPresetPhotos() {
+            if (state.player.hiddenPresetPhotos && state.player.hiddenPresetPhotos.length > 0) {
+                const count = state.player.hiddenPresetPhotos.length;
+                state.player.hiddenPresetPhotos = [];
+                saveState();
+                if (document.getElementById('photoLibraryModal').style.display !== 'none') {
+                    renderPhotoLibraryGrid();
+                }
+                showToast('已恢復', `已成功恢復 ${count} 張隱藏的預設圖片。`);
+            } else {
+                showToast('無隱藏圖片', '目前沒有任何隱藏的預設圖片。');
             }
         }
 
