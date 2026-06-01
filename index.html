@@ -8562,11 +8562,24 @@
 
         // ── End Character Gallery ─────────────────────────────────────────
 
+        const BUILTIN_TASK_PHOTOS = [
+            { id: 'builtin_strength', name: '力量鍛鍊 (Strength)', data: '/task_photos/task_strength.webp' },
+            { id: 'builtin_intelligence', name: '知識學習 (Intelligence)', data: '/task_photos/task_intelligence.webp' },
+            { id: 'builtin_agility', name: '速度敏捷 (Agility)', data: '/task_photos/task_agility.webp' },
+            { id: 'builtin_vitality', name: '體力回復 (Vitality)', data: '/task_photos/task_vitality.webp' },
+            { id: 'builtin_charisma', name: '魅力社交 (Charisma)', data: '/task_photos/task_charisma.webp' },
+            { id: 'builtin_dexterity', name: '靈巧工藝 (Dexterity)', data: '/task_photos/task_dexterity.webp' },
+            { id: 'builtin_luck', name: '幸運冒險 (Luck)', data: '/task_photos/task_luck.webp' },
+            { id: 'builtin_willpower', name: '意志修練 (Willpower)', data: '/task_photos/task_willpower.webp' }
+        ];
+
+        let activePhotoLibraryTab = 'system'; // 'system' | 'uploads'
+
         function openPhotoLibraryModal(context) {
             photoLibraryContext = context;
             const hint = document.getElementById('libSelectHint');
             if (hint) hint.style.display = (context === 'task' || context === 'project') ? 'block' : 'none';
-            renderPhotoLibraryGrid();
+            switchPhotoLibraryTab('system');
             document.getElementById('photoLibraryModal').style.display = 'flex';
         }
 
@@ -8575,35 +8588,82 @@
             photoLibraryContext = null;
         }
 
+        function switchPhotoLibraryTab(tab) {
+            activePhotoLibraryTab = tab;
+            const systemTabBtn = document.getElementById('tabSystemPhotos');
+            const uploadsTabBtn = document.getElementById('tabUploadPhotos');
+            const uploadSection = document.getElementById('libUploadSection');
+            
+            if (tab === 'system') {
+                if (systemTabBtn) {
+                    systemTabBtn.style.background = 'var(--accent-color, #4A90E2)';
+                    systemTabBtn.style.color = '#fff';
+                }
+                if (uploadsTabBtn) {
+                    uploadsTabBtn.style.background = 'rgba(255,255,255,0.08)';
+                    uploadsTabBtn.style.color = 'inherit';
+                }
+                if (uploadSection) uploadSection.style.display = 'none';
+            } else {
+                if (systemTabBtn) {
+                    systemTabBtn.style.background = 'rgba(255,255,255,0.08)';
+                    systemTabBtn.style.color = 'inherit';
+                }
+                if (uploadsTabBtn) {
+                    uploadsTabBtn.style.background = 'var(--accent-color, #4A90E2)';
+                    uploadsTabBtn.style.color = '#fff';
+                }
+                if (uploadSection) uploadSection.style.display = 'block';
+            }
+            renderPhotoLibraryGrid();
+        }
+
         function renderPhotoLibraryGrid() {
-            const library = state.player.photoLibrary || [];
             const grid = document.getElementById('photoLibraryGrid');
             const empty = document.getElementById('photoLibraryEmpty');
             const isSelecting = photoLibraryContext === 'task' || photoLibraryContext === 'project';
 
-            if (library.length === 0) {
-                grid.innerHTML = '';
-                empty.style.display = 'block';
-                return;
-            }
-            empty.style.display = 'none';
-            grid.innerHTML = library.map(photo => `
-                <div style="position:relative; border-radius:10px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s; cursor:${isSelecting ? 'pointer' : 'default'}; border:2px solid transparent; background:rgba(0,0,0,0.05);"
-                     onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.18)'; this.style.borderColor='var(--accent-color,#4A90E2)';"
-                     onmouseout="this.style.transform=''; this.style.boxShadow=''; this.style.borderColor='transparent';"
-                     onclick="${isSelecting ? `selectPhotoFromLibrary('${photo.id}')` : ''}">
-                    <img src="${photo.data}" alt="${photo.name}" loading="lazy"
-                         style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
-                    <div style="padding:5px 7px; font-size:0.72rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(255,255,255,0.92); color:#333;">
-                        ${photo.name}
+            if (activePhotoLibraryTab === 'system') {
+                empty.style.display = 'none';
+                grid.innerHTML = BUILTIN_TASK_PHOTOS.map(photo => `
+                    <div style="position:relative; border-radius:10px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s; cursor:${isSelecting ? 'pointer' : 'default'}; border:2px solid transparent; background:rgba(0,0,0,0.05);"
+                         onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.18)'; this.style.borderColor='var(--accent-color,#4A90E2)';"
+                         onmouseout="this.style.transform=''; this.style.boxShadow=''; this.style.borderColor='transparent';"
+                         onclick="${isSelecting ? `selectPhotoFromLibrary('${photo.id}')` : ''}">
+                        <img src="${photo.data}" alt="${photo.name}" loading="lazy"
+                             style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
+                        <div style="padding:5px 7px; font-size:0.72rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(255,255,255,0.92); color:#333;">
+                            ${photo.name}
+                        </div>
+                        ${isSelecting ? `<div style="position:absolute; top:4px; left:4px; background:rgba(74,144,226,0.9); color:white; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:700; pointer-events:none;">USE</div>` : ''}
                     </div>
-                    ${isSelecting ? `<div style="position:absolute; top:4px; left:4px; background:rgba(74,144,226,0.9); color:white; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:700; pointer-events:none;">USE</div>` : ''}
-                    <button onclick="event.stopPropagation(); deleteFromPhotoLibrary('${photo.id}')"
-                        style="position:absolute; top:4px; right:4px; background:rgba(229,62,62,0.85); color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; line-height:1; transition:background 0.15s;"
-                        onmouseover="this.style.background='rgba(229,62,62,1)'" onmouseout="this.style.background='rgba(229,62,62,0.85)'"
-                        title="Remove from library">✕</button>
-                </div>
-            `).join('');
+                `).join('');
+            } else {
+                const library = state.player.photoLibrary || [];
+                if (library.length === 0) {
+                    grid.innerHTML = '';
+                    empty.style.display = 'block';
+                    return;
+                }
+                empty.style.display = 'none';
+                grid.innerHTML = library.map(photo => `
+                    <div style="position:relative; border-radius:10px; overflow:hidden; transition:transform 0.15s, box-shadow 0.15s; cursor:${isSelecting ? 'pointer' : 'default'}; border:2px solid transparent; background:rgba(0,0,0,0.05);"
+                         onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.18)'; this.style.borderColor='var(--accent-color,#4A90E2)';"
+                         onmouseout="this.style.transform=''; this.style.boxShadow=''; this.style.borderColor='transparent';"
+                         onclick="${isSelecting ? `selectPhotoFromLibrary('${photo.id}')` : ''}">
+                        <img src="${photo.data}" alt="${photo.name}" loading="lazy"
+                             style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
+                        <div style="padding:5px 7px; font-size:0.72rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(255,255,255,0.92); color:#333;">
+                            ${photo.name}
+                        </div>
+                        ${isSelecting ? `<div style="position:absolute; top:4px; left:4px; background:rgba(74,144,226,0.9); color:white; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:700; pointer-events:none;">USE</div>` : ''}
+                        <button onclick="event.stopPropagation(); deleteFromPhotoLibrary('${photo.id}')"
+                            style="position:absolute; top:4px; right:4px; background:rgba(229,62,62,0.85); color:white; border:none; border-radius:50%; width:22px; height:22px; font-size:11px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; line-height:1; transition:background 0.15s;"
+                            onmouseover="this.style.background='rgba(229,62,62,1)'" onmouseout="this.style.background='rgba(229,62,62,0.85)'"
+                            title="Remove from library">✕</button>
+                    </div>
+                `).join('');
+            }
         }
 
         async function uploadToPhotoLibrary() {
@@ -8625,7 +8685,6 @@
                 state.player.photoLibrary.push({ id, name, data, addedAt: new Date().toISOString() });
                 const _libSaveOk = saveState();
                 if (!_libSaveOk) {
-                    // Revert: remove the entry we just pushed so state stays consistent
                     state.player.photoLibrary.pop();
                     showToast('⚠️ 上傳失敗', '本機儲存空間不足，無法新增照片。請登入 Google 同步或至設定頁清除舊照片。', 5000);
                     return;
@@ -8658,7 +8717,10 @@
         }
 
         function selectPhotoFromLibrary(id) {
-            const photo = (state.player.photoLibrary || []).find(p => p.id === id);
+            let photo = BUILTIN_TASK_PHOTOS.find(p => p.id === id);
+            if (!photo) {
+                photo = (state.player.photoLibrary || []).find(p => p.id === id);
+            }
             if (!photo) return;
             if (photoLibraryContext === 'task') {
                 document.getElementById('modalPhotoBase64').value = photo.data;
@@ -11987,8 +12049,19 @@
                 <h2 style="margin:0; font-size:1.4rem;">📸 Photo Library</h2>
                 <button onclick="closePhotoLibraryModal()" style="background:none; border:none; font-size:1.6rem; cursor:pointer; opacity:0.6; line-height:1; padding:0; color:inherit;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">✕</button>
             </div>
+            <!-- Tab Buttons -->
+            <div style="display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+                <button type="button" id="tabSystemPhotos" onclick="switchPhotoLibraryTab('system')"
+                        style="padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.88rem; display:flex; align-items:center; gap:5px; transition:all 0.2s; background:var(--accent-color, #4A90E2); color:#fff;">
+                    🔮 系統預設 (System Presets)
+                </button>
+                <button type="button" id="tabUploadPhotos" onclick="switchPhotoLibraryTab('uploads')"
+                        style="padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:0.88rem; display:flex; align-items:center; gap:5px; transition:all 0.2s; background:rgba(255,255,255,0.08); color:inherit;">
+                    📷 我的上傳 (My Uploads)
+                </button>
+            </div>
             <!-- Upload Section -->
-            <div style="background:rgba(0,0,0,0.05); border-radius:12px; padding:15px; margin-bottom:18px;">
+            <div id="libUploadSection" style="background:rgba(0,0,0,0.05); border-radius:12px; padding:15px; margin-bottom:18px; display:none;">
                 <div style="font-size:0.82rem; color:var(--text-secondary,#888); margin-bottom:8px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Upload to Library</div>
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     <input type="file" id="libPhotoUploadInput" accept="image/*" style="flex:2; min-width:0;">
