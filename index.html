@@ -1628,6 +1628,49 @@
         .custom-timeline-scroll::-webkit-scrollbar-thumb:hover {
             background-color: rgba(0, 0, 0, 0.6);
         }
+
+        /* Timeline Drag and Resize Styles */
+        .timeline-bar-draggable {
+            touch-action: none;
+            user-select: none;
+        }
+        .timeline-resize-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: col-resize;
+            z-index: 10;
+            transition: background 0.15s;
+        }
+        .timeline-resize-handle:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+        .timeline-resize-handle.left-handle {
+            left: 0;
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+        .timeline-resize-handle.right-handle {
+            right: 0;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        .timeline-drag-tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 10000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.15);
+            transform: translate(-50%, -130%);
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -4450,7 +4493,7 @@
                 })()}
                         
                         <!-- Bars Container -->
-                        <div style="position: relative; margin-top: 20px; display: flex; flex-direction: column; padding: 0 10px;">
+                        <div id="timeline-bars-container" data-min-date="${minDate.toISOString()}" data-day-width="${dayWidth}" style="position: relative; margin-top: 20px; display: flex; flex-direction: column; padding: 0 10px;">
             `;
 
             allTlTasks.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
@@ -4514,24 +4557,34 @@
                         const totalSubs = task.subtasks.length;
                         const percent = Math.round((completedSubs / totalSubs) * 100);
                         if (percent > 0) {
-                            progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: rgba(0,0,0,0.15);"></div>`;
+                            progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: ${percent}%; background: rgba(0,0,0,0.15); pointer-events: none;"></div>`;
                             titlePrefix = `[${percent}%] `;
                         }
                     }
 
                     const isArchived = !!task._archived;
+                    const isDraggable = !isArchived && !task.completed;
+                    
                     const interactStyle = isArchived
                         ? 'cursor: default;'
-                        : 'cursor: pointer; transition: transform 0.2s, filter 0.2s;';
+                        : (isDraggable ? 'cursor: grab;' : 'cursor: pointer; transition: transform 0.2s, filter 0.2s;');
+
+                    const dragAttr = isDraggable ? `onpointerdown="window.initTimelineTaskDrag(event, '${task.id}')"` : '';
+                    const draggableClass = isDraggable ? 'timeline-bar-draggable' : '';
+
                     const interactHandlers = isArchived
                         ? `title="${task.title} (${task.startDate} ~ ${task.dueDate}) — 已完成並歸檔"`
-                        : `title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';"`;
+                        : (isDraggable
+                            ? `title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="if(this.dataset.preventClick === 'true'){this.dataset.preventClick='false';}else{openTaskModal('${task.id}')}" onmouseover="if(this.dataset.dragging!=='true'){this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';}" onmouseout="if(this.dataset.dragging!=='true'){this.style.transform='translateY(0)'; this.style.filter='brightness(1)';}" ${dragAttr}`
+                            : `title="${task.title} (${task.startDate} ~ ${task.dueDate})" onclick="openTaskModal('${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';"`);
 
                     // Use width - 2 to add a 2px gap between adjacent bars for better visual distinction
                     timelineArea += `
-                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; ${interactStyle} ${opacityStyle}" ${interactHandlers}>
+                        <div class="${draggableClass}" style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; ${interactStyle} ${opacityStyle}" ${interactHandlers}>
+                            ${isDraggable ? `<div class="timeline-resize-handle left-handle"></div>` : ''}
                             ${progressStyle}
-                            <span style="position: relative; z-index: 1;">${titlePrefix}${task.title}</span>
+                            <span style="position: relative; z-index: 1; ${isDraggable ? 'pointer-events: none;' : ''}">${titlePrefix}${task.title}</span>
+                            ${isDraggable ? `<div class="timeline-resize-handle right-handle"></div>` : ''}
                         </div>
                     `;
                 });
@@ -4546,6 +4599,147 @@
 
             return html + timelineArea;
         }
+
+        window.initTimelineTaskDrag = function(event, taskId) {
+            // Only allow left-click / main pointer interaction
+            if (event.button !== 0) return;
+
+            const bar = event.currentTarget;
+            const isLeftHandle = event.target.classList.contains('left-handle');
+            const isRightHandle = event.target.classList.contains('right-handle');
+            const dragMode = isLeftHandle ? 'resize-left' : (isRightHandle ? 'resize-right' : 'move');
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            bar.setPointerCapture(event.pointerId);
+
+            const container = document.getElementById('timeline-bars-container');
+            if (!container) return;
+
+            const minDateStr = container.getAttribute('data-min-date');
+            const dayWidth = parseInt(container.getAttribute('data-day-width')) || 30;
+            const minDate = new Date(minDateStr);
+
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+
+            const startX = event.clientX;
+            const startLeft = parseFloat(bar.style.left) || 0;
+            const startWidth = parseFloat(bar.style.width) || 0;
+
+            // Mark element dragging state
+            bar.dataset.dragging = 'true';
+            bar.dataset.preventClick = 'false';
+            
+            // Temporary styling during drag
+            const originalTransform = bar.style.transform;
+            const originalFilter = bar.style.filter;
+            const originalTransition = bar.style.transition;
+            bar.style.transition = 'none';
+            bar.style.filter = 'brightness(1.1)';
+
+            // Create a live floating tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'timeline-drag-tooltip';
+            document.body.appendChild(tooltip);
+
+            let currentStartDateStr = task.startDate;
+            let currentDueDateStr = task.dueDate;
+
+            const updateTooltip = (clientX, clientY, startStr, dueStr) => {
+                tooltip.textContent = `${startStr} ~ ${dueStr}`;
+                tooltip.style.left = `${clientX}px`;
+                tooltip.style.top = `${clientY - 10}px`;
+            };
+
+            updateTooltip(event.clientX, event.clientY, currentStartDateStr, currentDueDateStr);
+
+            const getLocalDateStr = (baseDate, daysOffset) => {
+                const d = new Date(baseDate);
+                d.setDate(d.getDate() + daysOffset);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const handlePointerMove = (e) => {
+                const dx = e.clientX - startX;
+                if (Math.abs(dx) > 3) {
+                    bar.dataset.preventClick = 'true';
+                }
+
+                let newLeft = startLeft;
+                let newWidth = startWidth;
+
+                if (dragMode === 'move') {
+                    newLeft = startLeft + dx;
+                    if (newLeft < 0) newLeft = 0;
+                    bar.style.left = `${newLeft}px`;
+                } else if (dragMode === 'resize-left') {
+                    newLeft = startLeft + dx;
+                    newWidth = startWidth - dx;
+                    if (newWidth < dayWidth) {
+                        newWidth = dayWidth;
+                        newLeft = startLeft + startWidth - dayWidth;
+                    }
+                    bar.style.left = `${newLeft}px`;
+                    bar.style.width = `${newWidth}px`;
+                } else if (dragMode === 'resize-right') {
+                    newWidth = startWidth + dx;
+                    if (newWidth < dayWidth) {
+                        newWidth = dayWidth;
+                    }
+                    bar.style.width = `${newWidth}px`;
+                }
+
+                // Calculate date offsets
+                const startOffset = Math.round(newLeft / dayWidth);
+                const durationDays = Math.round(newWidth / dayWidth);
+                currentStartDateStr = getLocalDateStr(minDate, startOffset);
+                currentDueDateStr = getLocalDateStr(minDate, startOffset + durationDays - 1);
+
+                updateTooltip(e.clientX, e.clientY, currentStartDateStr, currentDueDateStr);
+            };
+
+            const handlePointerUp = (e) => {
+                bar.releasePointerCapture(e.pointerId);
+                bar.removeEventListener('pointermove', handlePointerMove);
+                bar.removeEventListener('pointerup', handlePointerUp);
+                bar.removeEventListener('pointercancel', handlePointerUp);
+
+                tooltip.remove();
+
+                bar.style.transition = originalTransition;
+                bar.style.transform = originalTransform;
+                bar.style.filter = originalFilter;
+
+                // Tiny delay to make sure any click event fires first before resetting the dragging flag
+                setTimeout(() => {
+                    bar.removeAttribute('data-dragging');
+                }, 50);
+
+                if (currentStartDateStr && currentDueDateStr && new Date(currentStartDateStr) <= new Date(currentDueDateStr)) {
+                    const hasChanged = task.startDate !== currentStartDateStr || task.dueDate !== currentDueDateStr;
+                    if (hasChanged) {
+                        task.startDate = currentStartDateStr;
+                        task.dueDate = currentDueDateStr;
+                        saveState();
+                        render();
+                        showToast('任務日期已更新', `${task.title} 已更新為 ${currentStartDateStr} ~ ${currentDueDateStr}`);
+                    } else {
+                        render();
+                    }
+                } else {
+                    render();
+                }
+            };
+
+            bar.addEventListener('pointermove', handlePointerMove);
+            bar.addEventListener('pointerup', handlePointerUp);
+            bar.addEventListener('pointercancel', handlePointerUp);
+        };
 
         window.expandedProjectTimelines = window.expandedProjectTimelines || [];
         window.toggleProjectTimelineTasks = function(event, projectId) {
