@@ -2004,24 +2004,25 @@
 
         <!-- Right Panel: Task Memo (Only for Edit Mode) -->
         <div class="modal-content" id="editTaskMemoSection" style="max-width: 600px; width: 100%; margin: 0; flex: 1; min-width: 300px; display: none; flex-direction: column;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
+                <button type="button" onclick="insertMemoBlock('text')" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ 文字</button>
+                <button type="button" onclick="insertMemoBlock('checklist')" style="background:rgba(99,230,190,0.15);border:1px solid rgba(99,230,190,0.35);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ ✅ 清單</button>
             </div>
-            <!-- Rich Text Toolbar -->
-            <div style="display: flex; flex-wrap: wrap; gap: 8px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 8px; margin-bottom: 15px;">
-                <button type="button" class="btn" style="padding: 4px 10px; font-weight: bold; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('bold', false, null)" title="Bold">B</button>
-                <button type="button" class="btn" style="padding: 4px 10px; font-style: italic; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('italic', false, null)" title="Italic">I</button>
-                <button type="button" class="btn" style="padding: 4px 10px; text-decoration: underline; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('underline', false, null)" title="Underline">U</button>
-                <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 5px;"></div>
-                <button type="button" class="btn" style="padding: 4px 8px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('removeFormat', false, null)" title="Clear Format">🧹清除</button>
-                <button type="button" class="btn" style="padding: 4px 8px; background: #FFF5F5; color: #E53E3E; border: 1px solid #FC8181; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('foreColor', false, '#E53E3E')" title="Red Text">🟥紅</button>
-                <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 2px;"></div>
-                <button type="button" class="btn" style="padding: 4px 8px; background: #FEFCBF; color: #744210; font-weight: bold; border: 1px solid #D69E2E; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, '#FEFCBF')" title="Highlight">Highlight</button>
-                <button type="button" class="btn" style="padding: 4px 8px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, 'transparent')" title="Remove Highlight">✕</button>
+            <!-- Shared Rich-Text Toolbar (works on whichever text block has focus) -->
+            <div id="inlineMemoToolbar" style="display:flex;flex-wrap:wrap;gap:6px;background:rgba(0,0,0,0.1);padding:7px;border-radius:8px;margin-bottom:12px;">
+                <button type="button" class="btn" style="padding:4px 10px;font-weight:bold;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('bold',false,null)">B</button>
+                <button type="button" class="btn" style="padding:4px 10px;font-style:italic;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('italic',false,null)">I</button>
+                <button type="button" class="btn" style="padding:4px 10px;text-decoration:underline;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('underline',false,null)">U</button>
+                <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 3px;"></div>
+                <button type="button" class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('removeFormat',false,null)">🧹清除</button>
+                <button type="button" class="btn" style="padding:4px 8px;background:#FFF5F5;color:#E53E3E;border:1px solid #FC8181;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('foreColor',false,'#E53E3E')">🟥紅</button>
+                <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 2px;"></div>
+                <button type="button" class="btn" style="padding:4px 8px;background:#FEFCBF;color:#744210;font-weight:bold;border:1px solid #D69E2E;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'#FEFCBF')">Highlight</button>
+                <button type="button" class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'transparent')">✕</button>
             </div>
-            <!-- Editor -->
-            <div id="inlineTaskMemoEditor" contenteditable="true" style="flex: 1; outline: none; padding: 15px; border: 1px dashed rgba(255,255,255,0.4); border-radius: 8px; min-height: 250px; line-height: 1.6; font-size: 1rem; background: rgba(255,255,255,0.05); overflow-y: auto;">
-            </div>
+            <!-- Block container -->
+            <div id="inlineMemoBlocksContainer" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0;"></div>
         </div>
 
         </div> <!-- End taskModalFlexContainer -->
@@ -3170,6 +3171,16 @@
             if (!state.player.hiddenPresetPhotos) {
                 state.player.hiddenPresetPhotos = [];
             }
+            // Migrate task.memoBlocks (block-based memo editor)
+            if (state.tasks) {
+                state.tasks.forEach(task => {
+                    if (!task.memoBlocks) {
+                        task.memoBlocks = task.memo
+                            ? [{ id: 'mb_' + task.id, type: 'text', html: task.memo }]
+                            : [];
+                    }
+                });
+            }
             migrateCharacterGallery();
         }
 
@@ -3307,6 +3318,8 @@
         let currentTab = 'tasks';
         let statsChart = null;
         let activeReminderTag = 'all';
+        let _memoBlocks = [];        // live working copy for the block-based memo editor
+        let _memoContainerId = '';   // which DOM container is currently hosting the editor
 
         function switchTab(tab) {
             currentTab = tab;
@@ -8083,7 +8096,7 @@
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${String(state.featuredTaskId) === String(task.id) ? '1' : '0.3'}; filter: ${String(state.featuredTaskId) === String(task.id) ? 'drop-shadow(0 0 4px rgba(72,199,116,0.8))' : 'none'};" onclick="event.stopPropagation(); setFeaturedTask('${task.id}')" title="${String(state.featuredTaskId) === String(task.id) ? '取消 Featured Quest' : '設為 Featured Quest'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⭐</button>
                     ${!task.completed ? `<button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); startFocusForTask('${task.id}')" title="開始番茄鐘專注此任務" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">🍅</button>` : ''}
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.pinned ? '1' : '0.35'}; filter: ${task.pinned ? 'drop-shadow(0 0 4px rgba(107,70,193,0.7))' : 'none'};" onclick="event.stopPropagation(); togglePinTask('${task.id}')" title="${task.pinned ? '取消置頂' : '優先置頂'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📌</button>
-                    <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.memo ? '1' : '0.4'}; text-shadow: ${task.memo ? '0 0 8px rgba(255,255,255,0.6)' : 'none'};" onclick="event.stopPropagation(); window.openTaskMemoModal('${task.id}')" title="${task.memo ? 'Edit Memo' : 'Add Memo'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📝</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${(task.memoBlocks&&task.memoBlocks.length>0)||task.memo ? '1' : '0.4'}; text-shadow: ${(task.memoBlocks&&task.memoBlocks.length>0)||task.memo ? '0 0 8px rgba(255,255,255,0.6)' : 'none'};" onclick="event.stopPropagation(); window.openTaskMemoModal('${task.id}')" title="${(task.memoBlocks&&task.memoBlocks.length>0)||task.memo ? 'Edit Memo' : 'Add Memo'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📝</button>
                     ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5; font-size: 1.1rem; transition: transform 0.2s;" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Delete Task" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗑️</button>`}
                 </div>
             `;
@@ -8274,7 +8287,9 @@
                 const memoSection = document.getElementById('editTaskMemoSection');
                 if (memoSection) {
                     memoSection.style.display = 'flex';
-                    document.getElementById('inlineTaskMemoEditor').innerHTML = task.memo || '';
+                    _memoContainerId = 'inlineMemoBlocksContainer';
+                    _memoBlocks = JSON.parse(JSON.stringify(task.memoBlocks || (task.memo ? [{ id: 'mb_' + task.id, type: 'text', html: task.memo }] : [])));
+                    renderTaskMemoBlocks();
                 }
 
             } else {
@@ -8743,7 +8758,8 @@
                         state.tasks[taskIndex] = {
                             ...state.tasks[taskIndex],
                             title, description: desc, image: img, photo: photoData,
-                            memo: document.getElementById('inlineTaskMemoEditor').innerHTML,
+                            memo: _serializeMemoBlocks(),
+                            memoBlocks: JSON.parse(JSON.stringify(_memoBlocks)),
                             attribute: primaryAttribute, attributeRewards, skillRewards,
                             groupId: group, tags, subtasks, repeat, startDate, dueDate, color: color, rewardExp: exp, rewardGold: gold,
                             timeSpent: timeSpentSec,
@@ -12551,15 +12567,215 @@
             setTimeout(() => toastDiv.classList.remove('show'), 3000);
         }
 
-        // --- Task Memo Logic ---
+        // =====================================================
+        // --- Task Memo Block Editor ---
+        // =====================================================
         let modalMemoTaskId = null;
 
+        function _memoUid() { return 'mb_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
+        function _memoItemUid() { return 'mi_' + Date.now() + '_' + Math.random().toString(36).slice(2,6); }
+
+        // Collect HTML from live text-block editors, return a clean copy of _memoBlocks
+        function _serializeMemoBlocks() {
+            _memoBlocks.forEach(b => {
+                if (b.type === 'text') {
+                    const el = document.getElementById('mbtxt_' + b.id);
+                    if (el) b.html = el.innerHTML;
+                }
+            });
+            // Return a flat HTML string for legacy `task.memo` field (used for 📝 icon check)
+            return _memoBlocks.filter(b => b.type === 'text').map(b => b.html).join('') ||
+                   (_memoBlocks.some(b => b.type === 'checklist' && b.items.length > 0) ? '(checklist)' : '');
+        }
+
+        function renderTaskMemoBlocks() {
+            const container = document.getElementById(_memoContainerId);
+            if (!container) return;
+            container.innerHTML = '';
+
+            _memoBlocks.forEach((block, idx) => {
+                // ── Insert strip above each block ──────────────────────────────
+                container.appendChild(_makeInsertStrip(idx));
+                // ── The block itself ───────────────────────────────────────────
+                const wrap = document.createElement('div');
+                wrap.id = 'memoblock_' + block.id;
+                wrap.style.cssText = 'margin-bottom:4px;border-radius:10px;overflow:hidden;';
+
+                if (block.type === 'text') {
+                    wrap.innerHTML = `
+                        <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.06);padding:5px 10px;border-radius:10px 10px 0 0;">
+                            <span style="font-size:0.75rem;opacity:0.5;">📄 文字區塊</span>
+                            <div style="display:flex;gap:4px;">
+                                ${idx > 0 ? `<button onmousedown="event.preventDefault()" onclick="moveMemoBlock('${block.id}',-1)" style="background:none;border:none;cursor:pointer;opacity:0.5;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="上移">↑</button>` : ''}
+                                ${idx < _memoBlocks.length-1 ? `<button onmousedown="event.preventDefault()" onclick="moveMemoBlock('${block.id}',1)" style="background:none;border:none;cursor:pointer;opacity:0.5;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="下移">↓</button>` : ''}
+                                <button onmousedown="event.preventDefault()" onclick="deleteMemoBlock('${block.id}')" style="background:none;border:none;cursor:pointer;opacity:0.45;color:#FF6B6B;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.45'" title="刪除">✕</button>
+                            </div>
+                        </div>
+                        <div id="mbtxt_${block.id}" contenteditable="true"
+                            style="outline:none;padding:12px 14px;border:1px dashed rgba(255,255,255,0.2);border-top:none;border-radius:0 0 10px 10px;min-height:80px;line-height:1.6;font-size:0.95rem;background:rgba(255,255,255,0.04);"
+                            oninput="saveMemoTextBlock('${block.id}',this.innerHTML)"
+                            onblur="saveMemoTextBlock('${block.id}',this.innerHTML)">${block.html}</div>
+                    `;
+                } else if (block.type === 'checklist') {
+                    const done = block.items.filter(i => i.done).length;
+                    const itemsHtml = block.items.map(item => `
+                        <div id="mbi_${item.id}" style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.07);">
+                            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleMemoChecklistItem('${block.id}','${item.id}')"
+                                style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent-color,#7c3aed);flex-shrink:0;">
+                            <input type="text" value="${item.text.replace(/"/g,'&quot;')}"
+                                onblur="updateMemoChecklistItemText('${block.id}','${item.id}',this.value)"
+                                onkeydown="if(event.key==='Enter'){this.blur();addMemoChecklistItem('${block.id}');}"
+                                style="flex:1;background:transparent;border:none;color:inherit;outline:none;font-size:0.9rem;${item.done?'text-decoration:line-through;opacity:0.45;':''}">
+                            <button onclick="deleteMemoChecklistItem('${block.id}','${item.id}')" style="background:none;border:none;color:#FF6B6B;cursor:pointer;font-size:0.9rem;padding:0 4px;opacity:0.5;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">✕</button>
+                        </div>
+                    `).join('');
+                    wrap.innerHTML = `
+                        <div style="background:rgba(99,230,190,0.08);border:1px solid rgba(99,230,190,0.25);border-radius:10px;overflow:hidden;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(99,230,190,0.1);">
+                                <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                                    <span style="font-size:0.9rem;">✅</span>
+                                    <input type="text" value="${block.title.replace(/"/g,'&quot;')}"
+                                        onblur="updateMemoChecklistTitle('${block.id}',this.value)"
+                                        onkeydown="if(event.key==='Enter')this.blur();"
+                                        style="background:transparent;border:none;color:inherit;font-size:0.9rem;font-weight:600;outline:none;flex:1;">
+                                    <span style="font-size:0.75rem;opacity:0.5;">${done}/${block.items.length}</span>
+                                </div>
+                                <div style="display:flex;gap:4px;">
+                                    ${idx > 0 ? `<button onclick="moveMemoBlock('${block.id}',-1)" style="background:none;border:none;cursor:pointer;opacity:0.5;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="上移">↑</button>` : ''}
+                                    ${idx < _memoBlocks.length-1 ? `<button onclick="moveMemoBlock('${block.id}',1)" style="background:none;border:none;cursor:pointer;opacity:0.5;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'" title="下移">↓</button>` : ''}
+                                    <button onclick="deleteMemoBlock('${block.id}')" style="background:none;border:none;cursor:pointer;opacity:0.45;color:#FF6B6B;font-size:0.9rem;padding:2px 5px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.45'" title="刪除">✕</button>
+                                </div>
+                            </div>
+                            <div>${itemsHtml}</div>
+                            <div style="padding:6px 10px;">
+                                <button onclick="addMemoChecklistItem('${block.id}')"
+                                    style="width:100%;background:rgba(255,255,255,0.05);border:1px dashed rgba(255,255,255,0.2);border-radius:6px;color:inherit;padding:4px 10px;cursor:pointer;font-size:0.82rem;transition:background 0.2s;"
+                                    onmouseover="this.style.background='rgba(255,255,255,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">+ 新增項目</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                container.appendChild(wrap);
+            });
+
+            // ── Final insert strip ──────────────────────────────────────────────
+            container.appendChild(_makeInsertStrip(_memoBlocks.length));
+
+            // ── Empty state ──────────────────────────────────────────────────────
+            if (_memoBlocks.length === 0) {
+                const hint = document.createElement('div');
+                hint.style.cssText = 'text-align:center;opacity:0.35;padding:30px 0;font-size:0.9rem;';
+                hint.textContent = '點擊上方「+ 文字」或「+ ✅ 清單」開始編寫備忘錄';
+                container.appendChild(hint);
+            }
+        }
+
+        function _makeInsertStrip(insertIdx) {
+            const strip = document.createElement('div');
+            strip.style.cssText = 'display:flex;justify-content:center;gap:6px;padding:2px 0;opacity:0;transition:opacity 0.2s;position:relative;';
+            strip.innerHTML = `
+                <div style="position:absolute;top:50%;left:10%;right:10%;height:1px;background:rgba(255,255,255,0.1);"></div>
+                <button onclick="insertMemoBlock('text',${insertIdx})"
+                    style="position:relative;z-index:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:20px;color:inherit;padding:2px 10px;cursor:pointer;font-size:0.75rem;">+ 文字</button>
+                <button onclick="insertMemoBlock('checklist',${insertIdx})"
+                    style="position:relative;z-index:1;background:rgba(99,230,190,0.12);border:1px solid rgba(99,230,190,0.3);border-radius:20px;color:inherit;padding:2px 10px;cursor:pointer;font-size:0.75rem;">+ ✅ 清單</button>
+            `;
+            strip.onmouseenter = () => strip.style.opacity = '1';
+            strip.onmouseleave = () => strip.style.opacity = '0';
+            return strip;
+        }
+
+        // ── Block CRUD ──────────────────────────────────────────────────────────
+        window.insertMemoBlock = function(type, insertIdx) {
+            // Flush current text blocks first
+            _memoBlocks.forEach(b => {
+                if (b.type === 'text') { const el = document.getElementById('mbtxt_' + b.id); if (el) b.html = el.innerHTML; }
+            });
+            const newBlock = type === 'checklist'
+                ? { id: _memoUid(), type: 'checklist', title: 'To-Do 清單', items: [] }
+                : { id: _memoUid(), type: 'text', html: '' };
+            if (insertIdx === undefined || insertIdx >= _memoBlocks.length) {
+                _memoBlocks.push(newBlock);
+            } else {
+                _memoBlocks.splice(insertIdx, 0, newBlock);
+            }
+            renderTaskMemoBlocks();
+            // Focus new text block
+            if (type === 'text') {
+                setTimeout(() => document.getElementById('mbtxt_' + newBlock.id)?.focus(), 30);
+            }
+        };
+
+        window.deleteMemoBlock = function(blockId) {
+            _memoBlocks.forEach(b => { if (b.type === 'text') { const el = document.getElementById('mbtxt_' + b.id); if (el) b.html = el.innerHTML; } });
+            _memoBlocks = _memoBlocks.filter(b => b.id !== blockId);
+            renderTaskMemoBlocks();
+        };
+
+        window.moveMemoBlock = function(blockId, dir) {
+            _memoBlocks.forEach(b => { if (b.type === 'text') { const el = document.getElementById('mbtxt_' + b.id); if (el) b.html = el.innerHTML; } });
+            const idx = _memoBlocks.findIndex(b => b.id === blockId);
+            if (idx < 0) return;
+            const newIdx = idx + dir;
+            if (newIdx < 0 || newIdx >= _memoBlocks.length) return;
+            [_memoBlocks[idx], _memoBlocks[newIdx]] = [_memoBlocks[newIdx], _memoBlocks[idx]];
+            renderTaskMemoBlocks();
+        };
+
+        window.saveMemoTextBlock = function(blockId, html) {
+            const b = _memoBlocks.find(b => b.id === blockId);
+            if (b) b.html = html;
+        };
+
+        // ── Checklist operations ────────────────────────────────────────────────
+        window.updateMemoChecklistTitle = function(blockId, title) {
+            const b = _memoBlocks.find(b => b.id === blockId);
+            if (b) { b.title = title; }
+        };
+
+        window.addMemoChecklistItem = function(blockId) {
+            const b = _memoBlocks.find(b => b.id === blockId);
+            if (!b) return;
+            const newItem = { id: _memoItemUid(), text: '', done: false };
+            b.items.push(newItem);
+            renderTaskMemoBlocks();
+            setTimeout(() => {
+                const row = document.getElementById('mbi_' + newItem.id);
+                if (row) row.querySelector('input[type="text"]')?.focus();
+            }, 30);
+        };
+
+        window.toggleMemoChecklistItem = function(blockId, itemId) {
+            const b = _memoBlocks.find(b => b.id === blockId);
+            if (!b) return;
+            const item = b.items.find(i => i.id === itemId);
+            if (item) { item.done = !item.done; renderTaskMemoBlocks(); }
+        };
+
+        window.updateMemoChecklistItemText = function(blockId, itemId, text) {
+            const b = _memoBlocks.find(b => b.id === blockId);
+            if (!b) return;
+            const item = b.items.find(i => i.id === itemId);
+            if (item) item.text = text;
+        };
+
+        window.deleteMemoChecklistItem = function(blockId, itemId) {
+            const b = _memoBlocks.find(b => b.id === blockId);
+            if (b) { b.items = b.items.filter(i => i.id !== itemId); renderTaskMemoBlocks(); }
+        };
+
+        // ── Standalone memo modal (📝 icon from task list) ──────────────────────
         window.openTaskMemoModal = function(taskId) {
             modalMemoTaskId = taskId;
             const task = state.tasks.find(t => t.id == taskId);
             if (!task) return;
-            
-            document.getElementById('taskMemoEditor').innerHTML = task.memo || '';
+            _memoContainerId = 'modalMemoBlocksContainer';
+            _memoBlocks = JSON.parse(JSON.stringify(
+                task.memoBlocks?.length ? task.memoBlocks
+                : task.memo ? [{ id: 'mb_' + task.id, type: 'text', html: task.memo }]
+                : []
+            ));
+            renderTaskMemoBlocks();
             document.getElementById('taskMemoModal').classList.add('show');
         };
 
@@ -12572,10 +12788,12 @@
             if (!modalMemoTaskId) return;
             const taskIndex = state.tasks.findIndex(t => t.id == modalMemoTaskId);
             if (taskIndex !== -1) {
-                state.tasks[taskIndex].memo = document.getElementById('taskMemoEditor').innerHTML;
+                const memoLegacy = _serializeMemoBlocks();
+                state.tasks[taskIndex].memo = memoLegacy;
+                state.tasks[taskIndex].memoBlocks = JSON.parse(JSON.stringify(_memoBlocks));
                 saveState();
                 showToast('Memo Saved', 'Task memo updated successfully.');
-                render(); // refresh UI to show the highlighted memo icon
+                render();
             }
             window.closeTaskMemoModal();
         };
@@ -12640,28 +12858,31 @@
 
     <!-- Task Memo Modal -->
     <div id="taskMemoModal" class="modal-backdrop">
-        <div class="modal-content" style="max-width: 600px; padding: 25px;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
-                <button class="close-btn" style="background:none; border:none; font-size: 1.5rem; cursor:pointer; opacity: 0.7;" onclick="closeTaskMemoModal()" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">✕</button>
+        <div class="modal-content" style="max-width:620px;padding:25px;display:flex;flex-direction:column;max-height:88vh;">
+            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
+                <h2 style="margin:0;font-size:1.5rem;">📝 Task Memo</h2>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <button type="button" onclick="insertMemoBlock('text')" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ 文字</button>
+                    <button type="button" onclick="insertMemoBlock('checklist')" style="background:rgba(99,230,190,0.15);border:1px solid rgba(99,230,190,0.35);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ ✅ 清單</button>
+                    <button class="close-btn" style="background:none;border:none;font-size:1.5rem;cursor:pointer;opacity:0.7;" onclick="closeTaskMemoModal()" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">✕</button>
+                </div>
             </div>
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
+            <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;flex:1;overflow:hidden;">
                 <!-- Rich Text Toolbar -->
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; background: rgba(0,0,0,0.1); padding: 8px; border-radius: 8px;">
-                    <button class="btn" style="padding: 4px 10px; font-weight: bold; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('bold', false, null)" title="Bold">B</button>
-                    <button class="btn" style="padding: 4px 10px; font-style: italic; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('italic', false, null)" title="Italic">I</button>
-                    <button class="btn" style="padding: 4px 10px; text-decoration: underline; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; color: inherit; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('underline', false, null)" title="Underline">U</button>
-                    <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 5px;"></div>
-                    <button class="btn" style="padding: 4px 8px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('removeFormat', false, null)" title="Clear Format">🧹清除</button>
-                    <button class="btn" style="padding: 4px 8px; background: #FFF5F5; color: #E53E3E; border: 1px solid #FC8181; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('foreColor', false, '#E53E3E')" title="Text Red">🟥紅</button>
-                    <div style="width: 1px; background: rgba(255,255,255,0.3); margin: 0 2px;"></div>
-                    <button class="btn" style="padding: 4px 8px; background: #FEFCBF; color: #744210; font-weight: bold; border: 1px solid #D69E2E; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, '#FEFCBF')" title="Highlight">Highlight</button>
-                    <button class="btn" style="padding: 4px 8px; background: rgba(255,255,255,0.2); color: inherit; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="document.execCommand('hiliteColor', false, 'transparent')" title="Remove Highlight">✕</button>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;background:rgba(0,0,0,0.1);padding:7px;border-radius:8px;">
+                    <button class="btn" style="padding:4px 10px;font-weight:bold;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('bold',false,null)">B</button>
+                    <button class="btn" style="padding:4px 10px;font-style:italic;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('italic',false,null)">I</button>
+                    <button class="btn" style="padding:4px 10px;text-decoration:underline;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('underline',false,null)">U</button>
+                    <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 3px;"></div>
+                    <button class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('removeFormat',false,null)">🧹清除</button>
+                    <button class="btn" style="padding:4px 8px;background:#FFF5F5;color:#E53E3E;border:1px solid #FC8181;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('foreColor',false,'#E53E3E')">🟥紅</button>
+                    <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 2px;"></div>
+                    <button class="btn" style="padding:4px 8px;background:#FEFCBF;color:#744210;font-weight:bold;border:1px solid #D69E2E;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'#FEFCBF')">Highlight</button>
+                    <button class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'transparent')">✕</button>
                 </div>
-                <!-- Editor -->
-                <div id="taskMemoEditor" contenteditable="true" style="flex: 1; outline: none; padding: 15px; border: 1px dashed rgba(255,255,255,0.4); border-radius: 8px; min-height: 250px; line-height: 1.6; font-size: 1rem; background: rgba(255,255,255,0.05); overflow-y: auto;">
-                </div>
-                <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
+                <!-- Block container -->
+                <div id="modalMemoBlocksContainer" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0;padding-right:2px;"></div>
+                <div style="display:flex;justify-content:flex-end;margin-top:8px;">
                     <button type="button" class="btn btn-primary" onclick="saveTaskMemo()">Save Memo</button>
                 </div>
             </div>
