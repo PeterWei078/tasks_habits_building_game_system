@@ -8342,27 +8342,43 @@
 
             // Create Delete Button if Editing
             let deleteBtn = document.getElementById('btnDeleteTask');
+            // Remove stale lock label if present
+            const staleLock = document.getElementById('btnDeleteTaskLock');
+            if (staleLock) staleLock.remove();
+
             if (taskId) {
-                if (!deleteBtn) {
-                    deleteBtn = document.createElement('button');
-                    deleteBtn.id = 'btnDeleteTask';
-                    deleteBtn.type = 'button'; // Prevent form submission
-                    deleteBtn.className = 'btn';
-                    deleteBtn.style.background = 'rgba(229, 62, 62, 0.2)';
-                    deleteBtn.style.color = '#E53E3E';
-                    deleteBtn.style.marginLeft = '10px';
-                    deleteBtn.textContent = '🗑️ Delete Quest';
-                    deleteBtn.onclick = (e) => {
-                        if (e) e.preventDefault();
-                        deleteTask(taskId);
-                    };
-                    saveBtn.parentNode.appendChild(deleteBtn);
+                const _taskForBtn = state.tasks.find(t => t.id == taskId);
+                const isCompletedAchievement = _taskForBtn && _taskForBtn.completed && _taskForBtn.isAchievement;
+                if (isCompletedAchievement) {
+                    // Hide delete button and show permanent-lock label instead
+                    if (deleteBtn) deleteBtn.style.display = 'none';
+                    const lockLabel = document.createElement('span');
+                    lockLabel.id = 'btnDeleteTaskLock';
+                    lockLabel.style.cssText = 'margin-left:10px; padding:6px 14px; border-radius:8px; background:rgba(255,200,0,0.12); color:rgba(255,200,0,0.85); font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;';
+                    lockLabel.innerHTML = '🔒 成就任務 · 永久保存';
+                    saveBtn.parentNode.appendChild(lockLabel);
                 } else {
-                    deleteBtn.onclick = (e) => {
-                        if (e) e.preventDefault();
-                        deleteTask(taskId);
-                    };
-                    deleteBtn.style.display = 'inline-block';
+                    if (!deleteBtn) {
+                        deleteBtn = document.createElement('button');
+                        deleteBtn.id = 'btnDeleteTask';
+                        deleteBtn.type = 'button'; // Prevent form submission
+                        deleteBtn.className = 'btn';
+                        deleteBtn.style.background = 'rgba(229, 62, 62, 0.2)';
+                        deleteBtn.style.color = '#E53E3E';
+                        deleteBtn.style.marginLeft = '10px';
+                        deleteBtn.textContent = '🗑️ Delete Quest';
+                        deleteBtn.onclick = (e) => {
+                            if (e) e.preventDefault();
+                            deleteTask(taskId);
+                        };
+                        saveBtn.parentNode.appendChild(deleteBtn);
+                    } else {
+                        deleteBtn.onclick = (e) => {
+                            if (e) e.preventDefault();
+                            deleteTask(taskId);
+                        };
+                        deleteBtn.style.display = 'inline-block';
+                    }
                 }
             } else {
                 if (deleteBtn) deleteBtn.style.display = 'none';
@@ -9654,6 +9670,12 @@
             const task = state.tasks.find(t => t.id == id);
             if (!task) {
                 console.error("Task not found for deletion:", id);
+                return;
+            }
+
+            // Completed achievement tasks are permanently preserved — only hideable, never deletable
+            if (task.completed && task.isAchievement) {
+                showToast("🏆 永久保存中", "成就任務完成後不可刪除，只能透過「隱藏已完成任務」來隱藏。");
                 return;
             }
 
