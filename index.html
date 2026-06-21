@@ -2169,6 +2169,7 @@
                                 <option value="Habits">Habits 習慣</option>
                                 <option value="Skills">Skills 技能</option>
                                 <option value="Achievements">Achievements 成就</option>
+                                <option value="AI創作">AI創作</option>
                             </select>
                         </div>
                         <input type="text" id="newBadgeDesc" placeholder="描述 (選填)"
@@ -6084,6 +6085,7 @@
                 'Habits':       { label: 'Habits',   icon: '🏃' },
                 'Skills':       { label: 'Skills',   icon: '⚡' },
                 'Achievements': { label: 'Achievements', icon: '🏆' },
+                'AI創作':       { label: 'AI創作',   icon: '🤖' },
                 'General':      { label: 'General',  icon: '📂' },
             };
             const existingCats = [...new Set(allBadgesPool.map(i => i.badgeCategory || 'General'))];
@@ -10754,6 +10756,7 @@
                                  <option value="Habits">Habits</option>
                                  <option value="Skills">Skills</option>
                                  <option value="Achievements">Achievements</option>
+                                 <option value="AI創作">AI創作</option>
                              </select>
                         </div>
                         <div class="form-group" id="editBadgeTierGroup" style="display:none;">
