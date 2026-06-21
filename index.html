@@ -2896,6 +2896,7 @@
                     { id: 'b2', title: '運動健將 (Athlete)', description: '堅持運動', price: 100, category: 'Badge', badgeCategory: 'Habits', icon: '🏃' },
                     { id: 'b3', title: '學習大師 (Scholar)', description: '熱愛學習', price: 150, category: 'Badge', badgeCategory: 'Skills', icon: '🎓' },
                     { id: 'b4', title: '財富自由 (Tycoon)', description: '累積財富', price: 500, category: 'Badge', badgeCategory: 'Achievements', icon: '💎' },
+                    { id: 'b_ai_vocab_app', title: '詞海術士', description: '以 AI 之力，構築英文查詢與單字庫 APP，化語言為魔法。', price: 0, category: 'Badge', badgeCategory: 'AI創作', badgeTier: 'silver', icon: '/badges/badge_ai_vocab_app.webp' },
                 ],
                 inventory: [],
                 achievements: [], // Archived completed projects
@@ -5802,6 +5803,13 @@
                 path: '/badges/badge_line_sticker_launch.webp',
                 name: 'LINE 貼圖首發上線',
                 match: t => /LINE.?貼圖|貼圖.?上線|sticker.?launch/i.test(t)
+            },
+            // ── AI創作 系列 ──
+            {
+                id: 'ai_vocab_app',
+                path: '/badges/badge_ai_vocab_app.webp',
+                name: '詞海術士',
+                match: t => /英文.?查詢|單字庫|vocab.?app|詞海術士/i.test(t)
             },
         ];
 
