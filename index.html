@@ -3756,6 +3756,12 @@
             { hex: '#ca8a04', label: '黃' }, { hex: '#ea580c', label: '橙' },
             { hex: '#dc2626', label: '紅' }, { hex: '#db2777', label: '粉' },
         ];
+        function stripReminderHtml(html) {
+            const d = document.createElement('div');
+            d.innerHTML = html || '';
+            return (d.textContent || d.innerText || '').trim();
+        }
+
         function getReminderTagColor(tagName) {
             const t = (state.reminderTags || []).find(t => t.name === tagName);
             return t?.color || '#7c3aed';
@@ -3767,6 +3773,7 @@
         }
 
         function renderRemindersPage() {
+            window.expandedReminderIds = window.expandedReminderIds || new Set();
             contentDiv.innerHTML = '';
 
             // ── Header ─────────────────────────────────────────────────────
@@ -3833,105 +3840,148 @@
             const sorted = [...filtered.filter(r => r.pinned), ...filtered.filter(r => !r.pinned)];
 
             sorted.forEach((rem) => {
+                const isExpanded = window.expandedReminderIds.has(rem.id);
                 const card = document.createElement('div');
                 card.className = 'glass glass-card';
-                card.style.cssText = `padding:20px 15px;display:flex;flex-direction:column;
-                    ${rem.pinned ? 'border:1px solid rgba(255,200,50,0.5);box-shadow:0 0 12px rgba(255,200,50,0.15);' : ''}`;
+                const pinnedBorder = rem.pinned ? 'border:1px solid rgba(255,200,50,0.5);box-shadow:0 0 12px rgba(255,200,50,0.15);' : '';
 
-                // ── Checklist HTML ──────────────────────────────────────────
-                const todosHtml = (rem.todos || []).map(todo => `
-                    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.08);" id="todo_row_${todo.id}">
-                        <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleReminderTodo('${rem.id}','${todo.id}')"
-                            style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent-color,#7c3aed);flex-shrink:0;">
-                        <input type="text" value="${todo.text.replace(/"/g, '&quot;')}"
-                            onblur="updateReminderTodoText('${rem.id}','${todo.id}',this.value)"
-                            onkeydown="if(event.key==='Enter'){this.blur();addReminderTodo('${rem.id}');}"
-                            style="flex:1;background:transparent;border:none;color:inherit;outline:none;font-size:0.9rem;
-                                ${todo.done ? 'text-decoration:line-through;opacity:0.5;' : ''}">
-                        <button onclick="deleteReminderTodo('${rem.id}','${todo.id}')" style="background:none;border:none;color:#FF6B6B;cursor:pointer;font-size:1rem;padding:0 4px;opacity:0.6;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">✕</button>
-                    </div>
-                `).join('');
+                if (!isExpanded) {
+                    // ── COLLAPSED ────────────────────────────────────────────
+                    card.style.cssText = `padding:0;display:flex;flex-direction:column;cursor:pointer;transition:transform 0.18s,box-shadow 0.18s;${pinnedBorder}`;
+                    card.onmouseenter = () => { card.style.transform='translateY(-2px)'; };
+                    card.onmouseleave = () => { card.style.transform=''; };
 
-                // ── Photo HTML ──────────────────────────────────────────────
-                const photoHtml = rem.photo
-                    ? `<div style="position:relative;margin-top:8px;">
-                          <img src="${rem.photo}" alt="photo" style="max-width:100%;border-radius:8px;max-height:220px;object-fit:contain;display:block;">
-                          <button onclick="removeReminderPhoto('${rem.id}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;cursor:pointer;border-radius:50%;width:24px;height:24px;font-size:0.8rem;display:flex;align-items:center;justify-content:center;">✕</button>
-                       </div>`
-                    : `<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);border-radius:8px;font-size:0.82rem;margin-top:8px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
-                          📷 選擇圖片
-                          <input type="file" accept="image/*" style="display:none;" onchange="handleReminderPhoto('${rem.id}',this)">
-                       </label>`;
+                    const preview = stripReminderHtml(rem.content);
+                    const previewText = preview.length > 90 ? preview.slice(0, 90) + '…' : preview;
+                    const tagsReadHtml = (rem.tags || []).map(t => {
+                        const c = getReminderTagColor(t);
+                        return `<span style="display:inline-flex;align-items:center;gap:3px;background:${_hexToRgba(c,0.22)};border:1px solid ${_hexToRgba(c,0.6)};border-radius:12px;padding:2px 7px;font-size:0.75rem;">
+                            <span style="width:6px;height:6px;border-radius:50%;background:${c};flex-shrink:0;"></span>${t}
+                        </span>`;
+                    }).join('');
+                    const doneTodos = (rem.todos || []).filter(t => t.done).length;
+                    const totalTodos = (rem.todos || []).length;
 
-                // ── Tags row HTML ───────────────────────────────────────────
-                const tagsHtml = (rem.tags || []).map(t => tagChipHtml(t, rem.id)).join('');
-                const availableTagsForAdd = (state.reminderTags || []).filter(tagObj => !(rem.tags || []).includes(tagObj.name));
-                const addTagOptions = availableTagsForAdd.map(tagObj => `<option value="${tagObj.name}">${tagObj.name}</option>`).join('');
-
-                card.innerHTML = `
-                    <!-- Card header -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;">
-                        <button onclick="toggleReminderPin('${rem.id}')" title="${rem.pinned ? '取消置頂' : '置頂'}"
-                            style="background:${rem.pinned ? 'rgba(255,200,50,0.25)' : 'rgba(255,255,255,0.08)'};border:none;cursor:pointer;border-radius:6px;padding:4px 7px;font-size:1rem;flex-shrink:0;transition:background 0.2s;"
-                            onmouseover="this.style.background='rgba(255,200,50,0.35)'" onmouseout="this.style.background='${rem.pinned ? 'rgba(255,200,50,0.25)' : 'rgba(255,255,255,0.08)'}'">
-                            ${rem.pinned ? '📌' : '📍'}
-                        </button>
-                        <input type="text" value="${rem.title.replace(/"/g, '&quot;')}" onchange="updateReminderTitle('${rem.id}', this.value)"
-                            style="font-size:1.1rem;font-weight:bold;background:transparent;border:none;color:inherit;flex:1;outline:none;border-bottom:1px dashed rgba(255,255,255,0.3);">
-                        <button class="btn" onclick="deleteReminderBoard('${rem.id}')" style="background:rgba(255,0,0,0.2);color:#FF6B6B;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">刪除</button>
-                    </div>
-
-                    <!-- Tags row -->
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;min-height:26px;">
-                        ${tagsHtml}
-                        ${availableTagsForAdd.length > 0 ? `
-                        <select onchange="addTagToReminder('${rem.id}',this.value);this.value='';"
-                            style="background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);border-radius:12px;color:inherit;padding:2px 6px;font-size:0.78rem;cursor:pointer;">
-                            <option value="">+ 加標籤</option>
-                            ${addTagOptions}
-                        </select>` : ''}
-                    </div>
-
-                    <!-- Toolbar -->
-                    <div style="display:flex;gap:8px;margin-bottom:10px;background:rgba(255,255,255,0.1);padding:5px;border-radius:6px;flex-wrap:wrap;">
-                        <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('fontSize',false,'3')" title="一般大小">A</button>
-                        <button class="btn" style="padding:2px 8px;font-size:0.9rem;background:rgba(0,0,0,0.2);font-weight:bold;" ${preventFocus} onclick="document.execCommand('fontSize',false,'5')" title="放大字體">A+</button>
-                        <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);font-weight:bold;" ${preventFocus} onclick="document.execCommand('bold',false,null)" title="粗體">B</button>
-                        <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);color:#FF6B6B;" ${preventFocus} onclick="document.execCommand('foreColor',false,'#FF6B6B')" title="紅色字體">A</button>
-                        <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('hiliteColor',false,'#FFFF00')" title="黃色螢光筆">🖍️</button>
-                        <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('removeFormat',false,null)" title="清除格式">🚫</button>
-                    </div>
-
-                    <!-- Memo contenteditable -->
-                    <div id="rem_${rem.id}" contenteditable="true"
-                        style="outline:none;padding:10px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;min-height:180px;line-height:1.6;"
-                        onblur="updateReminderContent('${rem.id}',this.innerHTML)"
-                        oninput="updateReminderContent('${rem.id}',this.innerHTML)">
-                        ${rem.content}
-                    </div>
-
-                    <!-- To-Do Checklist -->
-                    <div style="margin-top:14px;">
-                        <div style="font-size:0.85rem;font-weight:600;opacity:0.7;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-                            ✅ To-Do 清單
-                            <span style="font-size:0.75rem;opacity:0.5;">(${(rem.todos||[]).filter(t=>t.done).length}/${(rem.todos||[]).length})</span>
+                    card.innerHTML = `
+                        <div onclick="toggleReminderExpand('${rem.id}')" style="padding:16px 18px;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:${(rem.tags||[]).length || previewText ? '10px' : '0'};">
+                                <button onclick="event.stopPropagation();toggleReminderPin('${rem.id}')" title="${rem.pinned ? '取消置頂' : '置頂'}"
+                                    style="background:${rem.pinned ? 'rgba(255,200,50,0.25)' : 'rgba(255,255,255,0.08)'};border:none;cursor:pointer;border-radius:6px;padding:4px 7px;font-size:1rem;flex-shrink:0;transition:background 0.2s;"
+                                    onmouseover="this.style.background='rgba(255,200,50,0.35)'" onmouseout="this.style.background='${rem.pinned ? 'rgba(255,200,50,0.25)' : 'rgba(255,255,255,0.08)'}'">
+                                    ${rem.pinned ? '📌' : '📍'}
+                                </button>
+                                <span style="flex:1;font-size:1.05rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${rem.title}</span>
+                                <span style="font-size:0.72rem;color:rgba(255,255,255,0.4);flex-shrink:0;padding:2px 8px;background:rgba(255,255,255,0.07);border-radius:6px;border:1px solid rgba(255,255,255,0.12);">▼ 展開</span>
+                                <button class="btn" onclick="event.stopPropagation();deleteReminderBoard('${rem.id}')" style="background:rgba(255,0,0,0.2);color:#FF6B6B;padding:3px 8px;font-size:0.78rem;flex-shrink:0;">刪除</button>
+                            </div>
+                            ${tagsReadHtml ? `<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">${tagsReadHtml}</div>` : ''}
+                            ${previewText ? `<div style="font-size:0.86rem;color:rgba(255,255,255,0.58);line-height:1.55;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${previewText}</div>` : ''}
+                            ${(totalTodos > 0 || rem.photo) ? `
+                            <div style="display:flex;gap:6px;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.09);">
+                                ${totalTodos > 0 ? `<span style="background:rgba(255,255,255,0.1);border-radius:10px;padding:2px 8px;font-size:0.75rem;color:rgba(255,255,255,0.65);">✅ ${doneTodos}/${totalTodos}</span>` : ''}
+                                ${rem.photo ? `<span style="background:rgba(255,255,255,0.1);border-radius:10px;padding:2px 8px;font-size:0.75rem;color:rgba(255,255,255,0.65);">📷</span>` : ''}
+                            </div>` : ''}
                         </div>
-                        <div id="todos_${rem.id}" style="display:flex;flex-direction:column;">
-                            ${todosHtml}
-                        </div>
-                        <button onclick="addReminderTodo('${rem.id}')"
-                            style="margin-top:6px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);border-radius:8px;color:inherit;padding:4px 12px;cursor:pointer;font-size:0.82rem;width:100%;transition:background 0.2s;"
-                            onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
-                            + 新增項目
-                        </button>
-                    </div>
+                    `;
+                } else {
+                    // ── EXPANDED ─────────────────────────────────────────────
+                    card.style.cssText = `padding:20px 15px;display:flex;flex-direction:column;${pinnedBorder}`;
 
-                    <!-- Photo -->
-                    <div style="margin-top:12px;">
-                        <div style="font-size:0.85rem;font-weight:600;opacity:0.7;margin-bottom:4px;">📷 圖片</div>
-                        ${photoHtml}
-                    </div>
-                `;
+                    const todosHtml = (rem.todos || []).map(todo => `
+                        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.08);" id="todo_row_${todo.id}">
+                            <input type="checkbox" ${todo.done ? 'checked' : ''} onchange="toggleReminderTodo('${rem.id}','${todo.id}')"
+                                style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent-color,#7c3aed);flex-shrink:0;">
+                            <input type="text" value="${todo.text.replace(/"/g, '&quot;')}"
+                                onblur="updateReminderTodoText('${rem.id}','${todo.id}',this.value)"
+                                onkeydown="if(event.key==='Enter'){this.blur();addReminderTodo('${rem.id}');}"
+                                style="flex:1;background:transparent;border:none;color:inherit;outline:none;font-size:0.9rem;
+                                    ${todo.done ? 'text-decoration:line-through;opacity:0.5;' : ''}">
+                            <button onclick="deleteReminderTodo('${rem.id}','${todo.id}')" style="background:none;border:none;color:#FF6B6B;cursor:pointer;font-size:1rem;padding:0 4px;opacity:0.6;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">✕</button>
+                        </div>
+                    `).join('');
+
+                    const photoHtml = rem.photo
+                        ? `<div style="position:relative;margin-top:8px;">
+                              <img src="${rem.photo}" alt="photo" style="max-width:100%;border-radius:8px;max-height:220px;object-fit:contain;display:block;">
+                              <button onclick="removeReminderPhoto('${rem.id}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;cursor:pointer;border-radius:50%;width:24px;height:24px;font-size:0.8rem;display:flex;align-items:center;justify-content:center;">✕</button>
+                           </div>`
+                        : `<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);border-radius:8px;font-size:0.82rem;margin-top:8px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                              📷 選擇圖片
+                              <input type="file" accept="image/*" style="display:none;" onchange="handleReminderPhoto('${rem.id}',this)">
+                           </label>`;
+
+                    const tagsHtml = (rem.tags || []).map(t => tagChipHtml(t, rem.id)).join('');
+                    const availableTagsForAdd = (state.reminderTags || []).filter(tagObj => !(rem.tags || []).includes(tagObj.name));
+                    const addTagOptions = availableTagsForAdd.map(tagObj => `<option value="${tagObj.name}">${tagObj.name}</option>`).join('');
+
+                    card.innerHTML = `
+                        <!-- Card header -->
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;">
+                            <button onclick="toggleReminderPin('${rem.id}')" title="${rem.pinned ? '取消置頂' : '置頂'}"
+                                style="background:${rem.pinned ? 'rgba(255,200,50,0.25)' : 'rgba(255,255,255,0.08)'};border:none;cursor:pointer;border-radius:6px;padding:4px 7px;font-size:1rem;flex-shrink:0;transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(255,200,50,0.35)'" onmouseout="this.style.background='${rem.pinned ? 'rgba(255,200,50,0.25)' : 'rgba(255,255,255,0.08)'}'">
+                                ${rem.pinned ? '📌' : '📍'}
+                            </button>
+                            <input type="text" value="${rem.title.replace(/"/g, '&quot;')}" onchange="updateReminderTitle('${rem.id}', this.value)"
+                                style="font-size:1.1rem;font-weight:bold;background:transparent;border:none;color:inherit;flex:1;outline:none;border-bottom:1px dashed rgba(255,255,255,0.3);">
+                            <button onclick="toggleReminderExpand('${rem.id}')" title="收合"
+                                style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:6px;cursor:pointer;padding:4px 10px;font-size:0.72rem;color:rgba(255,255,255,0.7);flex-shrink:0;transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">▲ 收合</button>
+                            <button class="btn" onclick="deleteReminderBoard('${rem.id}')" style="background:rgba(255,0,0,0.2);color:#FF6B6B;padding:4px 8px;font-size:0.8rem;flex-shrink:0;">刪除</button>
+                        </div>
+
+                        <!-- Tags row -->
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;min-height:26px;">
+                            ${tagsHtml}
+                            ${availableTagsForAdd.length > 0 ? `
+                            <select onchange="addTagToReminder('${rem.id}',this.value);this.value='';"
+                                style="background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);border-radius:12px;color:inherit;padding:2px 6px;font-size:0.78rem;cursor:pointer;">
+                                <option value="">+ 加標籤</option>
+                                ${addTagOptions}
+                            </select>` : ''}
+                        </div>
+
+                        <!-- Toolbar -->
+                        <div style="display:flex;gap:8px;margin-bottom:10px;background:rgba(255,255,255,0.1);padding:5px;border-radius:6px;flex-wrap:wrap;">
+                            <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('fontSize',false,'3')" title="一般大小">A</button>
+                            <button class="btn" style="padding:2px 8px;font-size:0.9rem;background:rgba(0,0,0,0.2);font-weight:bold;" ${preventFocus} onclick="document.execCommand('fontSize',false,'5')" title="放大字體">A+</button>
+                            <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);font-weight:bold;" ${preventFocus} onclick="document.execCommand('bold',false,null)" title="粗體">B</button>
+                            <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);color:#FF6B6B;" ${preventFocus} onclick="document.execCommand('foreColor',false,'#FF6B6B')" title="紅色字體">A</button>
+                            <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('hiliteColor',false,'#FFFF00')" title="黃色螢光筆">🖍️</button>
+                            <button class="btn" style="padding:2px 8px;font-size:0.8rem;background:rgba(0,0,0,0.2);" ${preventFocus} onclick="document.execCommand('removeFormat',false,null)" title="清除格式">🚫</button>
+                        </div>
+
+                        <!-- Memo contenteditable -->
+                        <div id="rem_${rem.id}" contenteditable="true"
+                            style="outline:none;padding:10px;border:1px dashed rgba(255,255,255,0.2);border-radius:8px;min-height:180px;line-height:1.6;"
+                            onblur="updateReminderContent('${rem.id}',this.innerHTML)"
+                            oninput="updateReminderContent('${rem.id}',this.innerHTML)">
+                            ${rem.content}
+                        </div>
+
+                        <!-- To-Do Checklist -->
+                        <div style="margin-top:14px;">
+                            <div style="font-size:0.85rem;font-weight:600;opacity:0.7;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                                ✅ To-Do 清單
+                                <span style="font-size:0.75rem;opacity:0.5;">(${(rem.todos||[]).filter(t=>t.done).length}/${(rem.todos||[]).length})</span>
+                            </div>
+                            <div id="todos_${rem.id}" style="display:flex;flex-direction:column;">
+                                ${todosHtml}
+                            </div>
+                            <button onclick="addReminderTodo('${rem.id}')"
+                                style="margin-top:6px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);border-radius:8px;color:inherit;padding:4px 12px;cursor:pointer;font-size:0.82rem;width:100%;transition:background 0.2s;"
+                                onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                                + 新增項目
+                            </button>
+                        </div>
+
+                        <!-- Photo -->
+                        <div style="margin-top:12px;">
+                            <div style="font-size:0.85rem;font-weight:600;opacity:0.7;margin-bottom:4px;">📷 圖片</div>
+                            ${photoHtml}
+                        </div>
+                    `;
+                }
                 gridLayout.appendChild(card);
             });
 
@@ -4121,12 +4171,15 @@
         };
 
         window.addReminderBoard = function() {
+            const newId = 'rem_' + Date.now();
             state.reminders.push({
-                id: 'rem_' + Date.now(),
+                id: newId,
                 title: '新提醒板',
-                content: '點擊此處開始輸入重要提醒...',
+                content: '',
                 tags: [], pinned: false, todos: [], photo: null
             });
+            window.expandedReminderIds = window.expandedReminderIds || new Set();
+            window.expandedReminderIds.add(newId);
             saveState();
             render();
         };
@@ -4134,9 +4187,20 @@
         window.deleteReminderBoard = function(id) {
             if (confirm('確定要刪除這個提醒板嗎？')) {
                 state.reminders = state.reminders.filter(r => r.id !== id);
+                if (window.expandedReminderIds) window.expandedReminderIds.delete(id);
                 saveState();
                 render();
             }
+        };
+
+        window.toggleReminderExpand = function(id) {
+            window.expandedReminderIds = window.expandedReminderIds || new Set();
+            if (window.expandedReminderIds.has(id)) {
+                window.expandedReminderIds.delete(id);
+            } else {
+                window.expandedReminderIds.add(id);
+            }
+            renderRemindersPage();
         };
 
         window.updateReminderTitle = function(id, title) {
