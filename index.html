@@ -4433,6 +4433,30 @@
                                 ${!done ? `<div style="background:${accent};color:#fff;border-radius:8px;padding:4px 12px;font-size:0.78rem;font-weight:700;flex-shrink:0;">打卡</div>` : ''}
                             </div>
 
+                            <!-- Retro check-in: past 3 days -->
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+                                <span style="font-size:0.72rem;color:rgba(60,40,100,0.45);font-weight:600;white-space:nowrap;letter-spacing:0.3px;">補打卡</span>
+                                <div style="width:1px;height:12px;background:rgba(107,70,193,0.18);flex-shrink:0;"></div>
+                                ${[1,2,3].map(n => {
+                                    const ds = getDateStrOffset(n);
+                                    const retroDone = !!habit.completions[ds];
+                                    const label = n===1 ? '昨天' : `${n}天前`;
+                                    const mmdd = ds.slice(5,7)+'/'+ds.slice(8,10);
+                                    return `<div onclick="toggleHabitRetro('${habit.id}','${ds}')"
+                                         title="${ds} 補打卡"
+                                         style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:7px;cursor:pointer;
+                                                border:1.5px solid ${retroDone?'rgba(39,103,73,0.45)':'rgba(107,70,193,0.2)'};
+                                                background:${retroDone?'rgba(39,103,73,0.1)':'rgba(107,70,193,0.04)'};
+                                                transition:all 0.15s;user-select:none;"
+                                         onmouseover="this.style.background='${retroDone?'rgba(39,103,73,0.18)':'rgba(107,70,193,0.1)'}'"
+                                         onmouseout="this.style.background='${retroDone?'rgba(39,103,73,0.1)':'rgba(107,70,193,0.04)'}'">
+                                        ${retroDone ? `<span style="font-size:0.7rem;color:#276749;font-weight:900;line-height:1;">✓</span>` : `<span style="font-size:0.65rem;color:rgba(107,70,193,0.35);font-weight:700;line-height:1;">○</span>`}
+                                        <span style="font-size:0.72rem;font-weight:700;color:${retroDone?'#276749':'rgba(60,40,100,0.6)'};">${mmdd}</span>
+                                        <span style="font-size:0.68rem;color:${retroDone?'#276749':'rgba(60,40,100,0.4)'};">${label}</span>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+
                             <!-- Chart scale toggle + legend -->
                             <div style="display:flex;gap:5px;align-items:center;margin-bottom:10px;">
                                 ${['day','week','month'].map(s => `
@@ -4561,6 +4585,18 @@
                 if (rewardParts.length > 0) showToast(`🏅 習慣連續獎勵！`, `${habit.icon} ${rewardParts.join(', ')}（連續${streak}日）`);
             }
 
+            saveState();
+            renderHabitsPage();
+        };
+
+        window.toggleHabitRetro = function(habitId, dateStr) {
+            const habit = state.habits.find(h => h.id === habitId);
+            if (!habit) return;
+            if (habit.completions[dateStr]) {
+                delete habit.completions[dateStr];
+            } else {
+                habit.completions[dateStr] = true;
+            }
             saveState();
             renderHabitsPage();
         };
