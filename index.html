@@ -9871,6 +9871,12 @@
         }
 
         function executeDelete(id) {
+            const task = state.tasks.find(t => t.id == id);
+            // If the task had a date range, archive it so it stays visible (faded) in the timeline
+            if (task && task.startDate && task.dueDate) {
+                if (!state.archivedTasks) state.archivedTasks = [];
+                state.archivedTasks.push(task);
+            }
             // Use loose equality for filtering to match mixed types
             state.tasks = state.tasks.filter(t => t.id != id);
             saveState();
