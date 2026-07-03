@@ -6370,6 +6370,11 @@
             renderBadgesPage();
         }
 
+        function setSpoilsSortMode(mode) {
+            window._spoilsSortMode = mode;
+            renderStatisticsPage();
+        }
+
         function buyBadge(itemId) {
             const item = state.player.shopItems.find(i => i.id === itemId);
             if (!item) return;
@@ -6663,7 +6668,8 @@
             purchaseListCard.style.padding = '20px';
             purchaseListCard.style.marginBottom = '20px';
 
-            const tierWeights = { 'Paper': 1, 'Wood': 1, 'Iron': 2, 'Bronze': 3, 'Silver': 4, 'Gold': 5, 'Platinum': 6, 'Diamond': 7, 'Legendary': 8, 'Mythic': 9 };
+            const tierWeights = { 'paper': 1, 'wood': 1, 'iron': 2, 'bronze': 3, 'silver': 4, 'gold': 5, 'platinum': 6, 'diamond': 7, 'legendary': 8, 'mythic': 9 };
+            const getTierWeight = (tier) => tier ? (tierWeights[tier.toLowerCase()] || 3) : 3;
 
             const purchaseHistory = [];
             state.player.inventory.forEach(inv => {
@@ -6682,7 +6688,7 @@
                 }
 
                 if (itemData && itemData.tier) {
-                    const weight = tierWeights[itemData.tier] || 3;
+                    const weight = getTierWeight(itemData.tier);
                     if (weight >= 3) {
                         purchaseHistory.push({
                             ...itemData,
@@ -6694,13 +6700,6 @@
 
             purchaseHistory.sort((a, b) => b.date - a.date);
 
-            const groupedPurchases = {};
-            purchaseHistory.forEach(item => {
-                const yearMonth = `${item.date.getFullYear()} -${String(item.date.getMonth() + 1).padStart(2, '0')} `;
-                if (!groupedPurchases[yearMonth]) groupedPurchases[yearMonth] = [];
-                groupedPurchases[yearMonth].push(item);
-            });
-
             const getTierBadgeClass = (tier) => {
                 if (!tier) return 'spoils-tier-bronze';
                 const lowerTier = tier.toLowerCase();
@@ -6711,27 +6710,87 @@
                 return 'spoils-tier-bronze';
             };
 
-            let purchasesHtml = `<h3 style = "margin:0 0 15px 0;">🎉 戰利品(Legendary Spoils)</h3> `;
+            if (!window._spoilsSortMode) window._spoilsSortMode = 'date';
+            const spoilsSortMode = window._spoilsSortMode;
 
-            if (Object.keys(groupedPurchases).length === 0) {
+            const spoilsSortMeta = {
+                date: { label: '日期', icon: '📅' },
+                tier: { label: '等級', icon: '🏅' },
+                category: { label: '分類', icon: '🗂️' },
+            };
+            const spoilsFilterBarHtml = Object.entries(spoilsSortMeta).map(([mode, m]) => {
+                const isActive = spoilsSortMode === mode;
+                return `<button class="badge-filter-btn${isActive ? ' active' : ''}" onclick="setSpoilsSortMode('${mode}')">${m.icon} ${m.label}</button>`;
+            }).join('');
+
+            // Group purchases according to the selected mode (items stay date-desc within each group)
+            const spoilsGroups = {};
+            if (spoilsSortMode === 'tier') {
+                const tierLabelMeta = {
+                    bronze: { label: 'BRONZE', icon: '🥉' },
+                    silver: { label: 'SILVER', icon: '🥈' },
+                    gold: { label: 'GOLD', icon: '🥇' },
+                    platinum: { label: 'PLATINUM', icon: '💠' },
+                    diamond: { label: 'DIAMOND', icon: '💎' },
+                    legendary: { label: 'LEGENDARY', icon: '🌟' },
+                    mythic: { label: 'MYTHIC', icon: '✨' },
+                };
+                purchaseHistory.forEach(item => {
+                    const key = (item.tier || 'Bronze').toLowerCase();
+                    if (!spoilsGroups[key]) {
+                        const m = tierLabelMeta[key] || { label: (item.tier || 'Bronze').toUpperCase(), icon: '🏅' };
+                        spoilsGroups[key] = { label: `${m.icon} ${m.label}`, weight: getTierWeight(item.tier), items: [] };
+                    }
+                    spoilsGroups[key].items.push(item);
+                });
+            } else if (spoilsSortMode === 'category') {
+                purchaseHistory.forEach(item => {
+                    const key = item.category === 'Badge' ? 'Badge' : 'Item';
+                    if (!spoilsGroups[key]) {
+                        spoilsGroups[key] = { label: key === 'Badge' ? '🏅 徽章 (Badges)' : '🛍️ 商品 (Items)', items: [] };
+                    }
+                    spoilsGroups[key].items.push(item);
+                });
+            } else {
+                purchaseHistory.forEach(item => {
+                    const key = `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, '0')}`;
+                    if (!spoilsGroups[key]) {
+                        const dateObj = new Date(item.date.getFullYear(), item.date.getMonth(), 1);
+                        spoilsGroups[key] = { label: dateObj.toLocaleDateString('default', { year: 'numeric', month: 'long' }), items: [] };
+                    }
+                    spoilsGroups[key].items.push(item);
+                });
+            }
+
+            let spoilsGroupKeys = Object.keys(spoilsGroups);
+            if (spoilsSortMode === 'tier') {
+                spoilsGroupKeys.sort((a, b) => spoilsGroups[b].weight - spoilsGroups[a].weight);
+            } else if (spoilsSortMode === 'category') {
+                spoilsGroupKeys.sort((a, b) => (a === 'Badge' ? -1 : 1) - (b === 'Badge' ? -1 : 1));
+            } else {
+                spoilsGroupKeys.sort((a, b) => b.localeCompare(a));
+            }
+
+            let purchasesHtml = `
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:15px;">
+                    <h3 style="margin:0;">🎉 戰利品(Legendary Spoils)</h3>
+                    <div class="badge-filter-bar" style="margin:0;">${spoilsFilterBarHtml}</div>
+                </div>
+            `;
+
+            if (spoilsGroupKeys.length === 0) {
                 purchasesHtml += `<div style = "text-align:center; opacity:0.6; padding: 20px;"> 尚無購買紀錄。去商店逛逛吧！</div> `;
             } else {
-                // Sort months descending
-                const sortedMonths = Object.keys(groupedPurchases).sort((a, b) => b.localeCompare(a));
-
-                for (const monthKey of sortedMonths) {
-                    const [y, m] = monthKey.split('-');
-                    const dateObj = new Date(parseInt(y), parseInt(m) - 1, 1);
-                    const monthDisplay = dateObj.toLocaleDateString('default', { year: 'numeric', month: 'long' });
-                    const items = groupedPurchases[monthKey];
+                spoilsGroupKeys.forEach(key => {
+                    const group = spoilsGroups[key];
 
                     purchasesHtml += `
                 <div style = "font-weight: bold; padding: 10px 10px 5px 10px; border-bottom: 2px solid rgba(255,255,255,0.2); margin-top: 15px; color: #a0aec0; font-size: 1rem; opacity: 0.9;">
-                    ${monthDisplay}
+                    ${group.label}
                         </div>
                 `;
 
-                    items.forEach(item => {
+                    group.items.forEach(item => {
                         purchasesHtml += `
                 <div style = "display: flex; align-items: flex-start; gap: 15px; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background 0.2s; border-radius: 8px;" onmouseover = "this.style.background='rgba(255,255,255,0.05)'" onmouseout = "this.style.background='transparent'">
                                 <div style="width:60px;height:60px;flex-shrink:0;border-radius:10px;overflow:hidden;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:2.2rem;">${(item.icon && (item.icon.startsWith('data:image/') || item.icon.startsWith('/') || item.icon.startsWith('http'))) ? `<img src="${item.icon}" style="width:100%;height:100%;object-fit:cover;display:block;" draggable="false">` : `<span>${item.icon || '📦'}</span>`}</div>
@@ -6752,7 +6811,7 @@
                             </div>
                 `;
                     });
-                }
+                });
             }
 
             purchaseListCard.innerHTML = purchasesHtml;
