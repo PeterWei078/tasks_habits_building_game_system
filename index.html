@@ -11948,15 +11948,19 @@
                 const borderLeft  = accentColor;
                 const romanNum    = toRoman(total - idx);
 
+                const navLabel = type === 'task' ? '前往任務 →' : '前往專案 →';
+
                 return `
                     <div style="position:relative; margin-bottom:12px; padding:16px 18px 12px;
                         background:linear-gradient(135deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.02) 100%);
                         border:1px solid rgba(255,215,0,0.15);
                         border-left:3px solid ${borderLeft};
                         border-radius:12px;
-                        transition:background 0.2s;"
-                        onmouseover="this.style.background='linear-gradient(135deg,rgba(255,215,0,0.06) 0%,rgba(255,255,255,0.03) 100%)'; this.querySelector('.achieve-actions').style.opacity='1';"
-                        onmouseout="this.style.background='linear-gradient(135deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.02) 100%)'; this.querySelector('.achieve-actions').style.opacity='0';">
+                        cursor:pointer;
+                        transition:background 0.2s, transform 0.15s;"
+                        onclick="navigateToAchievement('${item.id}','${type}')"
+                        onmouseover="this.style.background='linear-gradient(135deg,rgba(255,215,0,0.06) 0%,rgba(255,255,255,0.03) 100%)'; this.style.transform='translateY(-1px)'; this.querySelector('.achieve-actions').style.opacity='1'; this.querySelector('.achieve-nav').style.opacity='1';"
+                        onmouseout="this.style.background='linear-gradient(135deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.02) 100%)'; this.style.transform='translateY(0)'; this.querySelector('.achieve-actions').style.opacity='0'; this.querySelector('.achieve-nav').style.opacity='0';">
                         <div style="position:absolute;top:10px;right:46px; font-size:0.65rem; color:rgba(255,215,0,0.3); font-family:serif; letter-spacing:1px;">${romanNum}</div>
                         <div class="achieve-actions" style="position:absolute;top:7px;right:7px; display:flex; gap:4px; opacity:0; transition:opacity 0.2s;">
                             <button onclick="event.stopPropagation(); editAchievement('${item.id}','${type}')"
@@ -11975,6 +11979,7 @@
                                     <span style="font-size:0.75rem; color:rgba(255,215,0,0.55); letter-spacing:0.8px; font-family:serif;">${dateStr}</span>
                                     ${rewardsHtml}
                                     ${urlHtml}
+                                    <span class="achieve-nav" style="font-size:0.7rem; color:rgba(255,255,255,0.35); opacity:0; transition:opacity 0.2s; margin-left:auto;">${navLabel}</span>
                                 </div>
                             </div>
                         </div>
@@ -12016,6 +12021,18 @@
             let result = '';
             vals.forEach((v, i) => { while (num >= v) { result += syms[i]; num -= v; } });
             return result;
+        }
+
+        function navigateToAchievement(id, type) {
+            const achieveModal = document.getElementById('achievementModal');
+            if (achieveModal) achieveModal.classList.remove('show');
+            if (type === 'task') {
+                switchTab('tasks');
+                setTimeout(() => openTaskModal(id), 80);
+            } else {
+                switchTab('projects');
+                setTimeout(() => openProjectModal(id), 80);
+            }
         }
 
         function deleteAchievement(id, groupId, type) {
