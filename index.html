@@ -5833,11 +5833,13 @@
 
         function renderShopTab() {
             // Category Filter (Exclude Badges from Shop)
-            // Get all used categories plus the default ones
-            const usedCategoryNames = new Set(state.player.shopItems.filter(i => i.category !== 'Badge').map(item => item.category));
-            state.player.shopCategories.forEach(c => usedCategoryNames.add(c.name));
+            // Order follows state.player.shopCategories (user-editable via Manage Categories);
+            // any item category not defined there (e.g. orphaned 'Other') is appended at the end.
+            const definedNames = state.player.shopCategories.map(c => c.name);
+            const usedItemNames = new Set(state.player.shopItems.filter(i => i.category !== 'Badge').map(item => item.category));
+            const orphanNames = Array.from(usedItemNames).filter(name => !definedNames.includes(name));
 
-            const categories = ['All', ...Array.from(usedCategoryNames)];
+            const categories = ['All', ...definedNames, ...orphanNames];
 
             const categoryScroll = document.createElement('div');
             categoryScroll.className = 'category-scroll';
