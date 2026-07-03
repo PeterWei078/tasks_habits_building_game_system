@@ -3137,8 +3137,6 @@
             }
 
             if (!state.player.inventory) state.player.inventory = [];
-            if (!state.player.inventory) state.player.inventory = [];
-            if (!state.player.achievements) state.player.achievements = [];
             if (!state.player.reflections) state.player.reflections = []; // Initialize reflections
             if (!state.player.skills) state.player.skills = []; // Initialize skills
             if (!state.player.photoLibrary) {
@@ -7915,19 +7913,23 @@
             const activeProjectIds = new Set(
                 state.player.tags.filter(p => !p.completed && !isProjectCompleted(p)).map(p => p.id)
             );
+            // Locked achievement project IDs: completed + achievement projects — their tasks are permanently preserved too
+            const lockedProjectIds = new Set(
+                state.player.tags.filter(p => p.completed && p.isAchievement).map(p => p.id)
+            );
 
-            // Deletable = completed, not an achievement, and not belonging to an active project
+            // Deletable = completed, not an achievement, and not belonging to an active or achievement-locked project
             const toDelete = state.tasks.filter(t =>
                 t.completed &&
                 !t.isAchievement &&
-                !(t.tags && t.tags.some(tid => activeProjectIds.has(tid)))
+                !(t.tags && t.tags.some(tid => activeProjectIds.has(tid) || lockedProjectIds.has(tid)))
             );
 
             if (toDelete.length === 0) {
-                alert("No completed tasks to delete!\n\n(Achievement tasks and tasks in active projects are always preserved.)");
+                alert("No completed tasks to delete!\n\n(Achievement tasks and tasks in active or achievement-locked projects are always preserved.)");
                 return;
             }
-            const confirmed = await uiConfirm(`Are you sure you want to delete ${toDelete.length} completed task(s)?\n\nNote: Achievement tasks and tasks in active projects will NOT be deleted. You will KEEP all EXP, Coins, and activity history earned from these tasks.\n\nCompleted tasks with a timeline date range will remain visible (faded) in the timelines.`);
+            const confirmed = await uiConfirm(`Are you sure you want to delete ${toDelete.length} completed task(s)?\n\nNote: Achievement tasks and tasks in active or achievement-locked projects will NOT be deleted. You will KEEP all EXP, Coins, and activity history earned from these tasks.\n\nCompleted tasks with a timeline date range will remain visible (faded) in the timelines.`);
             if (confirmed) {
                 const toDeleteIds = new Set(toDelete.map(t => t.id));
                 // Move tasks that had timeline dates to archivedTasks so they remain visible in timelines
@@ -9846,6 +9848,17 @@
                 return;
             }
 
+            // Completed tasks under a locked achievement project are preserved too, so the project's memo/history stays intact
+            if (task.completed) {
+                const lockedProject = (task.tags || [])
+                    .map(tid => state.player.tags.find(t => t.id === tid))
+                    .find(p => p && p.completed && p.isAchievement);
+                if (lockedProject) {
+                    showToast("🏆 永久保存中", `此任務屬於成就專案「${lockedProject.name}」，完成後不可刪除，只能透過「隱藏已完成任務」來隱藏。`);
+                    return;
+                }
+            }
+
             if (typeof openConfirmModal === 'function') {
                 openConfirmModal(`Abandon quest "${task.title}"?`, () => {
                     executeDelete(id);
@@ -11423,16 +11436,16 @@
         }
 
         async function deleteTag(id) {
-            const confirmed = await uiConfirm("Delete this project?");
-            if (!confirmed) return;
-
             const project = state.player.tags.find(t => t.id === id);
 
-            // Archive if completed
-            if (project && project.completed) {
-                state.player.achievements.push(project);
-                showToast("Project Archived", "Completed project moved to Achievements.");
+            // Completed achievement projects are permanently preserved — only hideable, never deletable
+            if (project && project.completed && project.isAchievement) {
+                showToast("🏆 永久保存中", "成就專案完成後不可刪除，只能透過「隱藏已完成專案」來隱藏。");
+                return;
             }
+
+            const confirmed = await uiConfirm("Delete this project?");
+            if (!confirmed) return;
 
             // Remove tag from all tasks
             state.tasks.forEach(t => {
