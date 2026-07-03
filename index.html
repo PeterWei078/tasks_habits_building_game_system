@@ -2938,6 +2938,7 @@
                 { id: 2, title: "閱讀 30 分鐘 (Read Book)", attributeRewards: [{ attribute: "intelligence", exp: 15 }], completed: false, rewardExp: 15, rewardGold: 5, groupId: 'learning', tags: ['longterm'] }
             ],
             archivedTasks: [],
+            archivedProjects: [],
             featuredTaskId: null,
             focusMusic: [
                 {
@@ -2979,6 +2980,9 @@
             }
             if (!state.archivedTasks) {
                 state.archivedTasks = [];
+            }
+            if (!state.archivedProjects) {
+                state.archivedProjects = [];
             }
             if (!state.reminders) {
                 state.reminders = [
@@ -5294,7 +5298,9 @@
 
         function renderProjectTimelineHTML() {
             // Include all projects with date ranges — completed ones shown faded and non-editable
-            const tlProjects = state.player.tags.filter(p => p.startDate && p.endDate && new Date(p.startDate) <= new Date(p.endDate));
+            const tlActive = state.player.tags.filter(p => p.startDate && p.endDate && new Date(p.startDate) <= new Date(p.endDate));
+            const tlArchived = (state.archivedProjects || []).filter(p => p.startDate && p.endDate && new Date(p.startDate) <= new Date(p.endDate)).map(p => ({ ...p, _archived: true }));
+            const tlProjects = [...tlActive, ...tlArchived];
 
             let html = `
                 <div class="glass glass-card" style="padding: 15px; margin-bottom: 20px;">
@@ -5450,11 +5456,16 @@
                     let opacityStyle = '';
                     let titlePrefix = '';
                     let progressStyle = '';
-                    
+
                     const isExpanded = window.expandedProjectTimelines && window.expandedProjectTimelines.includes(task.id);
                     const expandIcon = isExpanded ? '📂' : '📁';
+                    const isProjArchived = !!task._archived;
 
-                    if (isProjectCompleted(task)) {
+                    if (isProjArchived) {
+                        opacityStyle = 'opacity: 0.35;';
+                        titlePrefix = '🗑️ ';
+                        progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
+                    } else if (isProjectCompleted(task)) {
                         opacityStyle = 'opacity: 0.4;';
                         titlePrefix = '✅ ';
                         progressStyle = `<div style="position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: rgba(0,0,0,0.2);"></div>`;
@@ -5471,13 +5482,16 @@
                     }
 
                     const projCompleted = isProjectCompleted(task);
-                    const editBtnHtml = projCompleted ? '' : `<div onclick="openProjectModal('${task.id}'); event.stopPropagation();" style="position: absolute; right: 5px; z-index: 2; font-size: 0.8rem; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 5px; margin-top: 1px;" title="Edit Project">✏️</div>`;
-                    const projInteract = projCompleted
+                    // Archived projects: clickable to expand tasks, but no edit button
+                    const editBtnHtml = (projCompleted || isProjArchived) ? '' : `<div onclick="openProjectModal('${task.id}'); event.stopPropagation();" style="position: absolute; right: 5px; z-index: 2; font-size: 0.8rem; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 5px; margin-top: 1px;" title="Edit Project">✏️</div>`;
+                    const projInteract = (projCompleted && !isProjArchived)
                         ? `cursor: default;`
                         : `cursor: pointer; transition: transform 0.2s, filter 0.2s;`;
-                    const projHandlers = projCompleted
+                    const projHandlers = (projCompleted && !isProjArchived)
                         ? `title="${task.name} (${task.startDate} ~ ${task.endDate}) — 已完成"`
-                        : `title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';"`;
+                        : isProjArchived
+                            ? `title="${task.name} (${task.startDate} ~ ${task.endDate}) — 已刪除（點擊展開任務）" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.filter='brightness(1.15)';" onmouseout="this.style.filter='brightness(1)';" `
+                            : `title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';"`;
 
                     timelineArea += `
                         <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; ${projInteract} color: rgba(0,0,0,0.8); ${opacityStyle}" ${projHandlers}>
@@ -6996,6 +7010,7 @@
                 專案 (Projects)
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <button onclick="openPageInfoModal('projects', '專案 (Projects)')" title="Page Info" style="background:none; border:none; cursor:pointer; font-size:1.2rem; opacity:0.7; padding:5px; transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+                    <button onclick="triggerDeleteCompletedProjects()" style="background:rgba(229,62,62,0.8); color:white; border:none; border-radius:8px; padding:5px 12px; font-size:0.85rem; cursor:pointer; transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">🗑️ Delete Completed</button>
                     <label style="font-size: 0.9rem; font-weight: normal; cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 8px;">
                         <input type="checkbox" id="hideCompletedProjects" ${state.settings.hideCompletedProjects ? 'checked' : ''} onchange="toggleHideCompletedProjects(this.checked)">
                     Hide Completed
@@ -7085,6 +7100,30 @@
                 }
             }, 0);
         }
+
+        window.triggerDeleteCompletedProjects = async function () {
+            const completedProjects = state.player.tags.filter(p => p.completed && !p.isAchievement);
+            if (completedProjects.length === 0) {
+                alert("No completed projects to delete!\n\n(Achievement projects and incomplete projects are always preserved.)");
+                return;
+            }
+            const confirmed = await uiConfirm(`Are you sure you want to delete ${completedProjects.length} completed project(s)?\n\nNote: Achievement projects will NOT be deleted.\n\nCompleted projects with a date range will remain visible (faded) in the Project Timeline.`);
+            if (!confirmed) return;
+
+            if (!state.archivedProjects) state.archivedProjects = [];
+            const toArchive = completedProjects.filter(p => p.startDate && p.endDate);
+            state.archivedProjects.push(...toArchive);
+
+            const toDeleteIds = new Set(completedProjects.map(p => p.id));
+            // Remove tag reference from tasks
+            state.tasks.forEach(t => {
+                if (t.tags) t.tags = t.tags.filter(tid => !toDeleteIds.has(tid));
+            });
+            state.player.tags = state.player.tags.filter(p => !toDeleteIds.has(p.id));
+            saveState();
+            renderProjectsPage();
+            showToast("Projects Cleared", `${completedProjects.length} completed project(s) removed.`);
+        };
 
         // Function to handle toggle
         window.toggleHideCompletedProjects = function (checked) {
