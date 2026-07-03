@@ -10564,6 +10564,8 @@
         }
 
         // --- Store Categories Management ---
+        let editingStoreCategoryId = null;
+
         function renderManageStoreCategories() {
             try {
                 const list = document.getElementById('manageStoreCategoryList');
@@ -10573,19 +10575,87 @@
                     state.player.shopCategories = [];
                 }
 
-                list.innerHTML = state.player.shopCategories.map(cat => `
+                const cats = state.player.shopCategories;
+                list.innerHTML = cats.map((cat, idx) => {
+                    if (editingStoreCategoryId === cat.id) {
+                        return `
+                        <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; gap: 8px; align-items: center;">
+                            <input type="text" id="editStoreCategoryIcon_${cat.id}" value="${cat.icon || '📦'}" style="width: 50px; padding: 8px; border-radius: 6px; border: 1px solid #ccc; text-align:center;">
+                            <input type="text" id="editStoreCategoryName_${cat.id}" value="${cat.name || ''}" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                            <button class="btn btn-primary" onclick="saveStoreCategoryEdit('${cat.id}')">Save</button>
+                            <button class="btn btn-secondary" onclick="cancelStoreCategoryEdit()">Cancel</button>
+                        </div>
+                        `;
+                    }
+                    return `
                         <div style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <button onclick="moveStoreCategory('${cat.id}', -1)" ${idx === 0 ? 'disabled style="opacity:0.3;cursor:default;"' : ''} title="Move up" style="background:none; border:none; cursor:pointer; font-size:1rem; padding:2px 4px;">▲</button>
+                                <button onclick="moveStoreCategory('${cat.id}', 1)" ${idx === cats.length - 1 ? 'disabled style="opacity:0.3;cursor:default;"' : ''} title="Move down" style="background:none; border:none; cursor:pointer; font-size:1rem; padding:2px 4px;">▼</button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; flex: 1; margin-left: 8px;">
                                 <span style="font-size: 1.5rem;">${cat.icon || '📦'}</span>
                                 <div style="font-weight: bold;">${cat.name || 'Untitled'}</div>
                             </div>
-                            <button class="btn btn-secondary" onclick="deleteStoreCategory('${cat.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
+                            <div style="display:flex; gap:6px;">
+                                <button onclick="startEditStoreCategory('${cat.id}')" title="Edit" style="background:none; border:none; cursor:pointer; font-size:1rem; opacity:0.7; padding:2px 4px;">✏️</button>
+                                <button class="btn btn-secondary" onclick="deleteStoreCategory('${cat.id}')" style="background: rgba(255, 99, 132, 0.2); color: #ff6384; border: 1px solid #ff6384;">Delete</button>
+                            </div>
                         </div>
-                    `).join('');
+                    `;
+                }).join('');
             } catch (e) {
                 console.error("Error rendering store categories:", e);
                 document.getElementById('manageStoreCategoryList').innerHTML = '<div style="color:red">Error loading categories</div>';
             }
+        }
+
+        function moveStoreCategory(id, direction) {
+            const cats = state.player.shopCategories;
+            const idx = cats.findIndex(c => c.id === id);
+            const targetIdx = idx + direction;
+            if (idx === -1 || targetIdx < 0 || targetIdx >= cats.length) return;
+
+            [cats[idx], cats[targetIdx]] = [cats[targetIdx], cats[idx]];
+
+            saveState();
+            renderManageStoreCategories();
+            renderStorePage();
+        }
+
+        function startEditStoreCategory(id) {
+            editingStoreCategoryId = id;
+            renderManageStoreCategories();
+        }
+
+        function cancelStoreCategoryEdit() {
+            editingStoreCategoryId = null;
+            renderManageStoreCategories();
+        }
+
+        function saveStoreCategoryEdit(id) {
+            const category = state.player.shopCategories.find(c => c.id === id);
+            if (!category) return;
+
+            const newName = document.getElementById(`editStoreCategoryName_${id}`).value.trim();
+            const newIcon = document.getElementById(`editStoreCategoryIcon_${id}`).value.trim() || '📦';
+
+            if (!newName) return alert("Category name cannot be empty");
+            if (state.player.shopCategories.some(c => c.id !== id && c.name.toLowerCase() === newName.toLowerCase())) {
+                return alert("A category with this name already exists");
+            }
+
+            const oldName = category.name;
+            if (oldName !== newName) {
+                state.player.shopItems.filter(i => i.category === oldName).forEach(i => i.category = newName);
+            }
+            category.name = newName;
+            category.icon = newIcon;
+
+            editingStoreCategoryId = null;
+            saveState();
+            renderManageStoreCategories();
+            renderStorePage();
         }
 
         function addStoreCategory() {
