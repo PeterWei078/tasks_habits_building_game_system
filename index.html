@@ -11673,10 +11673,16 @@
                         }
 
                         // Normal Mode
+                        const isHidden = !!g.hideFromAchievements;
                         return `
                         <li style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 6px;">
                             <span style="font-weight: 500;">${g.name}</span>
-                            <div style="display: flex; gap: 8px;">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                ${!isDefault ? `
+                                <label style="display:flex; align-items:center; gap:4px; font-size:0.8rem; opacity:0.75; cursor:pointer; user-select:none; white-space:nowrap;" title="關閉後，此 Group 不會顯示在成就頁面（已歸類的 Tasks/Projects 不受影響）">
+                                    <input type="checkbox" ${isHidden ? '' : 'checked'} onchange="toggleGroupAchievementVisibility('${g.id}', !this.checked)">
+                                    🏆 列入成就
+                                </label>` : ''}
                                 <button type="button" onclick="event.stopPropagation(); editGroup('${g.id}')" style="background: none; border: none; cursor: pointer; opacity: 0.6; font-size: 1.1rem;" title="Rename">✏️</button>
                                 ${!isDefault ? `<button type="button" onclick="event.stopPropagation(); deleteGroup('${g.id}')" style="background: none; border: none; color: #E53E3E; cursor: pointer; font-weight: bold; font-size: 1.1rem;" title="Delete">🗑️</button>` : ''}
                             </div>
@@ -11767,6 +11773,13 @@
             saveState();
             renderManageGroups();
             // render(); // Removed to prevent modal closing
+        }
+
+        function toggleGroupAchievementVisibility(id, hide) {
+            const group = state.player.groups.find(g => g.id === id);
+            if (!group) return;
+            group.hideFromAchievements = hide;
+            saveState();
         }
 
         function addTag() {
@@ -11874,7 +11887,7 @@
                 return { img: null, grad: 'linear-gradient(135deg, #1f2937 0%, #4b5563 100%)', glow: '156,163,175' };
             }
 
-            const visibleGroups = (state.player.groups || []).filter(g => g.id !== 'default');
+            const visibleGroups = (state.player.groups || []).filter(g => g.id !== 'default' && !g.hideFromAchievements);
             if (visibleGroups.length > 0) {
                 grid.innerHTML = visibleGroups.map(group => {
                     const count = allAchievementTasks.filter(t => t.groupId === group.id).length
