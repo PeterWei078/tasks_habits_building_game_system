@@ -1641,6 +1641,9 @@
         .timeline-bar-draggable .timeline-resize-handle {
             pointer-events: auto !important;
         }
+        .timeline-bar-draggable .timeline-edit-btn {
+            pointer-events: auto !important;
+        }
         .timeline-resize-handle {
             position: absolute;
             top: 0;
@@ -5145,7 +5148,7 @@
                 console.warn("setPointerCapture failed:", err);
             }
 
-            const container = document.getElementById('timeline-bars-container');
+            const container = bar.closest('[data-min-date]');
             if (!container) return;
 
             const minDateStr = container.getAttribute('data-min-date');
@@ -5413,7 +5416,7 @@
                 })()}
                         
                         <!-- Bars Container -->
-                        <div style="position: relative; margin-top: 20px; display: flex; flex-direction: column; padding: 0 10px;">
+                        <div id="project-timeline-bars-container" data-min-date="${minDate.toISOString()}" data-day-width="${dayWidth}" style="position: relative; margin-top: 20px; display: flex; flex-direction: column; padding: 0 10px;">
             `;
 
             tlProjects.sort((a, b) => parseLocalDate(a.startDate) - parseLocalDate(b.startDate));
@@ -5482,21 +5485,26 @@
                     }
 
                     const projCompleted = isProjectCompleted(task);
+                    const isProjDraggable = !isProjArchived && !projCompleted;
                     // Archived projects: clickable to expand tasks, but no edit button
-                    const editBtnHtml = (projCompleted || isProjArchived) ? '' : `<div onclick="openProjectModal('${task.id}'); event.stopPropagation();" style="position: absolute; right: 5px; z-index: 2; font-size: 0.8rem; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 5px; margin-top: 1px;" title="Edit Project">✏️</div>`;
+                    const editBtnHtml = (projCompleted || isProjArchived) ? '' : `<div class="timeline-edit-btn" onpointerdown="event.stopPropagation();" onclick="openProjectModal('${task.id}'); event.stopPropagation();" style="position: absolute; right: 5px; z-index: 20; font-size: 0.8rem; background: rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 5px; margin-top: 1px;" title="Edit Project">✏️</div>`;
                     const projInteract = (projCompleted && !isProjArchived)
                         ? `cursor: default;`
-                        : `cursor: pointer; transition: transform 0.2s, filter 0.2s;`;
+                        : (isProjDraggable ? `cursor: grab;` : `cursor: pointer; transition: transform 0.2s, filter 0.2s;`);
+                    const projDragAttr = isProjDraggable ? `onpointerdown="window.initTimelineProjectDrag(event, '${task.id}')"` : '';
+                    const projDraggableClass = isProjDraggable ? 'timeline-bar-draggable' : '';
                     const projHandlers = (projCompleted && !isProjArchived)
                         ? `title="${task.name} (${task.startDate} ~ ${task.endDate}) — 已完成"`
                         : isProjArchived
                             ? `title="${task.name} (${task.startDate} ~ ${task.endDate}) — 已刪除（點擊展開任務）" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.filter='brightness(1.15)';" onmouseout="this.style.filter='brightness(1)';" `
-                            : `title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="window.toggleProjectTimelineTasks(event, '${task.id}')" onmouseover="this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='translateY(0)'; this.style.filter='brightness(1)';"`;
+                            : `title="${task.name} (${task.startDate} ~ ${task.endDate})" onclick="if(this.dataset.preventClick === 'true'){this.dataset.preventClick='false';}else{window.toggleProjectTimelineTasks(event, '${task.id}')}" onmouseover="if(this.dataset.dragging!=='true'){this.style.transform='translateY(-2px)'; this.style.filter='brightness(1.1)';}" onmouseout="if(this.dataset.dragging!=='true'){this.style.transform='translateY(0)'; this.style.filter='brightness(1)';}" ${projDragAttr}`;
 
                     timelineArea += `
-                        <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; ${projInteract} color: rgba(0,0,0,0.8); ${opacityStyle}" ${projHandlers}>
+                        <div class="${projDraggableClass}" draggable="false" style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.8rem; font-weight: 500; ${projInteract} color: rgba(0,0,0,0.8); ${opacityStyle} ${isProjDraggable ? 'touch-action: none;' : ''}" ${projHandlers}>
+                            ${isProjDraggable ? `<div class="timeline-resize-handle left-handle"></div>` : ''}
                             ${progressStyle}
-                            <span style="position: relative; z-index: 1;">${expandIcon} ${titlePrefix}${task.name}</span>
+                            <span style="position: relative; z-index: 1; ${isProjDraggable ? 'pointer-events: none;' : ''}">${expandIcon} ${titlePrefix}${task.name}</span>
+                            ${isProjDraggable ? `<div class="timeline-resize-handle right-handle"></div>` : ''}
                             ${editBtnHtml}
                         </div>
                     `;
@@ -5555,16 +5563,23 @@
 
                             let barColor = t._projectColor ? t._projectColor : 'rgba(74, 144, 226, 0.5)';
                             const tArchived = !!t._archived;
+                            const tDraggable = !tArchived && !t.completed;
                             let opacityStyle = (t.completed || tArchived) ? 'opacity: 0.5;' : 'opacity: 0.9;';
                             let titlePrefix = (t.completed || tArchived) ? '✅ ' : '🔸 ';
-                            const tCursor = tArchived ? 'cursor: default;' : 'cursor: pointer;';
+                            const tCursor = tArchived ? 'cursor: default;' : (tDraggable ? 'cursor: grab;' : 'cursor: pointer;');
+                            const tDragAttr = tDraggable ? `onpointerdown="window.initTimelineTaskDrag(event, '${t.id}')"` : '';
+                            const tDraggableClass = tDraggable ? 'timeline-bar-draggable' : '';
                             const tHandlers = tArchived
                                 ? `title="${t.title} (${t.startDate} ~ ${t.dueDate}) — 已完成並歸檔"`
-                                : `title="${t.title} (${t.startDate} ~ ${t.dueDate})" onclick="openTaskModal('${t.id}')"`;
+                                : (tDraggable
+                                    ? `title="${t.title} (${t.startDate} ~ ${t.dueDate})" onclick="if(this.dataset.preventClick === 'true'){this.dataset.preventClick='false';}else{openTaskModal('${t.id}')}" ${tDragAttr}`
+                                    : `title="${t.title} (${t.startDate} ~ ${t.dueDate})" onclick="openTaskModal('${t.id}')"`);
 
                             timelineArea += `
-                                <div style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.7rem; font-weight: normal; ${tCursor} color: rgba(0,0,0,0.8); ${opacityStyle} filter: brightness(1.2);" ${tHandlers}>
-                                    <span style="position: relative; z-index: 1;">${titlePrefix}${t.title}</span>
+                                <div class="${tDraggableClass}" draggable="false" style="position: absolute; left: ${leftOffset}px; width: ${Math.max(dayWidth - 2, width - 2)}px; height: 100%; background: ${barColor}; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.7rem; font-weight: normal; ${tCursor} color: rgba(0,0,0,0.8); ${opacityStyle} filter: brightness(1.2); ${tDraggable ? 'touch-action: none;' : ''}" ${tHandlers}>
+                                    ${tDraggable ? `<div class="timeline-resize-handle left-handle"></div>` : ''}
+                                    <span style="position: relative; z-index: 1; ${tDraggable ? 'pointer-events: none;' : ''}">${titlePrefix}${t.title}</span>
+                                    ${tDraggable ? `<div class="timeline-resize-handle right-handle"></div>` : ''}
                                 </div>
                             `;
                         });
@@ -5583,6 +5598,163 @@
 
             return html + timelineArea;
         }
+
+        window.initTimelineProjectDrag = function(event, projectId) {
+            // Only allow left-click / main pointer interaction for mouse type
+            if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+            const bar = event.currentTarget;
+            const isLeftHandle = event.target.classList.contains('left-handle');
+            const isRightHandle = event.target.classList.contains('right-handle');
+            const dragMode = isLeftHandle ? 'resize-left' : (isRightHandle ? 'resize-right' : 'move');
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            try {
+                bar.setPointerCapture(event.pointerId);
+            } catch (err) {
+                console.warn("setPointerCapture failed:", err);
+            }
+
+            const container = bar.closest('[data-min-date]');
+            if (!container) return;
+
+            const minDateStr = container.getAttribute('data-min-date');
+            const dayWidth = parseInt(container.getAttribute('data-day-width')) || 30;
+            const minDate = new Date(minDateStr);
+
+            const project = state.player.tags.find(p => p.id == projectId);
+            if (!project) return;
+
+            const startX = event.clientX;
+            const startLeft = parseFloat(bar.style.left) || 0;
+            const startWidth = parseFloat(bar.style.width) || 0;
+
+            // Mark element dragging state
+            bar.dataset.dragging = 'true';
+            bar.dataset.preventClick = 'false';
+
+            // Temporary styling during drag
+            const originalTransform = bar.style.transform;
+            const originalFilter = bar.style.filter;
+            const originalTransition = bar.style.transition;
+            bar.style.transition = 'none';
+            bar.style.filter = 'brightness(1.1)';
+
+            // Create a live floating tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'timeline-drag-tooltip';
+            document.body.appendChild(tooltip);
+
+            let currentStartDateStr = project.startDate;
+            let currentEndDateStr = project.endDate;
+
+            const updateTooltip = (clientX, clientY, startStr, endStr) => {
+                tooltip.textContent = `${startStr} ~ ${endStr}`;
+                tooltip.style.left = `${clientX}px`;
+                tooltip.style.top = `${clientY - 10}px`;
+            };
+
+            updateTooltip(event.clientX, event.clientY, currentStartDateStr, currentEndDateStr);
+
+            const getLocalDateStr = (baseDate, daysOffset) => {
+                const d = new Date(baseDate);
+                d.setDate(d.getDate() + daysOffset);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const handlePointerMove = (e) => {
+                const dx = e.clientX - startX;
+                if (bar.dataset.preventClick !== 'true') {
+                    if (Math.abs(dx) > 3) {
+                        bar.dataset.preventClick = 'true';
+                    } else {
+                        return; // Ignore micro-movement to prevent layout jitter
+                    }
+                }
+
+                let newLeft = startLeft;
+                let newWidth = startWidth;
+
+                if (dragMode === 'move') {
+                    newLeft = startLeft + dx;
+                    if (newLeft < 0) newLeft = 0;
+                    bar.style.left = `${newLeft}px`;
+                } else if (dragMode === 'resize-left') {
+                    newLeft = startLeft + dx;
+                    newWidth = startWidth - dx;
+                    if (newWidth < dayWidth) {
+                        newWidth = dayWidth;
+                        newLeft = startLeft + startWidth - dayWidth;
+                    }
+                    bar.style.left = `${newLeft}px`;
+                    bar.style.width = `${newWidth}px`;
+                } else if (dragMode === 'resize-right') {
+                    newWidth = startWidth + dx;
+                    if (newWidth < dayWidth) {
+                        newWidth = dayWidth;
+                    }
+                    bar.style.width = `${newWidth}px`;
+                }
+
+                // Calculate date offsets
+                const startOffset = Math.round(newLeft / dayWidth);
+                const durationDays = Math.round(newWidth / dayWidth);
+                currentStartDateStr = getLocalDateStr(minDate, startOffset);
+                currentEndDateStr = getLocalDateStr(minDate, startOffset + durationDays - 1);
+
+                updateTooltip(e.clientX, e.clientY, currentStartDateStr, currentEndDateStr);
+            };
+
+            const handlePointerUp = (e) => {
+                try {
+                    bar.releasePointerCapture(e.pointerId);
+                } catch (err) {
+                    console.warn("releasePointerCapture failed:", err);
+                }
+                bar.removeEventListener('pointermove', handlePointerMove);
+                bar.removeEventListener('pointerup', handlePointerUp);
+                bar.removeEventListener('pointercancel', handlePointerUp);
+
+                tooltip.remove();
+
+                bar.style.transition = originalTransition;
+                bar.style.transform = originalTransform;
+                bar.style.filter = originalFilter;
+
+                // Tiny delay to make sure any click event fires first before resetting the dragging flag
+                setTimeout(() => {
+                    bar.removeAttribute('data-dragging');
+                }, 50);
+
+                const isDrag = bar.dataset.preventClick === 'true';
+
+                if (isDrag) {
+                    if (currentStartDateStr && currentEndDateStr && new Date(currentStartDateStr) <= new Date(currentEndDateStr)) {
+                        const hasChanged = project.startDate !== currentStartDateStr || project.endDate !== currentEndDateStr;
+                        if (hasChanged) {
+                            project.startDate = currentStartDateStr;
+                            project.endDate = currentEndDateStr;
+                            saveState();
+                            renderProjectsPage();
+                            showToast('專案日期已更新', `${project.name} 已更新為 ${currentStartDateStr} ~ ${currentEndDateStr}`);
+                        } else {
+                            renderProjectsPage();
+                        }
+                    } else {
+                        renderProjectsPage();
+                    }
+                }
+            };
+
+            bar.addEventListener('pointermove', handlePointerMove);
+            bar.addEventListener('pointerup', handlePointerUp);
+            bar.addEventListener('pointercancel', handlePointerUp);
+        };
 
         function setTimerMode(mode) {
             timerMode = mode;
