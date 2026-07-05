@@ -486,6 +486,7 @@
 
         @media (max-width: 950px) {
             .badge-collection-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .timeline-card-mobile-hide { display: none; }
         }
         /* Badge locked (unobtained) state */
         .badge-emblem-card.badge-locked {
@@ -7282,6 +7283,7 @@
 
             // Timeline Container
             const timelineContainer = document.createElement('div');
+            timelineContainer.className = 'timeline-card-mobile-hide';
             timelineContainer.innerHTML = renderProjectTimelineHTML();
 
             // Projects Container
@@ -8439,7 +8441,7 @@
 
             // Top Row: Timeline
             const timelineContainer = document.createElement('div');
-            timelineContainer.className = 'glass glass-card';
+            timelineContainer.className = 'glass glass-card timeline-card-mobile-hide';
             timelineContainer.style.padding = '20px';
             timelineContainer.style.marginBottom = '20px';
             timelineContainer.style.overflowX = 'hidden';
