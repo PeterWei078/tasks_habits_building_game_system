@@ -2959,10 +2959,10 @@
                 { id: 'rem_default', title: '預設提醒', content: '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。', tags: [], pinned: false, todos: [], photo: null }
             ],
             habits: [
-                { id: 'habit_medicine',   title: '按時服藥',           icon: '💊', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'vitality', exp: 5 }], exp: 5, gold: 2 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
-                { id: 'habit_sleep',      title: '00:00前上床睡覺',    icon: '😪', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'vitality', exp: 8 }], exp: 8, gold: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
-                { id: 'habit_exercise',   title: '有氧/核心運動20分鐘', icon: '💪', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'strength', exp: 10 }, { attribute: 'agility', exp: 5 }], exp: 10, gold: 5 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
-                { id: 'habit_hygiene',    title: '提早完成盥洗',        icon: '🛁', description: '', hidden: false, completions: {}, streakReward: { attributes: [{ attribute: 'willpower', exp: 5 }], exp: 5, gold: 2 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() }
+                { id: 'habit_medicine',   title: '按時服藥',           icon: '💊', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'vitality', exp: 5 }], exp: 5, gold: 2 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
+                { id: 'habit_sleep',      title: '00:00前上床睡覺',    icon: '😪', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'vitality', exp: 8 }], exp: 8, gold: 3 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
+                { id: 'habit_exercise',   title: '有氧/核心運動20分鐘', icon: '💪', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'strength', exp: 10 }, { attribute: 'agility', exp: 5 }], exp: 10, gold: 5 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
+                { id: 'habit_hygiene',    title: '提早完成盥洗',        icon: '🛁', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'willpower', exp: 5 }], exp: 5, gold: 2 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() }
             ]
         };
 
@@ -3020,6 +3020,9 @@
                 if (typeof h.milestoneReached === 'undefined') h.milestoneReached = false;
                 if (typeof h.hidden === 'undefined') h.hidden = false;
                 if (typeof h.breakNotifiedDate === 'undefined') h.breakNotifiedDate = null;
+                if (h.type !== 'negative') h.type = 'positive';
+                if (!h.penaltyConfig) h.penaltyConfig = { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 };
+                if (!h.penaltiesApplied) h.penaltiesApplied = {};
             });
             if (!state.player.timerSettings) {
                 state.player.timerSettings = defaultState.player.timerSettings;
@@ -4319,6 +4322,12 @@
             return streak;
         }
 
+        function getNegativeHabitPenalty(habit, streak) {
+            const cfg = habit.penaltyConfig || { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 };
+            const threshold = cfg.escalateAfterDays || 3;
+            return streak > threshold ? (cfg.escalatedGold || 0) : (cfg.baseGold || 0);
+        }
+
         function wasHabitRewardDay(habit, dateStr) {
             if (!habit.completions[dateStr]) return false;
             let streak = 0;
@@ -4335,8 +4344,31 @@
             return streak >= 8;
         }
 
+        function wasHabitEscalatedDay(habit, dateStr) {
+            if (!habit.completions[dateStr]) return false;
+            const threshold = (habit.penaltyConfig && habit.penaltyConfig.escalateAfterDays) || 3;
+            let streak = 0;
+            const d = new Date(dateStr + 'T12:00:00');
+            for (let i = 0; i < 365; i++) {
+                const ds = d.toISOString().split('T')[0];
+                if (habit.completions[ds]) {
+                    streak++;
+                    d.setDate(d.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            return streak > threshold;
+        }
+
         window.habitCharts = {};
         window.habitChartScales = {};
+        window.habitViewType = window.habitViewType || 'positive';
+
+        window.setHabitViewType = function(type) {
+            window.habitViewType = type;
+            renderHabitsPage();
+        };
 
         window.setHabitChartScale = function(habitId, scale) {
             window.habitChartScales[habitId] = scale;
@@ -4359,9 +4391,21 @@
             return palette[Math.abs(hash) % palette.length];
         }
 
+        function getNegativeHabitAccent(habitId) {
+            const palette = ['#DC2626','#EA580C','#B91C1C','#C2410C'];
+            let hash = 0;
+            for (let i = 0; i < habitId.length; i++) hash = (hash * 31 + habitId.charCodeAt(i)) & 0xffffffff;
+            return palette[Math.abs(hash) % palette.length];
+        }
+
+        function getAccentForHabit(habit) {
+            return habit.type === 'negative' ? getNegativeHabitAccent(habit.id) : getHabitAccent(habit.id);
+        }
+
         function renderHabitChart(habitId) {
             const habit = state.habits.find(h => h.id === habitId);
             if (!habit) return;
+            const isNegative = habit.type === 'negative';
             const scale = window.habitChartScales[habitId] || 'day';
             const canvas = document.getElementById(`habit-chart-${habitId}`);
             if (!canvas) return;
@@ -4371,7 +4415,7 @@
                 delete window.habitCharts[habitId];
             }
 
-            const accent = getHabitAccent(habitId);
+            const accent = getAccentForHabit(habit);
             let labels = [], data = [], colors = [];
 
             if (scale === 'day') {
@@ -4381,7 +4425,15 @@
                     labels.push(`${pd.getMonth()+1}/${pd.getDate()}`);
                     const done = habit.completions[ds] ? 1 : 0;
                     data.push(done);
-                    if (done && wasHabitRewardDay(habit, ds)) {
+                    if (isNegative) {
+                        if (done && wasHabitEscalatedDay(habit, ds)) {
+                            colors.push('rgba(153,27,27,0.9)');    // dark red for escalated-penalty days
+                        } else if (done) {
+                            colors.push(accent + 'cc');
+                        } else {
+                            colors.push('rgba(180,180,200,0.3)');
+                        }
+                    } else if (done && wasHabitRewardDay(habit, ds)) {
                         colors.push('rgba(217,119,6,0.85)');   // amber-600 for reward days
                     } else if (done) {
                         colors.push(accent + 'cc');             // habit accent
@@ -4396,7 +4448,7 @@
                     const ws = new Date(); ws.setDate(ws.getDate() - (w*7+6));
                     labels.push(`${ws.getMonth()+1}/${ws.getDate()}`);
                     data.push(count);
-                    colors.push(count >= 6 ? 'rgba(217,119,6,0.85)' : count >= 3 ? accent + 'cc' : 'rgba(180,180,200,0.35)');
+                    colors.push(count >= 6 ? (isNegative?'rgba(153,27,27,0.9)':'rgba(217,119,6,0.85)') : count >= 3 ? accent + 'cc' : 'rgba(180,180,200,0.35)');
                 }
             } else {
                 for (let m = 11; m >= 0; m--) {
@@ -4409,7 +4461,7 @@
                     }
                     labels.push(`${yr}/${String(mo+1).padStart(2,'0')}`);
                     data.push(count);
-                    colors.push(count >= 20 ? 'rgba(217,119,6,0.85)' : count >= 10 ? accent + 'cc' : 'rgba(180,180,200,0.35)');
+                    colors.push(count >= 20 ? (isNegative?'rgba(153,27,27,0.9)':'rgba(217,119,6,0.85)') : count >= 10 ? accent + 'cc' : 'rgba(180,180,200,0.35)');
                 }
             }
 
@@ -4423,7 +4475,7 @@
                         tooltip: {
                             backgroundColor: 'rgba(30,20,60,0.92)',
                             titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.85)',
-                            callbacks: { label: ctx => scale === 'day' ? (ctx.raw === 1 ? '✅ 完成' : '—') : `完成 ${ctx.raw} 天` }
+                            callbacks: { label: ctx => scale === 'day' ? (ctx.raw === 1 ? (isNegative?'⚠️ 破戒':'✅ 完成') : '—') : (isNegative?`破戒 ${ctx.raw} 天`:`完成 ${ctx.raw} 天`) }
                         }
                     },
                     scales: {
@@ -4446,35 +4498,52 @@
 
         function renderHabitsPage() {
             contentDiv.innerHTML = '';
-            const today = getTodayDateStr();
-            const allHabits     = state.habits || [];
-            const visibleHabits = allHabits.filter(h => !h.hidden);
-            const doneToday     = visibleHabits.filter(h => !!h.completions[today]).length;
+            const today      = getTodayDateStr();
+            const viewType   = window.habitViewType || 'positive';
+            const isNegView  = viewType === 'negative';
+            const allHabits  = state.habits || [];
+            const typedHabits   = allHabits.filter(h => (h.type||'positive') === viewType);
+            const visibleHabits = typedHabits.filter(h => !h.hidden);
             const totalVisible  = visibleHabits.length;
-            const pct           = totalVisible > 0 ? Math.round(doneToday / totalVisible * 100) : 0;
+
+            // Positive view: "doneToday" = good progress. Negative view: framed as "avoided today" so the bar keeps the same "more filled = better" meaning.
+            const triggeredToday = visibleHabits.filter(h => !!h.completions[today]).length;
+            const doneToday      = isNegView ? (totalVisible - triggeredToday) : triggeredToday;
+            const pct            = totalVisible > 0 ? Math.round(doneToday / totalVisible * 100) : 0;
 
             // ── Page Header ──────────────────────────────────────────
             const header = document.createElement('div');
             header.style.cssText = 'margin-bottom:24px;';
             header.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap;gap:12px;">
                     <div>
                         <h2 class="page-title" style="margin:0 0 4px;">🔄 習慣 (Habits)</h2>
-                        <p style="margin:0;font-size:0.88rem;color:rgba(60,40,120,0.7);font-weight:500;">養成好習慣，每天進步一點點</p>
+                        <p style="margin:0;font-size:0.88rem;color:rgba(60,40,120,0.7);font-weight:500;">養成好習慣，戒除壞習慣，每天進步一點點</p>
                     </div>
                     <button class="btn btn-primary" onclick="openHabitEditModal(null)" style="font-size:0.88rem;padding:8px 18px;flex-shrink:0;">+ 新增習慣</button>
                 </div>
 
+                <div style="display:flex;gap:6px;margin-bottom:16px;">
+                    <button onclick="setHabitViewType('positive')" style="flex:1;padding:9px 14px;border-radius:12px;cursor:pointer;font-size:0.88rem;font-weight:700;
+                        border:1.5px solid ${!isNegView?'#6B46C1':'rgba(107,70,193,0.2)'};
+                        background:${!isNegView?'#6B46C1':'rgba(255,255,255,0.5)'};
+                        color:${!isNegView?'#fff':'#4C2E8A'};transition:all 0.15s;">🌱 正向習慣</button>
+                    <button onclick="setHabitViewType('negative')" style="flex:1;padding:9px 14px;border-radius:12px;cursor:pointer;font-size:0.88rem;font-weight:700;
+                        border:1.5px solid ${isNegView?'#DC2626':'rgba(220,38,38,0.2)'};
+                        background:${isNegView?'#DC2626':'rgba(255,255,255,0.5)'};
+                        color:${isNegView?'#fff':'#B91C1C'};transition:all 0.15s;">⚠️ 負面習慣</button>
+                </div>
+
                 ${totalVisible > 0 ? `
-                <div style="background:rgba(255,255,255,0.55);border:1px solid rgba(107,70,193,0.2);border-radius:16px;padding:16px 20px;backdrop-filter:blur(8px);">
+                <div style="background:rgba(255,255,255,0.55);border:1px solid ${isNegView?'rgba(220,38,38,0.2)':'rgba(107,70,193,0.2)'};border-radius:16px;padding:16px 20px;backdrop-filter:blur(8px);">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                        <span style="font-size:0.9rem;font-weight:700;color:#3B2074;">📅 今日進度</span>
-                        <span style="font-size:0.95rem;font-weight:800;color:${pct===100?'#276749':pct>=50?'#6B46C1':'#718096'};">${doneToday} / ${totalVisible} 完成 &nbsp;·&nbsp; ${pct}%</span>
+                        <span style="font-size:0.9rem;font-weight:700;color:${isNegView?'#991B1B':'#3B2074'};">${isNegView?'🛡️ 今日守住進度':'📅 今日進度'}</span>
+                        <span style="font-size:0.95rem;font-weight:800;color:${pct===100?'#276749':pct>=50?(isNegView?'#B91C1C':'#6B46C1'):'#718096'};">${doneToday} / ${totalVisible} ${isNegView?'守住':'完成'} &nbsp;·&nbsp; ${pct}%</span>
                     </div>
-                    <div style="height:10px;border-radius:99px;background:rgba(107,70,193,0.12);overflow:hidden;">
-                        <div style="height:100%;width:${pct}%;background:${pct===100?'linear-gradient(90deg,#276749,#48BB78)':'linear-gradient(90deg,#6B46C1,#9F7AEA)'};border-radius:99px;transition:width 0.5s ease;"></div>
+                    <div style="height:10px;border-radius:99px;background:${isNegView?'rgba(220,38,38,0.12)':'rgba(107,70,193,0.12)'};overflow:hidden;">
+                        <div style="height:100%;width:${pct}%;background:${pct===100?'linear-gradient(90deg,#276749,#48BB78)':isNegView?'linear-gradient(90deg,#B91C1C,#EA580C)':'linear-gradient(90deg,#6B46C1,#9F7AEA)'};border-radius:99px;transition:width 0.5s ease;"></div>
                     </div>
-                    ${pct === 100 ? `<div style="margin-top:8px;font-size:0.82rem;color:#276749;font-weight:600;text-align:center;">🎉 今天所有習慣都完成了！超棒！</div>` : ''}
+                    ${pct === 100 ? `<div style="margin-top:8px;font-size:0.82rem;color:#276749;font-weight:600;text-align:center;">🎉 ${isNegView?'今天完全守住，沒有破戒！':'今天所有習慣都完成了！超棒！'}</div>` : ''}
                 </div>` : ''}
             `;
             contentDiv.appendChild(header);
@@ -4484,8 +4553,8 @@
                 const empty = document.createElement('div');
                 empty.style.cssText = 'background:rgba(255,255,255,0.55);border:1px solid rgba(107,70,193,0.15);border-radius:20px;text-align:center;padding:60px 20px;backdrop-filter:blur(8px);';
                 empty.innerHTML = `
-                    <div style="font-size:3.5rem;margin-bottom:14px;">🌱</div>
-                    <div style="font-size:1.1rem;font-weight:700;color:#3B2074;margin-bottom:8px;">還沒有習慣</div>
+                    <div style="font-size:3.5rem;margin-bottom:14px;">${isNegView?'⚠️':'🌱'}</div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#3B2074;margin-bottom:8px;">${isNegView?'還沒有負面習慣':'還沒有習慣'}</div>
                     <div style="font-size:0.88rem;color:rgba(60,40,120,0.6);">點擊右上角「+ 新增習慣」開始吧！</div>
                 `;
                 contentDiv.appendChild(empty);
@@ -4497,17 +4566,22 @@
                 const ATTR_LABELS = { strength:'力量', intelligence:'智力', agility:'敏捷', vitality:'活力', charisma:'魅力', dexterity:'靈巧', luck:'幸運', willpower:'意志' };
 
                 visibleHabits.forEach(habit => {
+                    const isNeg     = habit.type === 'negative';
                     const streak    = getHabitStreak(habit);
                     const done      = !!habit.completions[today];
                     const scale     = window.habitChartScales[habit.id] || 'day';
                     const scaleMap  = { day:'日', week:'週', month:'月' };
-                    const accent    = getHabitAccent(habit.id);
+                    const accent    = getAccentForHabit(habit);
                     const hasReward = habit.streakReward && (habit.streakReward.exp > 0 || habit.streakReward.gold > 0 || (habit.streakReward.attributes||[]).length > 0);
+                    const penaltyCfg   = habit.penaltyConfig || { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 };
+                    const escalated    = isNeg && streak > (penaltyCfg.escalateAfterDays || 3);
 
                     // Streak state styling
-                    const streakBg    = streak >= 7 ? 'rgba(217,119,6,0.15)'  : streak > 0 ? 'rgba(72,187,120,0.15)' : 'transparent';
-                    const streakBdr   = streak >= 7 ? 'rgba(217,119,6,0.5)'   : streak > 0 ? 'rgba(72,187,120,0.5)'  : 'transparent';
-                    const streakColor = streak >= 7 ? '#92400E' : '#276749';
+                    const streakBg    = isNeg ? (escalated ? 'rgba(153,27,27,0.15)' : streak > 0 ? 'rgba(220,38,38,0.12)' : 'transparent')
+                                               : (streak >= 7 ? 'rgba(217,119,6,0.15)'  : streak > 0 ? 'rgba(72,187,120,0.15)' : 'transparent');
+                    const streakBdr   = isNeg ? (escalated ? 'rgba(153,27,27,0.5)' : streak > 0 ? 'rgba(220,38,38,0.4)' : 'transparent')
+                                               : (streak >= 7 ? 'rgba(217,119,6,0.5)'   : streak > 0 ? 'rgba(72,187,120,0.5)'  : 'transparent');
+                    const streakColor = isNeg ? (escalated ? '#991B1B' : '#B91C1C') : (streak >= 7 ? '#92400E' : '#276749');
 
                     const card = document.createElement('div');
                     card.style.cssText = `
@@ -4547,27 +4621,27 @@
                             <!-- Streak badge (full-width when active) -->
                             ${streak > 0 ? `
                             <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:${streakBg};border:1.5px solid ${streakBdr};border-radius:10px;margin-bottom:12px;">
-                                <span style="font-size:1.1rem;">🔥</span>
-                                <span style="font-size:0.88rem;font-weight:700;color:${streakColor};">連續 ${streak} 天！${streak>=7?' 🏆 獎勵啟動中':'　努力達成 7 天！'}</span>
-                                <div style="margin-left:auto;background:${accent};color:#fff;border-radius:99px;padding:2px 10px;font-size:0.76rem;font-weight:700;">${streak} 🔥</div>
+                                <span style="font-size:1.1rem;">${isNeg?'⚠️':'🔥'}</span>
+                                <span style="font-size:0.88rem;font-weight:700;color:${streakColor};">${isNeg ? `已連續 ${streak} 天破戒！${escalated?' 💸 罰金已提高':`　再 ${(penaltyCfg.escalateAfterDays||3)+1-streak} 天罰金將提高`}` : `連續 ${streak} 天！${streak>=7?' 🏆 獎勵啟動中':'　努力達成 7 天！'}`}</span>
+                                <div style="margin-left:auto;background:${accent};color:#fff;border-radius:99px;padding:2px 10px;font-size:0.76rem;font-weight:700;">${streak} ${isNeg?'⚠️':'🔥'}</div>
                             </div>` : ''}
 
                             <!-- Today checklist -->
                             <div onclick="toggleHabitCompletion('${habit.id}')"
                                  style="display:flex;align-items:center;gap:10px;padding:12px 14px;
-                                        background:${done?'rgba(39,103,73,0.12)':'rgba(107,70,193,0.05)'};
-                                        border:1.5px solid ${done?'rgba(39,103,73,0.4)':'rgba(107,70,193,0.2)'};
+                                        background:${done?(isNeg?'rgba(220,38,38,0.12)':'rgba(39,103,73,0.12)'):(isNeg?'rgba(220,38,38,0.05)':'rgba(107,70,193,0.05)')};
+                                        border:1.5px solid ${done?(isNeg?'rgba(220,38,38,0.4)':'rgba(39,103,73,0.4)'):(isNeg?'rgba(220,38,38,0.2)':'rgba(107,70,193,0.2)')};
                                         border-radius:12px;cursor:pointer;transition:all 0.18s;user-select:none;margin-bottom:14px;"
-                                 onmouseover="this.style.background='${done?'rgba(39,103,73,0.18)':'rgba(107,70,193,0.1)'}'"
-                                 onmouseout="this.style.background='${done?'rgba(39,103,73,0.12)':'rgba(107,70,193,0.05)'}'">
-                                <div style="width:24px;height:24px;border-radius:7px;border:2.5px solid ${done?'#276749':'rgba(107,70,193,0.5)'};background:${done?'#276749':'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.18s;">
+                                 onmouseover="this.style.background='${done?(isNeg?'rgba(220,38,38,0.18)':'rgba(39,103,73,0.18)'):(isNeg?'rgba(220,38,38,0.1)':'rgba(107,70,193,0.1)')}'"
+                                 onmouseout="this.style.background='${done?(isNeg?'rgba(220,38,38,0.12)':'rgba(39,103,73,0.12)'):(isNeg?'rgba(220,38,38,0.05)':'rgba(107,70,193,0.05)')}'">
+                                <div style="width:24px;height:24px;border-radius:7px;border:2.5px solid ${done?(isNeg?'#B91C1C':'#276749'):'rgba(107,70,193,0.5)'};background:${done?(isNeg?'#B91C1C':'#276749'):'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.18s;">
                                     ${done ? '<span style="color:white;font-size:0.95rem;line-height:1;font-weight:900;">✓</span>' : ''}
                                 </div>
                                 <div style="flex:1;">
-                                    <div style="font-size:0.92rem;font-weight:700;color:${done?'#276749':'#3B2074'};${done?'text-decoration:line-through;':''}">${done ? '今日已完成 ✨' : '點此打卡今日完成'}</div>
+                                    <div style="font-size:0.92rem;font-weight:700;color:${done?(isNeg?'#B91C1C':'#276749'):'#3B2074'};${done&&!isNeg?'text-decoration:line-through;':''}">${isNeg ? (done ? '今日已破戒 ⚠️' : '尚未破戒，繼續保持！') : (done ? '今日已完成 ✨' : '點此打卡今日完成')}</div>
                                     <div style="font-size:0.74rem;color:rgba(60,40,100,0.55);margin-top:1px;">${today}</div>
                                 </div>
-                                ${!done ? `<div style="background:${accent};color:#fff;border-radius:8px;padding:4px 12px;font-size:0.78rem;font-weight:700;flex-shrink:0;">打卡</div>` : ''}
+                                ${!done ? `<div style="background:${accent};color:#fff;border-radius:8px;padding:4px 12px;font-size:0.78rem;font-weight:700;flex-shrink:0;">${isNeg?'標記破戒':'打卡'}</div>` : ''}
                             </div>
 
                             <!-- Retro check-in: past 3 days -->
@@ -4604,11 +4678,15 @@
                                                background:${scale===s?accent:'rgba(107,70,193,0.06)'};
                                                transition:all 0.15s;">${scaleMap[s]}</button>
                                 `).join('')}
-                                ${scale === 'day' ? `
+                                ${scale === 'day' ? (isNeg ? `
+                                <span style="margin-left:auto;font-size:0.72rem;color:rgba(50,30,80,0.65);display:flex;align-items:center;gap:4px;">
+                                    <span style="width:10px;height:10px;background:rgba(153,27,27,0.9);border-radius:2px;display:inline-block;"></span>罰金提高
+                                    <span style="width:10px;height:10px;background:${accent}cc;border-radius:2px;display:inline-block;margin-left:4px;"></span>破戒
+                                </span>` : `
                                 <span style="margin-left:auto;font-size:0.72rem;color:rgba(50,30,80,0.65);display:flex;align-items:center;gap:4px;">
                                     <span style="width:10px;height:10px;background:rgba(217,119,6,0.85);border-radius:2px;display:inline-block;"></span>達獎日
                                     <span style="width:10px;height:10px;background:${accent}cc;border-radius:2px;display:inline-block;margin-left:4px;"></span>完成
-                                </span>` : ''}
+                                </span>`) : ''}
                             </div>
 
                             <!-- Chart canvas -->
@@ -4616,15 +4694,21 @@
                                 <canvas id="habit-chart-${habit.id}"></canvas>
                             </div>
 
-                            <!-- Reward info bar -->
-                            ${hasReward ? `
+                            <!-- Reward / Penalty info bar -->
+                            ${isNeg ? `
+                            <div style="margin-top:12px;padding:10px 14px;background:rgba(220,38,38,0.08);border:1.5px solid rgba(220,38,38,0.25);border-radius:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                                <span style="font-size:0.8rem;font-weight:700;color:#991B1B;">💸 扣款規則</span>
+                                <span style="width:1px;height:14px;background:rgba(220,38,38,0.3);"></span>
+                                <span style="background:rgba(220,38,38,0.12);color:#B91C1C;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">第1-${penaltyCfg.escalateAfterDays||3}天 -${penaltyCfg.baseGold||0} 💰</span>
+                                <span style="background:rgba(153,27,27,0.15);color:#991B1B;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">第${(penaltyCfg.escalateAfterDays||3)+1}天起 -${penaltyCfg.escalatedGold||0} 💰</span>
+                            </div>` : (hasReward ? `
                             <div style="margin-top:12px;padding:10px 14px;background:rgba(217,119,6,0.08);border:1.5px solid rgba(217,119,6,0.25);border-radius:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
                                 <span style="font-size:0.8rem;font-weight:700;color:#92400E;">🏅 7日後每日獎勵</span>
                                 <span style="width:1px;height:14px;background:rgba(217,119,6,0.3);"></span>
                                 ${habit.streakReward.exp  > 0 ? `<span style="background:rgba(107,70,193,0.12);color:#4C2E8A;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">+${habit.streakReward.exp} EXP</span>` : ''}
                                 ${habit.streakReward.gold > 0 ? `<span style="background:rgba(217,119,6,0.15);color:#92400E;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">+${habit.streakReward.gold} 💰</span>` : ''}
                                 ${(habit.streakReward.attributes||[]).filter(a=>a.exp>0).map(a=>`<span style="background:rgba(39,103,73,0.12);color:#276749;border-radius:6px;padding:2px 8px;font-size:0.78rem;font-weight:700;">+${a.exp} ${ATTR_LABELS[a.attribute]||a.attribute}</span>`).join('')}
-                            </div>` : ''}
+                            </div>` : '')}
                         </div>
                     `;
                     grid.appendChild(card);
@@ -4633,7 +4717,7 @@
             }
 
             // ── Hidden habits button ──────────────────────────────────
-            const hiddenHabits = allHabits.filter(h => h.hidden);
+            const hiddenHabits = typedHabits.filter(h => h.hidden);
             if (hiddenHabits.length > 0) {
                 const btn = document.createElement('div');
                 btn.style.cssText = 'margin-top:16px;text-align:center;';
@@ -4645,7 +4729,8 @@
         }
 
         window.showHiddenHabitsPanel = function() {
-            const hidden = (state.habits || []).filter(h => h.hidden);
+            const viewType = window.habitViewType || 'positive';
+            const hidden = (state.habits || []).filter(h => h.hidden && (h.type||'positive') === viewType);
             if (hidden.length === 0) return;
             const existing = document.getElementById('hiddenHabitsOverlay');
             if (existing) existing.remove();
@@ -4676,6 +4761,41 @@
             if (!habit) return;
             const today = getTodayDateStr();
             const wasCompleted = !!habit.completions[today];
+
+            if (habit.type === 'negative') {
+                if (!habit.penaltiesApplied) habit.penaltiesApplied = {};
+
+                if (wasCompleted) {
+                    // Refund exactly what was actually deducted (may be less than the
+                    // nominal penalty if gold was already floored at 0 that day).
+                    const refund = habit.penaltiesApplied[today] || 0;
+                    state.player.gold += refund;
+                    delete habit.penaltiesApplied[today];
+                    delete habit.completions[today];
+                    saveState();
+                    renderHabitsPage();
+                    return;
+                }
+
+                habit.completions[today] = true;
+                const streak  = getHabitStreak(habit);
+                const penalty = getNegativeHabitPenalty(habit, streak);
+                const actualDeduct = Math.min(penalty, state.player.gold);
+                state.player.gold -= actualDeduct;
+                habit.penaltiesApplied[today] = actualDeduct;
+                const threshold = (habit.penaltyConfig && habit.penaltyConfig.escalateAfterDays) || 3;
+                const justEscalated = streak === threshold + 1;
+
+                saveState();
+                renderHabitsPage();
+
+                if (justEscalated) {
+                    setTimeout(() => showHabitEscalationNotification(habit), 300);
+                } else {
+                    showToast(`⚠️ ${habit.icon} 破戒扣款`, `-${actualDeduct} 💰（連續 ${streak} 天）`);
+                }
+                return;
+            }
 
             if (wasCompleted) {
                 delete habit.completions[today];
@@ -4755,6 +4875,22 @@
 
         // --- Habit Edit Modal ---
         let editingHabitId = null;
+        let editingHabitType = 'positive';
+
+        window.setHabitEditType = function(type) {
+            editingHabitType = type;
+            const posBtn = document.getElementById('habitEditTypeBtnPositive');
+            const negBtn = document.getElementById('habitEditTypeBtnNegative');
+            const isNeg  = type === 'negative';
+            posBtn.style.background = isNeg ? 'rgba(255,255,255,0.5)' : '#6B46C1';
+            posBtn.style.color      = isNeg ? '#4C2E8A' : '#fff';
+            posBtn.style.border     = isNeg ? '1.5px solid rgba(107,70,193,0.3)' : '1.5px solid #6B46C1';
+            negBtn.style.background = isNeg ? '#DC2626' : 'rgba(255,255,255,0.5)';
+            negBtn.style.color      = isNeg ? '#fff' : '#B91C1C';
+            negBtn.style.border     = isNeg ? '1.5px solid #DC2626' : '1.5px solid rgba(220,38,38,0.3)';
+            document.getElementById('habitRewardSection').style.display  = isNeg ? 'none' : 'block';
+            document.getElementById('habitPenaltySection').style.display = isNeg ? 'block' : 'none';
+        };
 
         window.openHabitEditModal = function(habitId) {
             editingHabitId = habitId;
@@ -4766,7 +4902,11 @@
             document.getElementById('habitEditDescription').value= habit ? (habit.description||'') : '';
             document.getElementById('habitEditRewardExp').value  = habit ? (habit.streakReward?.exp||0)  : 0;
             document.getElementById('habitEditRewardGold').value = habit ? (habit.streakReward?.gold||0) : 0;
+            document.getElementById('habitEditPenaltyBase').value      = habit ? (habit.penaltyConfig?.baseGold ?? 5)  : 5;
+            document.getElementById('habitEditPenaltyEscalated').value = habit ? (habit.penaltyConfig?.escalatedGold ?? 10) : 10;
             renderHabitAttrRewardRows(habit ? (habit.streakReward?.attributes||[]) : []);
+
+            setHabitEditType(habit ? (habit.type||'positive') : (window.habitViewType||'positive'));
 
             document.getElementById('habitEditModalTitle').textContent = habit ? `✏️ 編輯習慣` : `＋ 新增習慣`;
             modal.classList.add('show');
@@ -4824,18 +4964,24 @@
             const exp         = parseInt(document.getElementById('habitEditRewardExp').value)  || 0;
             const gold        = parseInt(document.getElementById('habitEditRewardGold').value) || 0;
             const attributes  = getHabitAttrRowValues().filter(a => a.exp > 0);
+            const baseGold      = parseInt(document.getElementById('habitEditPenaltyBase').value) || 0;
+            const escalatedGold = parseInt(document.getElementById('habitEditPenaltyEscalated').value) || 0;
+            const penaltyConfig = { baseGold, escalatedGold, escalateAfterDays: 3 };
 
             if (editingHabitId) {
                 const habit = state.habits.find(h => h.id === editingHabitId);
                 if (habit) {
                     habit.title = title; habit.icon = icon; habit.description = description;
+                    habit.type = editingHabitType;
                     habit.streakReward = { attributes, exp, gold };
+                    habit.penaltyConfig = penaltyConfig;
                 }
             } else {
                 state.habits.push({
                     id: 'habit_' + Date.now(), title, icon, description,
-                    hidden: false, completions: {},
+                    hidden: false, completions: {}, type: editingHabitType,
                     streakReward: { attributes, exp, gold },
+                    penaltyConfig, penaltiesApplied: {},
                     milestoneReached: false, breakNotifiedDate: null,
                     createdAt: new Date().toISOString()
                 });
@@ -4918,13 +5064,32 @@
             setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 12000);
         }
 
+        function showHabitEscalationNotification(habit) {
+            playHabitBreakSound();
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);';
+            const cfg = habit.penaltyConfig || {};
+            overlay.innerHTML = `
+                <div style="background:linear-gradient(135deg,rgba(185,28,28,0.97),rgba(146,64,14,0.97));border-radius:24px;padding:40px 36px;text-align:center;max-width:380px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.25);">
+                    <div style="font-size:3.5rem;margin-bottom:10px;">${habit.icon}</div>
+                    <div style="font-size:2.2rem;margin-bottom:10px;">⚠️😣</div>
+                    <h2 style="color:#fff;margin:0 0 10px;font-size:1.6rem;text-shadow:0 2px 8px rgba(0,0,0,0.3);">罰金提高了！</h2>
+                    <p style="color:rgba(255,255,255,0.88);margin:0 0 6px;font-size:0.95rem;">「${habit.title}」已連續 <strong>${(cfg.escalateAfterDays||3)+1} 天</strong>！</p>
+                    <p style="color:rgba(254,215,170,0.95);margin:0 0 22px;font-size:0.88rem;">💸 從今天起，每日扣款提高至 ${cfg.escalatedGold||0} 💰</p>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.45);border-radius:14px;padding:10px 32px;color:#fff;cursor:pointer;font-size:1rem;font-weight:bold;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.22)'">知道了 💪</button>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+            setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 10000);
+        }
+
         function checkHabitBreaks() {
             if (!state.habits || state.habits.length === 0) return;
             const today     = getTodayDateStr();
             const yesterday = getDateStrOffset(1);
             const broken    = [];
             state.habits.forEach(habit => {
-                if (habit.hidden || !habit.milestoneReached) return;
+                if (habit.type === 'negative' || habit.hidden || !habit.milestoneReached) return;
                 if (!habit.completions[yesterday] && habit.breakNotifiedDate !== today) {
                     habit.milestoneReached   = false;
                     habit.breakNotifiedDate  = today;
@@ -13483,13 +13648,22 @@
             </div>
 
             <!-- Description -->
-            <div style="margin-bottom:18px;">
+            <div style="margin-bottom:14px;">
                 <label style="font-size:0.82rem;opacity:0.7;display:block;margin-bottom:5px;">備注說明（選填）</label>
                 <textarea id="habitEditDescription" placeholder="補充說明..." rows="2" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid rgba(0,0,0,0.15);font-size:0.88rem;resize:vertical;background:rgba(255,255,255,0.7);color:#333;"></textarea>
             </div>
 
-            <!-- Streak Reward Section -->
-            <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.22);border-radius:12px;padding:16px;margin-bottom:18px;">
+            <!-- Habit Type -->
+            <div style="margin-bottom:18px;">
+                <label style="font-size:0.82rem;opacity:0.7;display:block;margin-bottom:5px;">習慣類型</label>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" id="habitEditTypeBtnPositive" onclick="setHabitEditType('positive')" style="flex:1;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;border:1.5px solid #6B46C1;background:#6B46C1;color:#fff;">🌱 正向習慣</button>
+                    <button type="button" id="habitEditTypeBtnNegative" onclick="setHabitEditType('negative')" style="flex:1;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:700;border:1.5px solid rgba(220,38,38,0.3);background:rgba(255,255,255,0.5);color:#B91C1C;">⚠️ 負面習慣</button>
+                </div>
+            </div>
+
+            <!-- Streak Reward Section (positive) -->
+            <div id="habitRewardSection" style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.22);border-radius:12px;padding:16px;margin-bottom:18px;">
                 <div style="font-size:0.88rem;font-weight:bold;margin-bottom:12px;opacity:0.9;">🏅 連續 7 日後每日獎勵（第 8 日起生效）</div>
                 <div style="display:flex;gap:12px;margin-bottom:12px;">
                     <div style="flex:1;">
@@ -13503,6 +13677,21 @@
                 </div>
                 <div style="font-size:0.78rem;opacity:0.65;margin-bottom:8px;">屬性 EXP 獎勵（每次獲獎同時分配）</div>
                 <div id="habitAttrRewardList"></div>
+            </div>
+
+            <!-- Penalty Section (negative) -->
+            <div id="habitPenaltySection" style="display:none;background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.22);border-radius:12px;padding:16px;margin-bottom:18px;">
+                <div style="font-size:0.88rem;font-weight:bold;margin-bottom:12px;opacity:0.9;color:#991B1B;">💸 扣款規則（第 1 天即開始扣款）</div>
+                <div style="display:flex;gap:12px;">
+                    <div style="flex:1;">
+                        <label style="font-size:0.78rem;opacity:0.65;display:block;margin-bottom:4px;">第 1-3 天每日扣款 💰</label>
+                        <input id="habitEditPenaltyBase" type="number" value="5" min="0" max="9999" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.7);color:#333;font-size:0.9rem;text-align:center;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:0.78rem;opacity:0.65;display:block;margin-bottom:4px;">連續第 4 天起每日扣款 💰</label>
+                        <input id="habitEditPenaltyEscalated" type="number" value="10" min="0" max="9999" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.7);color:#333;font-size:0.9rem;text-align:center;">
+                    </div>
+                </div>
             </div>
 
             <!-- Save / Cancel -->
