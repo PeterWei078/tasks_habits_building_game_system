@@ -3148,6 +3148,9 @@
             }
 
             if (!state.player.inventory) state.player.inventory = [];
+            state.player.inventory.forEach((inv, idx) => {
+                if (!inv.id) inv.id = 'inv_' + (inv.purchaseDate || Date.now()) + '_' + idx;
+            });
             if (!state.player.reflections) state.player.reflections = []; // Initialize reflections
             if (!state.player.skills) state.player.skills = []; // Initialize skills
             if (!state.player.photoLibrary) {
@@ -6726,6 +6729,7 @@
             }
 
             state.player.inventory.push({
+                id: 'inv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
                 itemId: item.id,
                 purchaseDate: Date.now(),
                 isUsed: false,
@@ -6857,6 +6861,7 @@
 
                 state.player.gold -= item.price;
                 state.player.inventory.push({
+                    id: 'inv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
                     itemId: item.id,
                     purchaseDate: Date.now(),
                     isUsed: false,
@@ -6992,6 +6997,47 @@
 
         // --- Statistics Page ---
         function renderStatisticsPage() {
+            // Ensure Edit Modal Exists (Lazy Load)
+            if (!document.getElementById('editSpoilsModal')) {
+                const spoilsModal = document.createElement('div');
+                spoilsModal.id = 'editSpoilsModal';
+                spoilsModal.className = 'modal-backdrop';
+                spoilsModal.innerHTML = `
+                    <div class="modal-content" style="max-width: 440px;">
+                        <div class="modal-header">
+                            <h2>✏️ 編輯戰利品</h2>
+                            <button class="close-btn" onclick="document.getElementById('editSpoilsModal').classList.remove('show')">Close</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label>名稱</label>
+                                <input type="text" id="editSpoilsTitle" class="form-control" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+                            </div>
+                            <div class="form-group">
+                                <label>日期</label>
+                                <input type="date" id="editSpoilsDate" class="form-control" style="width: 100%; padding: 8px;">
+                            </div>
+                            <div class="form-group" style="margin-top: 12px;">
+                                <label>等級</label>
+                                <select id="editSpoilsTier" class="form-control" style="width: 100%; padding: 8px;">
+                                    <option value="bronze">BRONZE</option>
+                                    <option value="silver">SILVER</option>
+                                    <option value="gold">GOLD</option>
+                                    <option value="platinum">PLATINUM</option>
+                                    <option value="diamond">DIAMOND</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-top: 12px;">
+                                <label>描述 / 備注</label>
+                                <textarea id="editSpoilsDesc" rows="4" class="form-control" style="width: 100%; padding: 8px; resize: vertical;"></textarea>
+                            </div>
+                            <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="saveSpoilsEdit()">儲存</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(spoilsModal);
+            }
+
             contentDiv.innerHTML = ''; // Prevent duplication
             const title = document.createElement('h2');
             title.className = 'page-title';
@@ -7033,6 +7079,7 @@
                     if (weight >= 3) {
                         purchaseHistory.push({
                             ...itemData,
+                            invId: inv.id,
                             date: new Date(inv.purchaseDate)
                         });
                     }
@@ -7133,7 +7180,11 @@
 
                     group.items.forEach(item => {
                         purchasesHtml += `
-                <div style = "display: flex; align-items: flex-start; gap: 15px; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background 0.2s; border-radius: 8px;" onmouseover = "this.style.background='rgba(255,255,255,0.05)'" onmouseout = "this.style.background='transparent'">
+                <div style = "position:relative; display: flex; align-items: flex-start; gap: 15px; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background 0.2s; border-radius: 8px;" onmouseover = "this.style.background='rgba(255,255,255,0.05)'; this.querySelector('.spoils-actions').style.opacity='1';" onmouseout = "this.style.background='transparent'; this.querySelector('.spoils-actions').style.opacity='0';">
+                                <div class="spoils-actions" style="position:absolute; top:7px; right:7px; display:flex; gap:4px; opacity:0; transition:opacity 0.2s;">
+                                    <button onclick="editSpoilsItem('${item.invId}')" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; padding:2px 6px; cursor:pointer; color:rgba(255,255,255,0.45); font-size:0.7rem; line-height:1;" title="編輯">✏️</button>
+                                    <button onclick="deleteSpoilsItem('${item.invId}')" style="background:rgba(255,0,0,0.08); border:1px solid rgba(255,0,0,0.18); border-radius:6px; padding:2px 6px; cursor:pointer; color:rgba(255,100,100,0.55); font-size:0.7rem; line-height:1;" title="刪除">✕</button>
+                                </div>
                                 <div style="width:60px;height:60px;flex-shrink:0;border-radius:10px;overflow:hidden;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:2.2rem;">${getBadgeIconHtml(item.icon, item.title)}</div>
                                 <div style="flex: 1;">
                                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
@@ -7143,7 +7194,7 @@
                                                 ${item.tier || 'Bronze'}
                                             </span>
                                         </h4>
-                                        <span style="font-size: 0.8rem; opacity: 0.6; font-family: monospace;">
+                                        <span style="font-size: 0.8rem; opacity: 0.6; font-family: monospace; margin-right:44px;">
                                             ${item.date.toLocaleDateString('default', { month: 'short', day: 'numeric' })}
                                         </span>
                                     </div>
@@ -7159,6 +7210,57 @@
 
             contentDiv.appendChild(title);
             contentDiv.appendChild(purchaseListCard);
+        }
+
+        // Edit/Delete logic for Legendary Spoils (purchase history) items
+        let currentEditSpoilsId = null;
+
+        function editSpoilsItem(invId) {
+            const inv = state.player.inventory.find(i => i.id === invId);
+            if (!inv || !inv.snapshot) return;
+            currentEditSpoilsId = invId;
+
+            document.getElementById('editSpoilsTitle').value = inv.snapshot.title || '';
+            document.getElementById('editSpoilsDesc').value = inv.snapshot.description || '';
+            document.getElementById('editSpoilsTier').value = (inv.snapshot.tier || 'bronze').toLowerCase();
+            const dateVal = inv.purchaseDate ? new Date(inv.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+            document.getElementById('editSpoilsDate').value = dateVal;
+            document.getElementById('editSpoilsModal').classList.add('show');
+        }
+
+        function saveSpoilsEdit() {
+            if (!currentEditSpoilsId) return;
+            const inv = state.player.inventory.find(i => i.id === currentEditSpoilsId);
+            if (!inv || !inv.snapshot) return;
+
+            const newTitle = document.getElementById('editSpoilsTitle').value.trim();
+            const newDesc = document.getElementById('editSpoilsDesc').value;
+            const newTier = document.getElementById('editSpoilsTier').value;
+            const newDateStr = document.getElementById('editSpoilsDate').value;
+            if (!newTitle) { alert('名稱不可為空'); return; }
+
+            inv.snapshot.title = newTitle;
+            inv.snapshot.description = newDesc;
+            inv.snapshot.tier = newTier;
+            if (newDateStr) {
+                const dateObj = new Date(newDateStr);
+                dateObj.setHours(12, 0, 0, 0);
+                inv.purchaseDate = dateObj.getTime();
+            }
+
+            saveState();
+            renderStatisticsPage();
+            document.getElementById('editSpoilsModal').classList.remove('show');
+            showToast('戰利品已更新', '變更已儲存。');
+        }
+
+        function deleteSpoilsItem(invId) {
+            openConfirmModal('確定要刪除這筆戰利品紀錄嗎？（此操作僅移除紀錄，不會退還金幣或經驗值）', () => {
+                state.player.inventory = state.player.inventory.filter(i => i.id !== invId);
+                saveState();
+                renderStatisticsPage();
+                showToast('已刪除', '該筆戰利品紀錄已移除。');
+            });
         }
 
 
