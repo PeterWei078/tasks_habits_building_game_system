@@ -3247,8 +3247,13 @@
 
         saveState(); // Save the patched state immediately
 
+        const MAX_ACTIVITIES = 300;
         function saveState() {
             state._updatedAt = new Date().toISOString();
+            if (state.player.activities && state.player.activities.length > MAX_ACTIVITIES) {
+                state.player.activities.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                state.player.activities.length = MAX_ACTIVITIES;
+            }
             const stateString = JSON.stringify(state);
             let isLocalSaveSuccess = true;
 
@@ -6516,29 +6521,31 @@
         function handleShopPhotoUpload(input) {
             const file = input.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            compressImage(file).then(dataUrl => {
                 const iconInput = document.getElementById('editShopIcon');
                 if (iconInput) {
-                    iconInput.value = e.target.result;
+                    iconInput.value = dataUrl;
                     updateShopIconPreview();
                 }
-            };
-            reader.readAsDataURL(file);
+            }).catch(err => {
+                console.error('Icon compress failed:', err);
+                showToast('圖片處理失敗，請換一張圖片', 'error');
+            });
         }
 
         function handleNewShopPhotoUpload(input) {
             const file = input.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
+            compressImage(file).then(dataUrl => {
                 const iconInput = document.getElementById('newShopIcon');
                 if (iconInput) {
-                    iconInput.value = e.target.result;
+                    iconInput.value = dataUrl;
                     updateNewShopIconPreview();
                 }
-            };
-            reader.readAsDataURL(file);
+            }).catch(err => {
+                console.error('Icon compress failed:', err);
+                showToast('圖片處理失敗，請換一張圖片', 'error');
+            });
         }
 
         function updateNewShopIconPreview() {
