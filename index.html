@@ -3247,12 +3247,11 @@
 
         saveState(); // Save the patched state immediately
 
-        const MAX_ACTIVITIES = 300;
         function saveState() {
             state._updatedAt = new Date().toISOString();
-            if (state.player.activities && state.player.activities.length > MAX_ACTIVITIES) {
+            if (state.player.activities && state.player.activities.length > 300) {
                 state.player.activities.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                state.player.activities.length = MAX_ACTIVITIES;
+                state.player.activities.length = 300;
             }
             const stateString = JSON.stringify(state);
             let isLocalSaveSuccess = true;
