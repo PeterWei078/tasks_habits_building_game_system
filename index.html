@@ -2371,19 +2371,19 @@
                     <p>載入中...</p>
                 </div>
                 <div class="info-box">
-                    <h4 style="margin-bottom: 10px;">🧹 清理舊照片至雲端</h4>
-                    <p style="margin-bottom: 15px; font-size: 0.9rem;">
-                        任務、專案、提醒事項裡有些照片可能是早期版本留下、還沒上傳到雲端的內嵌照片，會佔用本機儲存空間（超過 5MB 會無法備份到本機）。
-                        點擊下方按鈕可一鍵將這些照片壓縮並搬移到 Firebase 雲端，本機資料只留下網址，大幅縮小資料量。需要先登入 Google 帳號。
+                    <h4 style="margin-bottom: 10px;">☁️ 照片的雲端備份方式</h4>
+                    <p style="margin-bottom: 10px; font-size: 0.9rem;">
+                        這個 App 目前沒有啟用 Firebase Storage（需要升級到付費方案才能使用），所以照片不是單獨上傳的。
+                        不過別擔心：只要您已登入 Google 帳號，每次存檔時整份資料（包含內嵌照片）都會透過 Firestore 同步到雲端，所以照片本身是有備份的，只是效率比較低（每次存檔都整包重傳）。
                     </p>
-                    <button class="btn btn-primary" id="storageCleanupBtn" onclick="migrateLegacyPhotosToStorage()" style="width: 100%; padding: 12px; font-weight: bold; background: var(--accent-color, #4A90E2); border-color: var(--accent-color, #4A90E2);">
-                        🧹 一鍵搬移舊照片至雲端
-                    </button>
+                    <p style="font-size: 0.9rem;">
+                        「本機儲存空間已滿」的警告只代表<strong>這支裝置的瀏覽器快取</strong>放不下全部資料，不代表雲端備份失效。
+                    </p>
                 </div>
                 <div class="warning-box">
                     <h4 style="margin-bottom: 10px;">🗑️ 直接清除本機照片（不上傳）</h4>
                     <p style="margin-bottom: 15px; font-size: 0.9rem;">
-                        如果上傳搬移一直卡住失敗，或您不需要保留這些照片，可以用這個按鈕直接永久刪除本機內嵌照片，釋放儲存空間。<strong>此動作無法復原，照片不會被保留在任何地方。</strong>
+                        如果本機儲存空間常常滿、或您不需要保留這些照片，可以用這個按鈕直接永久刪除本機內嵌照片，釋放儲存空間。<strong>此動作無法復原，照片不會被保留在任何地方（包含雲端）。</strong>
                     </p>
                     <button class="btn" id="storageClearBtn" onclick="clearLegacyBase64Photos()" style="width: 100%; padding: 12px; font-weight: bold; background: #E53E3E; color: white; border-color: #E53E3E;">
                         🗑️ 直接清除本機內嵌照片（無法復原）
@@ -9810,10 +9810,8 @@
             const legacyCount = findLegacyBase64Photos().length;
             box.innerHTML = `
                 <p style="margin-bottom: 8px;">目前資料總大小：<strong>${sizeMb} MB</strong></p>
-                <p style="margin-bottom: 15px;">尚未上傳至雲端的內嵌照片：<strong>${legacyCount} 張</strong></p>
+                <p style="margin-bottom: 15px;">內嵌照片數量：<strong>${legacyCount} 張</strong></p>
             `;
-            const btn = document.getElementById('storageCleanupBtn');
-            if (btn) btn.disabled = legacyCount === 0 || !window.firebaseUserUid;
             const clearBtn = document.getElementById('storageClearBtn');
             if (clearBtn) clearBtn.disabled = legacyCount === 0;
         }
