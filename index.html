@@ -4353,7 +4353,7 @@
                 id: newId,
                 title: '新提醒板',
                 content: '',
-                tags: [], pinned: false, todos: [], photo: null
+                tags: [...activeReminderTags], pinned: false, todos: [], photo: null
             });
             window.expandedReminderIds = window.expandedReminderIds || new Set();
             window.expandedReminderIds.add(newId);
