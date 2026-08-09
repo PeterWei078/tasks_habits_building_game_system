@@ -2374,6 +2374,15 @@
                         🧹 一鍵搬移舊照片至雲端
                     </button>
                 </div>
+                <div class="warning-box">
+                    <h4 style="margin-bottom: 10px;">🗑️ 直接清除本機照片（不上傳）</h4>
+                    <p style="margin-bottom: 15px; font-size: 0.9rem;">
+                        如果上傳搬移一直卡住失敗，或您不需要保留這些照片，可以用這個按鈕直接永久刪除本機內嵌照片，釋放儲存空間。<strong>此動作無法復原，照片不會被保留在任何地方。</strong>
+                    </p>
+                    <button class="btn" id="storageClearBtn" onclick="clearLegacyBase64Photos()" style="width: 100%; padding: 12px; font-weight: bold; background: #E53E3E; color: white; border-color: #E53E3E;">
+                        🗑️ 直接清除本機內嵌照片（無法復原）
+                    </button>
+                </div>
             </div>
 
             <!-- Theme Section -->
@@ -9796,6 +9805,8 @@
             `;
             const btn = document.getElementById('storageCleanupBtn');
             if (btn) btn.disabled = legacyCount === 0 || !window.firebaseUserUid;
+            const clearBtn = document.getElementById('storageClearBtn');
+            if (clearBtn) clearBtn.disabled = legacyCount === 0;
         }
 
         async function migrateLegacyPhotosToStorage() {
@@ -9811,11 +9822,18 @@
             const btn = document.getElementById('storageCleanupBtn');
             if (btn) { btn.disabled = true; btn.textContent = `搬移中... (0/${jobs.length})`; }
 
+            const withTimeout = (promise, ms) => Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), ms))
+            ]);
+
             let migrated = 0, failed = 0;
             for (const job of jobs) {
                 try {
-                    const compact = await compressDataUrl(job.get());
-                    const url = await uploadImageToStorage(compact, `photos/${window.firebaseUserUid}/legacy_${job.label}_${Date.now()}.jpg`);
+                    // Per-photo timeout so one stuck upload (flaky mobile network) can't
+                    // freeze the whole loop forever — it's skipped and the loop moves on.
+                    const compact = await withTimeout(compressDataUrl(job.get()), 15000);
+                    const url = await withTimeout(uploadImageToStorage(compact, `photos/${window.firebaseUserUid}/legacy_${job.label}_${Date.now()}.jpg`), 20000);
                     if (url) { job.set(url); migrated++; } else { failed++; }
                 } catch (e) {
                     console.error('Migrate photo failed:', job.label, e);
@@ -9833,6 +9851,29 @@
                 `已上傳 ${migrated} 張照片至雲端${failed ? `，${failed} 張失敗` : ''}，本機儲存空間已釋放`,
                 5000
             );
+        }
+
+        // Permanently discards legacy inline base64 photos without uploading anywhere.
+        // Unlike migrateLegacyPhotosToStorage, this does not require login and cannot be undone.
+        function clearLegacyBase64Photos() {
+            const jobs = findLegacyBase64Photos();
+            if (jobs.length === 0) {
+                showToast('✅ 沒有需要清除的照片', '本機沒有內嵌照片');
+                return;
+            }
+            if (!confirm(`即將永久清除 ${jobs.length} 張本機內嵌照片（不會上傳到任何地方）。\n\n這個動作無法復原，確定要繼續嗎？`)) return;
+
+            (state.tasks || []).forEach(t => { if (t.photo && t.photo.startsWith('data:image')) t.photo = null; });
+            (state.player.tags || []).forEach(p => {
+                if (p.photos) p.photos = p.photos.filter(url => !(url && url.startsWith('data:image')));
+            });
+            (state.reminders || []).forEach(r => { if (r.photo && r.photo.startsWith('data:image')) r.photo = null; });
+            state.player.photoLibrary = (state.player.photoLibrary || []).filter(ph => !(ph.data && ph.data.startsWith('data:image')));
+
+            saveState();
+            render();
+            renderStorageCleanupInfo();
+            showToast('🗑️ 已清除', `已永久移除 ${jobs.length} 張本機內嵌照片，本機儲存空間已釋放`, 5000);
         }
 
         // --- Photo Library ---
