@@ -2615,12 +2615,18 @@
                 });
 
                 const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                // Installed home-screen PWA (standalone). On iOS, signInWithRedirect gets stuck
+                // inside this container: the redirect back from Google has to hand off through
+                // the firebaseapp.com auth-handler domain, which iOS ITP blocks for a standalone
+                // WKWebView (especially right after a fresh install with no prior storage access).
+                // A gesture-triggered popup avoids that full-page hand-off entirely.
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
                 window.firebaseSignIn = () => {
                     if (loginBtnText) loginBtnText.innerText = "登入中...";
                     const provider = new GoogleAuthProvider();
-                    if (isMobile) {
-                        // Mobile: use redirect flow (popups are blocked on mobile browsers)
+                    if (isMobile && !isStandalone) {
+                        // Regular mobile browser tab: redirect flow is reliable here
                         signInWithRedirect(authInstance, provider).catch(e => {
                             console.error(e);
                             if (loginBtnText) loginBtnText.innerText = "使用 Google 登入同步";
@@ -2630,7 +2636,11 @@
                         signInWithPopup(authInstance, provider).catch(e => {
                             console.error(e);
                             if (loginBtnText) loginBtnText.innerText = "使用 Google 登入同步";
-                            alert("登入失敗: " + e.message);
+                            if (e.code === 'auth/popup-blocked' || e.code === 'auth/cancelled-popup-request') {
+                                alert("登入視窗被瀏覽器擋住了，請在跳出的提示中允許彈出視窗後再試一次。");
+                            } else if (e.code !== 'auth/popup-closed-by-user') {
+                                alert("登入失敗: " + e.message);
+                            }
                         });
                     }
                 };
