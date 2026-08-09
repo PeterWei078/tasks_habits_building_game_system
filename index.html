@@ -9754,6 +9754,9 @@
                 return await window.firebaseStorageGetDownloadURL(ref);
             } catch (e) {
                 console.error('Storage upload failed:', e);
+                // Stash the real reason so callers without devtools access (e.g. on mobile)
+                // can surface it directly in the UI instead of a silent null.
+                window.__lastStorageUploadError = (e && (e.code || e.message)) || String(e);
                 return null;
             }
         }
@@ -9833,29 +9836,40 @@
                 new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), ms))
             ]);
 
+            window.__lastStorageUploadError = null;
             let migrated = 0, failed = 0;
             for (const job of jobs) {
                 try {
                     // Per-photo timeout so one stuck upload (flaky mobile network) can't
                     // freeze the whole loop forever — it's skipped and the loop moves on.
-                    const compact = await withTimeout(compressDataUrl(job.get()), 15000);
-                    const url = await withTimeout(uploadImageToStorage(compact, `photos/${window.firebaseUserUid}/legacy_${job.label}_${Date.now()}.jpg`), 20000);
+                    const compact = await withTimeout(compressDataUrl(job.get()), 8000);
+                    const url = await withTimeout(uploadImageToStorage(compact, `photos/${window.firebaseUserUid}/legacy_${job.label}_${Date.now()}.jpg`), 12000);
                     if (url) { job.set(url); migrated++; } else { failed++; }
                 } catch (e) {
                     console.error('Migrate photo failed:', job.label, e);
+                    if (!window.__lastStorageUploadError) window.__lastStorageUploadError = e.message || String(e);
                     failed++;
                 }
                 if (btn) btn.textContent = `搬移中... (${migrated + failed}/${jobs.length})`;
+
+                // Fail fast: if the first few attempts all fail, this is almost certainly a
+                // systemic problem (permissions/network/blocked request), not a handful of
+                // bad images — stop instead of grinding through the rest one timeout at a time.
+                if (migrated === 0 && failed >= 3) break;
             }
 
             saveState();
             render();
             renderStorageCleanupInfo();
             if (btn) { btn.disabled = false; btn.textContent = '🧹 一鍵搬移舊照片至雲端'; }
+
+            const stoppedEarly = (migrated + failed) < jobs.length;
             showToast(
-                failed ? '⚠️ 部分完成' : '✅ 清理完成',
-                `已上傳 ${migrated} 張照片至雲端${failed ? `，${failed} 張失敗` : ''}，本機儲存空間已釋放`,
-                5000
+                failed ? '⚠️ 上傳失敗' : '✅ 清理完成',
+                failed
+                    ? `${stoppedEarly ? '偵測到連續失敗，已提前停止。' : ''}已上傳 ${migrated} 張，${failed} 張失敗。原因：${window.__lastStorageUploadError || '未知錯誤'}`
+                    : `已上傳 ${migrated} 張照片至雲端，本機儲存空間已釋放`,
+                9000
             );
         }
 
@@ -13686,11 +13700,12 @@
             }, 2500);
         }
 
-        function showToast(title, message) {
+        function showToast(title, message, duration) {
             toastDiv.querySelector('.toast-message h4').innerHTML = title;
             toastDiv.querySelector('.toast-message p').innerHTML = message;
             toastDiv.classList.add('show');
-            setTimeout(() => toastDiv.classList.remove('show'), 3000);
+            clearTimeout(window.__toastHideTimer);
+            window.__toastHideTimer = setTimeout(() => toastDiv.classList.remove('show'), duration || 3000);
         }
 
         // =====================================================
