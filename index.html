@@ -2371,14 +2371,14 @@
                     <p>載入中...</p>
                 </div>
                 <div class="info-box">
-                    <h4 style="margin-bottom: 10px;">☁️ 照片的雲端備份方式</h4>
-                    <p style="margin-bottom: 10px; font-size: 0.9rem;">
-                        這個 App 目前沒有啟用 Firebase Storage（需要升級到付費方案才能使用），所以照片不是單獨上傳的。
-                        不過別擔心：只要您已登入 Google 帳號，每次存檔時整份資料（包含內嵌照片）都會透過 Firestore 同步到雲端，所以照片本身是有備份的，只是效率比較低（每次存檔都整包重傳）。
+                    <h4 style="margin-bottom: 10px;">🧹 清理舊照片至雲端</h4>
+                    <p style="margin-bottom: 15px; font-size: 0.9rem;">
+                        這個 App 沒有啟用 Firebase Storage（需要升級到付費方案），所以照片改存成 Firestore 裡各自獨立的小文件，一樣免費、一樣有雲端備份，而且不用像之前一樣每次存檔都整包重傳。
+                        點擊下方按鈕可一鍵將任務、專案、提醒事項裡還內嵌成原始照片的項目搬移過去，本機資料只留下簡短的參照，大幅縮小資料量。需要先登入 Google 帳號。
                     </p>
-                    <p style="font-size: 0.9rem;">
-                        「本機儲存空間已滿」的警告只代表<strong>這支裝置的瀏覽器快取</strong>放不下全部資料，不代表雲端備份失效。
-                    </p>
+                    <button class="btn btn-primary" id="storageCleanupBtn" onclick="migrateLegacyPhotosToFirestore()" style="width: 100%; padding: 12px; font-weight: bold; background: var(--accent-color, #4A90E2); border-color: var(--accent-color, #4A90E2);">
+                        🧹 一鍵搬移舊照片至雲端
+                    </button>
                 </div>
                 <div class="warning-box">
                     <h4 style="margin-bottom: 10px;">🗑️ 直接清除本機照片（不上傳）</h4>
@@ -2617,7 +2617,6 @@
                 const appModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js");
                 const authModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js");
                 const firestoreModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
-                const storageModule = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js");
 
                 const auth = authModule.getAuth;
                 const db = firestoreModule.getFirestore;
@@ -2636,11 +2635,6 @@
                 window.firebaseDb = db(app);
                 window.firebaseDoc = doc;
                 window.firebaseSetDoc = setDoc;
-                window.firebaseStorage = storageModule.getStorage(app);
-                window.firebaseStorageRef = storageModule.ref;
-                window.firebaseStorageUploadString = storageModule.uploadString;
-                window.firebaseStorageGetDownloadURL = storageModule.getDownloadURL;
-                window.firebaseStorageDeleteObject = storageModule.deleteObject;
 
                 // Handle redirect result on mobile (page reloads after Google redirect)
                 getRedirectResult(authInstance).catch(e => {
@@ -4017,7 +4011,7 @@
 
                     const photoHtml = rem.photo
                         ? `<div style="position:relative;margin-top:8px;">
-                              <img src="${rem.photo}" alt="photo" style="max-width:100%;border-radius:8px;max-height:220px;object-fit:contain;display:block;">
+                              <img data-photo-ref="${rem.photo}" src="${photoSrc(rem.photo)}" alt="photo" style="max-width:100%;border-radius:8px;max-height:220px;object-fit:contain;display:block;">
                               <button onclick="removeReminderPhoto('${rem.id}')" style="position:absolute;top:6px;right:6px;background:rgba(0,0,0,0.6);border:none;color:#fff;cursor:pointer;border-radius:50%;width:24px;height:24px;font-size:0.8rem;display:flex;align-items:center;justify-content:center;">✕</button>
                            </div>`
                         : `<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.25);border-radius:8px;font-size:0.82rem;margin-top:8px;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
@@ -4328,8 +4322,8 @@
                 try {
                     let photoData = await compressImage(file);
                     if (window.firebaseUserUid) {
-                        const url = await uploadImageToStorage(photoData, `photos/${window.firebaseUserUid}/rem_${remId}_${Date.now()}.jpg`);
-                        if (url) photoData = url;
+                        const ref = await savePhotoToFirestore(photoData);
+                        if (ref) photoData = ref;
                     }
                     const rem = state.reminders.find(r => r.id === remId);
                     if (rem) {
@@ -7765,12 +7759,14 @@
                 const showCompletedBadge = project.completed || isProgressComplete;
 
                 // Cover Image (First photo or default pattern)
-                const coverStyle = project.photos && project.photos.length > 0
-                    ? `background-image: url('${project.photos[0]}'); background-size: cover; background-position: center;`
+                const hasCoverPhoto = project.photos && project.photos.length > 0;
+                const coverStyle = hasCoverPhoto
+                    ? `background-image: url('${photoSrc(project.photos[0])}'); background-size: cover; background-position: center;`
                     : `background: linear-gradient(135deg, ${project.color}aa, ${project.color}55);`;
+                const coverPhotoRefAttr = hasCoverPhoto ? `data-photo-ref="${project.photos[0]}"` : '';
 
                 card.innerHTML = `
-                    <div style="height: 120px; border-radius: 12px; margin-bottom: 10px; ${coverStyle}; position: relative;">
+                    <div ${coverPhotoRefAttr} style="height: 120px; border-radius: 12px; margin-bottom: 10px; ${coverStyle}; position: relative;">
                          ${showCompletedBadge ? '<div style="position: absolute; top: 10px; right: 10px; background: #48BB78; color: white; font-size: 0.8rem; padding: 4px 8px; border-radius: 6px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">Completed 🏆</div>' : ''}
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
@@ -8100,7 +8096,7 @@
                 const url = photos[0];
                 container.innerHTML = `
                     <div style="position: relative; width: 100%; height: 200px; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1);">
-                        <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <img data-photo-ref="${url}" src="${photoSrc(url)}" style="width: 100%; height: 100%; object-fit: cover;">
                         <button onclick="removeProjectPhoto(0)" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
                     </div>
                 `;
@@ -8121,8 +8117,8 @@
                 try {
                     let url = await compressImage(input.files[0]);
                     if (window.firebaseUserUid) {
-                        const storageUrl = await uploadImageToStorage(url, `photos/${window.firebaseUserUid}/proj_${Date.now()}.jpg`);
-                        if (storageUrl) url = storageUrl;
+                        const ref = await savePhotoToFirestore(url);
+                        if (ref) url = ref;
                     }
                     const container = document.getElementById('projPhotosContainer');
                     renderProjectPhotos([url]);
@@ -8894,7 +8890,7 @@
                 const isDailyFocus = task.title && task.title.includes("🔥當日小任務");
                 let photoHtml = '';
                 if (task.photo) {
-                    photoHtml = `<div class="task-photo-container" style="margin-left: 15px; flex-shrink: 0;"><img class="task-photo" src="${task.photo}" style="max-width: 240px; max-height: 180px; border-radius: 8px; border: 2px solid var(--accent-color, rgba(255,255,255,0.5)); object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onclick="event.stopPropagation()"></div>`;
+                    photoHtml = `<div class="task-photo-container" style="margin-left: 15px; flex-shrink: 0;"><img class="task-photo" data-photo-ref="${task.photo}" src="${photoSrc(task.photo)}" style="max-width: 240px; max-height: 180px; border-radius: 8px; border: 2px solid var(--accent-color, rgba(255,255,255,0.5)); object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onclick="event.stopPropagation()"></div>`;
                 }
 
                 item.innerHTML = `
@@ -9064,12 +9060,15 @@
                 document.getElementById('modalDesc').value = task.description || '';
                 document.getElementById('modalImage').value = task.image || '';
                 if (task.photo) {
-                    document.getElementById('modalPhotoPreview').src = task.photo;
-                    document.getElementById('modalPhotoPreview').style.display = 'block';
+                    const modalPhotoPreviewEl = document.getElementById('modalPhotoPreview');
+                    modalPhotoPreviewEl.setAttribute('data-photo-ref', task.photo);
+                    modalPhotoPreviewEl.src = photoSrc(task.photo);
+                    modalPhotoPreviewEl.style.display = 'block';
                     document.getElementById('modalPhotoBase64').value = task.photo;
                     const cb = document.getElementById('modalPhotoClearBtn');
                     if (cb) cb.style.display = '';
                 } else {
+                    document.getElementById('modalPhotoPreview').removeAttribute('data-photo-ref');
                     document.getElementById('modalPhotoPreview').src = '';
                     document.getElementById('modalPhotoPreview').style.display = 'none';
                     document.getElementById('modalPhotoBase64').value = '';
@@ -9543,8 +9542,8 @@
                     try {
                         photoData = await compressImage(photoFile);
                         if (window.firebaseUserUid) {
-                            const url = await uploadImageToStorage(photoData, `photos/${window.firebaseUserUid}/task_${Date.now()}.jpg`);
-                            if (url) photoData = url;
+                            const ref = await savePhotoToFirestore(photoData);
+                            if (ref) photoData = ref;
                         }
                     } catch (e) {
                         console.error("Image processing failed", e);
@@ -9746,18 +9745,79 @@
             });
         }
 
-        async function uploadImageToStorage(base64DataUrl, storagePath) {
-            if (!window.firebaseUserUid || !window.firebaseStorage) return null;
+        // Photos are stored as individual Firestore documents (users/{uid}/photos/{id})
+        // rather than Cloud Storage — this project doesn't have Storage provisioned (it
+        // requires the paid Blaze plan) and Firestore's free tier already covers this fine,
+        // since each compressed photo is well under Firestore's 1MB document limit.
+        // Returns a lightweight reference string ("firestore-photo:{id}") to store in place
+        // of the raw base64, or null if unavailable (caller should fall back to inline base64).
+        async function savePhotoToFirestore(base64DataUrl) {
+            if (!window.firebaseUserUid || !window.firebaseDb || !window.firebaseDoc || !window.firebaseSetDoc) return null;
             try {
-                const ref = window.firebaseStorageRef(window.firebaseStorage, storagePath);
-                await window.firebaseStorageUploadString(ref, base64DataUrl, 'data_url');
-                return await window.firebaseStorageGetDownloadURL(ref);
+                const id = 'ph_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+                await window.firebaseSetDoc(
+                    window.firebaseDoc(window.firebaseDb, `users/${window.firebaseUserUid}/photos/${id}`),
+                    { data: base64DataUrl, updatedAt: new Date().toISOString() }
+                );
+                window.__photoCache = window.__photoCache || {};
+                window.__photoCache[id] = base64DataUrl;
+                return `firestore-photo:${id}`;
             } catch (e) {
-                console.error('Storage upload failed:', e);
-                // Stash the real reason so callers without devtools access (e.g. on mobile)
-                // can surface it directly in the UI instead of a silent null.
-                window.__lastStorageUploadError = (e && (e.code || e.message)) || String(e);
+                console.error('savePhotoToFirestore failed:', e);
+                window.__lastPhotoSaveError = (e && (e.code || e.message)) || String(e);
                 return null;
+            }
+        }
+
+        // Resolves a photo field (raw data:/http(s) URL, or a "firestore-photo:{id}" reference)
+        // to a displayable src. Always returns synchronously — for an uncached Firestore
+        // reference it returns '' and kicks off a background fetch that hydrates any
+        // matching [data-photo-ref] elements once the data arrives (see _fetchPhotoFromFirestore).
+        function photoSrc(ref) {
+            if (!ref || typeof ref !== 'string') return '';
+            if (!ref.startsWith('firestore-photo:')) return ref; // already a usable data:/http(s) URL
+            const id = ref.slice('firestore-photo:'.length);
+            window.__photoCache = window.__photoCache || {};
+            if (window.__photoCache[id]) return window.__photoCache[id];
+            _fetchPhotoFromFirestore(id);
+            return '';
+        }
+
+        async function _fetchPhotoFromFirestore(id) {
+            window.__photoFetchInFlight = window.__photoFetchInFlight || {};
+            if (window.__photoFetchInFlight[id]) return;
+            window.__photoFetchInFlight[id] = true;
+            try {
+                if (!window.firebaseDb || !window.firebaseDoc || !window.firebaseUserUid) return;
+                const { getDoc } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+                const snap = await getDoc(window.firebaseDoc(window.firebaseDb, `users/${window.firebaseUserUid}/photos/${id}`));
+                if (snap.exists() && snap.data().data) {
+                    window.__photoCache = window.__photoCache || {};
+                    window.__photoCache[id] = snap.data().data;
+                    document.querySelectorAll(`[data-photo-ref="firestore-photo:${id}"]`).forEach(el => {
+                        if (el.tagName === 'IMG') el.src = window.__photoCache[id];
+                        else el.style.backgroundImage = `url('${window.__photoCache[id]}')`;
+                    });
+                }
+            } catch (e) {
+                console.error('Fetch photo from Firestore failed:', id, e);
+            } finally {
+                delete window.__photoFetchInFlight[id];
+            }
+        }
+
+        // Deletes the Firestore doc backing a "firestore-photo:{id}" reference. No-op for
+        // raw data:/http(s) values (nothing to clean up server-side).
+        async function deletePhotoFromFirestore(ref) {
+            if (!ref || typeof ref !== 'string' || !ref.startsWith('firestore-photo:')) return;
+            if (!window.firebaseDb || !window.firebaseDoc || !window.firebaseUserUid) return;
+            const id = ref.slice('firestore-photo:'.length);
+            try {
+                const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js");
+                await deleteDoc(window.firebaseDoc(window.firebaseDb, `users/${window.firebaseUserUid}/photos/${id}`));
+                if (window.__photoCache) delete window.__photoCache[id];
+            } catch (e) {
+                console.error('deletePhotoFromFirestore failed:', id, e);
             }
         }
 
@@ -9810,14 +9870,16 @@
             const legacyCount = findLegacyBase64Photos().length;
             box.innerHTML = `
                 <p style="margin-bottom: 8px;">目前資料總大小：<strong>${sizeMb} MB</strong></p>
-                <p style="margin-bottom: 15px;">內嵌照片數量：<strong>${legacyCount} 張</strong></p>
+                <p style="margin-bottom: 15px;">尚未搬移至雲端的內嵌照片：<strong>${legacyCount} 張</strong></p>
             `;
+            const btn = document.getElementById('storageCleanupBtn');
+            if (btn) btn.disabled = legacyCount === 0 || !window.firebaseUserUid;
             const clearBtn = document.getElementById('storageClearBtn');
             if (clearBtn) clearBtn.disabled = legacyCount === 0;
         }
 
-        async function migrateLegacyPhotosToStorage() {
-            if (!window.firebaseUserUid || !window.firebaseStorage) {
+        async function migrateLegacyPhotosToFirestore() {
+            if (!window.firebaseUserUid || !window.firebaseDb) {
                 showToast('⚠️ 尚未登入', '請先登入 Google 帳號才能將照片搬移至雲端');
                 return;
             }
@@ -9834,25 +9896,25 @@
                 new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), ms))
             ]);
 
-            window.__lastStorageUploadError = null;
+            window.__lastPhotoSaveError = null;
             let migrated = 0, failed = 0;
             for (const job of jobs) {
                 try {
-                    // Per-photo timeout so one stuck upload (flaky mobile network) can't
+                    // Per-photo timeout so one stuck write (flaky mobile network) can't
                     // freeze the whole loop forever — it's skipped and the loop moves on.
                     const compact = await withTimeout(compressDataUrl(job.get()), 8000);
-                    const url = await withTimeout(uploadImageToStorage(compact, `photos/${window.firebaseUserUid}/legacy_${job.label}_${Date.now()}.jpg`), 12000);
-                    if (url) { job.set(url); migrated++; } else { failed++; }
+                    const ref = await withTimeout(savePhotoToFirestore(compact), 12000);
+                    if (ref) { job.set(ref); migrated++; } else { failed++; }
                 } catch (e) {
                     console.error('Migrate photo failed:', job.label, e);
-                    if (!window.__lastStorageUploadError) window.__lastStorageUploadError = e.message || String(e);
+                    if (!window.__lastPhotoSaveError) window.__lastPhotoSaveError = e.message || String(e);
                     failed++;
                 }
                 if (btn) btn.textContent = `搬移中... (${migrated + failed}/${jobs.length})`;
 
                 // Fail fast: if the first few attempts all fail, this is almost certainly a
-                // systemic problem (permissions/network/blocked request), not a handful of
-                // bad images — stop instead of grinding through the rest one timeout at a time.
+                // systemic problem (permissions/network), not a handful of bad images —
+                // stop instead of grinding through the rest one timeout at a time.
                 if (migrated === 0 && failed >= 3) break;
             }
 
@@ -9865,8 +9927,8 @@
             showToast(
                 failed ? '⚠️ 上傳失敗' : '✅ 清理完成',
                 failed
-                    ? `${stoppedEarly ? '偵測到連續失敗，已提前停止。' : ''}已上傳 ${migrated} 張，${failed} 張失敗。原因：${window.__lastStorageUploadError || '未知錯誤'}`
-                    : `已上傳 ${migrated} 張照片至雲端，本機儲存空間已釋放`,
+                    ? `${stoppedEarly ? '偵測到連續失敗，已提前停止。' : ''}已搬移 ${migrated} 張，${failed} 張失敗。原因：${window.__lastPhotoSaveError || '未知錯誤'}`
+                    : `已搬移 ${migrated} 張照片至雲端，本機儲存空間已釋放`,
                 9000
             );
         }
@@ -10255,7 +10317,7 @@
                          onmouseover="this.style.transform='scale(1.03)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.18)'; this.style.borderColor='var(--accent-color,#4A90E2)';"
                          onmouseout="this.style.transform=''; this.style.boxShadow=''; this.style.borderColor='transparent';"
                          onclick="${isSelecting ? `selectPhotoFromLibrary('${photo.id}')` : ''}">
-                        <img src="${photo.data}" alt="${photo.name}" loading="lazy"
+                        <img data-photo-ref="${photo.data}" src="${photoSrc(photo.data)}" alt="${photo.name}" loading="lazy"
                              style="width:100%; aspect-ratio:1; object-fit:cover; display:block;">
                         <div style="padding:5px 7px; font-size:0.72rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:rgba(255,255,255,0.92); color:#333;">
                             ${photo.name}
@@ -10305,8 +10367,8 @@
                 let data = base64;
                 if (window.firebaseUserUid) {
                     showToast('上傳中', '正在上傳至雲端...');
-                    const url = await uploadImageToStorage(base64, `photos/${window.firebaseUserUid}/${id}.jpg`);
-                    if (url) data = url;
+                    const ref = await savePhotoToFirestore(base64);
+                    if (ref) data = ref;
                 }
                 if (!state.player.photoLibrary) state.player.photoLibrary = [];
                 state.player.photoLibrary.push({ id, name, data, addedAt: new Date().toISOString() });
@@ -10328,15 +10390,7 @@
         async function deleteFromPhotoLibrary(id) {
             if (!confirm('Remove this photo from the library?')) return;
             const photo = (state.player.photoLibrary || []).find(p => p.id === id);
-            if (photo && photo.data && photo.data.startsWith('https://firebasestorage') && window.firebaseStorage) {
-                try {
-                    const path = decodeURIComponent(photo.data.split('/o/')[1].split('?')[0]);
-                    const ref = window.firebaseStorageRef(window.firebaseStorage, path);
-                    await window.firebaseStorageDeleteObject(ref);
-                } catch (e) {
-                    console.error('Failed to delete from Storage:', e);
-                }
-            }
+            if (photo) await deletePhotoFromFirestore(photo.data);
             state.player.photoLibrary = (state.player.photoLibrary || []).filter(p => p.id !== id);
             saveState();
             renderPhotoLibraryGrid();
@@ -10351,7 +10405,8 @@
             if (!photo) return;
             if (photoLibraryContext === 'task') {
                 document.getElementById('modalPhotoBase64').value = photo.data;
-                document.getElementById('modalPhotoPreview').src = photo.data;
+                document.getElementById('modalPhotoPreview').setAttribute('data-photo-ref', photo.data);
+                document.getElementById('modalPhotoPreview').src = photoSrc(photo.data);
                 document.getElementById('modalPhotoPreview').style.display = 'block';
                 document.getElementById('modalPhotoFile').value = '';
                 const clearBtn = document.getElementById('modalPhotoClearBtn');
@@ -10365,6 +10420,7 @@
 
         function clearTaskModalPhoto() {
             document.getElementById('modalPhotoBase64').value = '';
+            document.getElementById('modalPhotoPreview').removeAttribute('data-photo-ref');
             document.getElementById('modalPhotoPreview').src = '';
             document.getElementById('modalPhotoPreview').style.display = 'none';
             document.getElementById('modalPhotoFile').value = '';
@@ -10377,6 +10433,7 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = e => {
+                document.getElementById('modalPhotoPreview').removeAttribute('data-photo-ref');
                 document.getElementById('modalPhotoPreview').src = e.target.result;
                 document.getElementById('modalPhotoPreview').style.display = 'block';
                 const clearBtn = document.getElementById('modalPhotoClearBtn');
