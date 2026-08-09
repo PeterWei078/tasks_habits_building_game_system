@@ -2305,6 +2305,12 @@
                     border-radius: 8px 8px 0 0;
                     overflow: hidden;
                     margin-bottom: 20px;
+                    /* Without this, overflow:hidden makes this flex item's automatic minimum
+                       height 0 (per the flexbox spec), so when the active tab's content is tall
+                       enough to exceed .modal-content's max-height, the tab bar — being the only
+                       sibling allowed to shrink to 0 — gets squeezed away entirely instead of the
+                       content scrolling. Pin it to its natural height so tab content scrolls instead. */
+                    flex-shrink: 0;
                 }
 
                 .data-tab-btn {
