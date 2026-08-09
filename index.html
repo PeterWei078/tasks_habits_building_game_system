@@ -12053,6 +12053,11 @@
 
                     if (confirm("Are you sure you want to overwrite all your current data with this backup? This action cannot be undone.")) {
                         localStorage.setItem('sl_data', JSON.stringify(parsedData));
+                        // Mark local as dirty-and-newer so the post-reload login flow pushes
+                        // this restored backup to the cloud instead of silently pulling the
+                        // (possibly stale) cloud copy and overwriting what was just imported.
+                        localStorage.setItem('sl_local_dirty', '1');
+                        localStorage.setItem('sl_last_cloud_at', new Date().toISOString());
                         alert("Data imported successfully! The game will now reload.");
                         location.reload();
                     }
