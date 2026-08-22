@@ -4642,7 +4642,7 @@
                 const grid = document.createElement('div');
                 grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:18px;';
 
-                const ATTR_LABELS = { intelligence:'智力', vitality:'活力', charisma:'魅力', dexterity:'靈巧', willpower:'意志' };
+                const ATTR_LABELS = { intelligence:'智力', vitality:'體力', charisma:'魅力', dexterity:'靈巧', willpower:'意志' };
 
                 visibleHabits.forEach(habit => {
                     const isNeg     = habit.type === 'negative';
@@ -4999,7 +4999,7 @@
         function renderHabitAttrRewardRows(attrs) {
             const container = document.getElementById('habitAttrRewardList');
             const attrKeys   = ['intelligence','vitality','charisma','dexterity','willpower'];
-            const attrLabels = { intelligence:'智力',vitality:'活力',charisma:'魅力',dexterity:'靈巧',willpower:'意志' };
+            const attrLabels = { intelligence:'智力',vitality:'體力',charisma:'魅力',dexterity:'靈巧',willpower:'意志' };
             const rows = attrs && attrs.length > 0 ? attrs : [];
             container.innerHTML = rows.map((a, i) => `
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;" data-row="${i}">
