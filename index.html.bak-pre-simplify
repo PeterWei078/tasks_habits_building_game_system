@@ -680,9 +680,19 @@
             text-transform: uppercase;
         }
 
+        .badge-str {
+            background: #FEB2B2;
+            color: #9B2C2C;
+        }
+
         .badge-int {
             background: #90CDF4;
             color: #2C5282;
+        }
+
+        .badge-agi {
+            background: #F6E05E;
+            color: #744210;
         }
 
         .badge-vit {
@@ -698,6 +708,11 @@
         .badge-dex {
             background: #D6BCFA;
             color: #553C9A;
+        }
+
+        .badge-luk {
+            background: #FBD38D;
+            color: #9C4221;
         }
 
         .badge-wil {
@@ -1737,6 +1752,10 @@
                 <li class="nav-item" id="nav-status" onclick="switchTab('status')">
                     <span class="nav-icon">📊</span>
                     <span class="nav-text">狀態 (Status)</span>
+                </li>
+                <li class="nav-item" id="nav-occupation" onclick="switchTab('occupation')">
+                    <span class="nav-icon">🧝</span>
+                    <span class="nav-text">職業 (Occupation)</span>
                 </li>
                 <li class="nav-item" id="nav-statistics" onclick="switchTab('statistics')">
                     <span class="nav-icon">📈</span>
@@ -2873,10 +2892,13 @@
                 exp: 0,
                 gold: 0,
                 attributes: {
+                    strength: { level: 5, exp: 0 },
                     intelligence: { level: 5, exp: 0 },
+                    agility: { level: 5, exp: 0 },
                     vitality: { level: 5, exp: 0 },
                     charisma: { level: 5, exp: 0 },
                     dexterity: { level: 5, exp: 0 },
+                    luck: { level: 5, exp: 0 },
                     willpower: { level: 5, exp: 0 }
                 },
                 // Groups & Tags
@@ -2927,16 +2949,16 @@
                 photoLibrary: [], // [{id, name, data (base64), addedAt}]
                 hiddenPresetPhotos: [], // list of builtin preset IDs that the user has hidden/deleted
                 characterGallery: [
-                    { id: 'char_lv1_student_m',     level: 1,  name: '菁英學院男學生', path: '/characters/char_lv1_student_m.webp',     unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv1_student_f',     level: 1,  name: '菁英學院女學生', path: '/characters/char_lv1_student_f.webp',     unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師',   path: '/characters/char_lv5_mage.webp',          unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv5_martial',       level: 5,  name: '初級武道家',   path: '/characters/char_lv5_martial.webp',       unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv5_hunter',        level: 5,  name: '初級獵人',     path: '/characters/char_lv5_hunter.webp',        unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士',   path: '/characters/char_lv5_dragonknight.webp',  unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',     path: '/characters/char_lv10_redmage.webp',      unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',     path: '/characters/char_lv10_bard.webp',         unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp', unlockedAt: new Date().toISOString() },
-                    { id: 'char_lv30_sharingan_sasuke', level: 30, displayLevel: '???', name: '萬花筒寫輪眼佐助', path: '/characters/char_lv30_sharingan_sasuke.webp', unlockedAt: new Date().toISOString() }
+                    { id: 'char_lv1_student_m',     level: 1,  name: '菁英學院男學生', path: '/characters/char_lv1_student_m.webp',     occupation: null,           unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv1_student_f',     level: 1,  name: '菁英學院女學生', path: '/characters/char_lv1_student_f.webp',     occupation: null,           unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師',   path: '/characters/char_lv5_mage.webp',          occupation: 'mage',         unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_martial',       level: 5,  name: '初級武道家',   path: '/characters/char_lv5_martial.webp',       occupation: 'martial',      unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_hunter',        level: 5,  name: '初級獵人',     path: '/characters/char_lv5_hunter.webp',        occupation: 'hunter',       unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士',   path: '/characters/char_lv5_dragonknight.webp',  occupation: 'dragonknight', unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',     path: '/characters/char_lv10_redmage.webp',      occupation: 'mage',         unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',     path: '/characters/char_lv10_bard.webp',         occupation: null,           unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp', occupation: 'shadow_monarch', unlockedAt: new Date().toISOString() },
+                    { id: 'char_lv30_sharingan_sasuke', level: 30, displayLevel: '???', name: '萬花筒寫輪眼佐助', path: '/characters/char_lv30_sharingan_sasuke.webp', occupation: 'sharingan_sasuke', unlockedAt: new Date().toISOString() }
                 ],
                 activeCharacterId: 'char_lv5_mage',
                 pageInfos: {
@@ -2944,6 +2966,7 @@
                     'focus': "Welcome to **Focus Mode**!\n\nUse the Pomodoro timer to concentrate on your tasks uninterrupted.",
                     'projects': "Welcome to **Projects**!\n\nOrganize large, multi-step goals here. Track progress bars and completion status.",
                     'status': "Welcome to **Status**!\n\nView your current Level, Attribute stats, and overall character progression.",
+                    'occupation': "Welcome to **Occupation**!\n\n瀏覽所有職業與已創建的角色圖鑑。點擊卡片上的編輯按鈕可設定角色所屬職業。20 級後可選擇進階職業，30 級後可暫時切換特殊職業。",
                     'activity': "Welcome to **Activity**!\n\nReview your historical task completions and analyze your productivity heatmap.",
                     'statistics': "Welcome to **Statistics**!\n\nAnalyze your attribute growth over time using the interactive radar charts.",
                     'reflections': "Welcome to **Reflections**!\n\nWrite daily journal entries to track your thoughts and lessons learned.",
@@ -2952,7 +2975,7 @@
                 }
             },
             tasks: [
-                { id: 1, title: "晨跑 3 公里 (Morning Run)", attributeRewards: [], completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
+                { id: 1, title: "晨跑 3 公里 (Morning Run)", attributeRewards: [{ attribute: "agility", exp: 20 }], completed: false, rewardExp: 20, rewardGold: 10, groupId: 'health', tags: ['daily'] },
                 { id: 2, title: "閱讀 30 分鐘 (Read Book)", attributeRewards: [{ attribute: "intelligence", exp: 15 }], completed: false, rewardExp: 15, rewardGold: 5, groupId: 'learning', tags: ['longterm'] }
             ],
             archivedTasks: [],
@@ -2975,7 +2998,7 @@
             habits: [
                 { id: 'habit_medicine',   title: '按時服藥',           icon: '💊', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'vitality', exp: 5 }], exp: 5, gold: 2 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
                 { id: 'habit_sleep',      title: '00:00前上床睡覺',    icon: '😪', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'vitality', exp: 8 }], exp: 8, gold: 3 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
-                { id: 'habit_exercise',   title: '有氧/核心運動20分鐘', icon: '💪', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [], exp: 10, gold: 5 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
+                { id: 'habit_exercise',   title: '有氧/核心運動20分鐘', icon: '💪', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'strength', exp: 10 }, { attribute: 'agility', exp: 5 }], exp: 10, gold: 5 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() },
                 { id: 'habit_hygiene',    title: '提早完成盥洗',        icon: '🛁', description: '', hidden: false, completions: {}, type: 'positive', streakReward: { attributes: [{ attribute: 'willpower', exp: 5 }], exp: 5, gold: 2 }, penaltyConfig: { baseGold: 5, escalatedGold: 10, escalateAfterDays: 3 }, milestoneReached: false, breakNotifiedDate: null, createdAt: new Date().toISOString() }
             ]
         };
@@ -3067,7 +3090,7 @@
                 state.player.activities = [];
             }
             // Ensure attributes exist and are objects
-            const attrKeys = ['intelligence', 'vitality', 'charisma', 'dexterity', 'willpower'];
+            const attrKeys = ['strength', 'intelligence', 'agility', 'vitality', 'charisma', 'dexterity', 'luck', 'willpower'];
             attrKeys.forEach(key => {
                 if (!state.player.attributes[key]) {
                     state.player.attributes[key] = { level: 5, exp: 0 };
@@ -3076,13 +3099,6 @@
                     state.player.attributes[key] = { level: state.player.attributes[key], exp: 0 };
                 }
             });
-            // Removed attributes (strength/agility/luck) — strip any leftover data from old saves
-            const removedAttrKeys = ['strength', 'agility', 'luck'];
-            removedAttrKeys.forEach(key => { delete state.player.attributes[key]; });
-            const stripRemovedAttrRewards = (rewards) => (rewards || []).filter(r => !removedAttrKeys.includes(r.attribute));
-            (state.tasks || []).forEach(t => { if (t.attributeRewards) t.attributeRewards = stripRemovedAttrRewards(t.attributeRewards); });
-            (state.archivedTasks || []).forEach(t => { if (t.attributeRewards) t.attributeRewards = stripRemovedAttrRewards(t.attributeRewards); });
-            (state.habits || []).forEach(h => { if (h.streakReward && h.streakReward.attributes) h.streakReward.attributes = stripRemovedAttrRewards(h.streakReward.attributes); });
 
             // Migrate Tasks to use attributeRewards
             if (state.tasks) {
@@ -3232,21 +3248,23 @@
             }
             // Ensure every built-in character exists in the gallery
             const builtIn = [
-                { id: 'char_lv1_student_m',     level: 1,  name: '菁英學院男學生', path: '/characters/char_lv1_student_m.webp' },
-                { id: 'char_lv1_student_f',     level: 1,  name: '菁英學院女學生', path: '/characters/char_lv1_student_f.webp' },
-                { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp' },
-                { id: 'char_lv5_martial',       level: 5,  name: '初級武道家', path: '/characters/char_lv5_martial.webp' },
-                { id: 'char_lv5_hunter',        level: 5,  name: '初級獵人',   path: '/characters/char_lv5_hunter.webp' },
-                { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士', path: '/characters/char_lv5_dragonknight.webp' },
-                { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp' },
-                { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',   path: '/characters/char_lv10_bard.webp' },
-                { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp' },
-                { id: 'char_lv30_sharingan_sasuke', level: 30, displayLevel: '???', name: '萬花筒寫輪眼佐助', path: '/characters/char_lv30_sharingan_sasuke.webp' }
+                { id: 'char_lv1_student_m',     level: 1,  name: '菁英學院男學生', path: '/characters/char_lv1_student_m.webp',     occupation: null },
+                { id: 'char_lv1_student_f',     level: 1,  name: '菁英學院女學生', path: '/characters/char_lv1_student_f.webp',     occupation: null },
+                { id: 'char_lv5_mage',          level: 5,  name: '見習魔法師', path: '/characters/char_lv5_mage.webp',          occupation: 'mage' },
+                { id: 'char_lv5_martial',       level: 5,  name: '初級武道家', path: '/characters/char_lv5_martial.webp',       occupation: 'martial' },
+                { id: 'char_lv5_hunter',        level: 5,  name: '初級獵人',   path: '/characters/char_lv5_hunter.webp',        occupation: 'hunter' },
+                { id: 'char_lv5_dragonknight',  level: 5,  name: '見習龍騎士', path: '/characters/char_lv5_dragonknight.webp',  occupation: 'dragonknight' },
+                { id: 'char_lv10_redmage',      level: 10, name: '紅魔導師',   path: '/characters/char_lv10_redmage.webp',      occupation: 'mage' },
+                { id: 'char_lv10_bard',         level: 10, name: '吟遊詩人',   path: '/characters/char_lv10_bard.webp',         occupation: null },
+                { id: 'char_lv30_shadow_monarch', level: 30, displayLevel: '???', name: '暗影君王', path: '/characters/char_lv30_shadow_monarch.webp', occupation: 'shadow_monarch' },
+                { id: 'char_lv30_sharingan_sasuke', level: 30, displayLevel: '???', name: '萬花筒寫輪眼佐助', path: '/characters/char_lv30_sharingan_sasuke.webp', occupation: 'sharingan_sasuke' }
             ];
             builtIn.forEach(c => {
                 const existing = state.player.characterGallery.find(g => g.id === c.id);
                 if (!existing) {
                     state.player.characterGallery.push({ ...c, unlockedAt: new Date().toISOString() });
+                } else if (!('occupation' in existing)) {
+                    existing.occupation = c.occupation;
                 }
             });
             state.player.characterGallery.sort((a, b) => a.level - b.level);
@@ -3390,10 +3408,13 @@
 
         // --- Attributes Config ---
         const attributesConfig = {
+            strength: { label: "力量 (STR)", color: "rgba(255, 99, 132, 0.7)", border: "rgb(255, 99, 132)", badgeClass: "badge-str" },
             intelligence: { label: "智力 (INT)", color: "rgba(54, 162, 235, 0.7)", border: "rgb(54, 162, 235)", badgeClass: "badge-int" },
+            agility: { label: "敏捷 (AGI)", color: "rgba(255, 206, 86, 0.7)", border: "rgb(255, 206, 86)", badgeClass: "badge-agi" },
             vitality: { label: "體力 (VIT)", color: "rgba(75, 192, 192, 0.7)", border: "rgb(75, 192, 192)", badgeClass: "badge-vit" },
             charisma: { label: "魅力 (CHA)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(255, 159, 64)", badgeClass: "badge-cha" },
             dexterity: { label: "靈巧 (DEX)", color: "rgba(153, 102, 255, 0.7)", border: "rgb(153, 102, 255)", badgeClass: "badge-dex" },
+            luck: { label: "幸運 (LUK)", color: "rgba(255, 159, 64, 0.7)", border: "rgb(205, 139, 44)", badgeClass: "badge-luk" },
             willpower: { label: "意志 (WIL)", color: "rgba(201, 203, 207, 0.7)", border: "rgb(201, 203, 207)", badgeClass: "badge-wil" }
         };
 
@@ -3421,6 +3442,7 @@
             if (currentTab === 'tasks') renderTasksPage();
             else if (currentTab === 'habits') renderHabitsPage();
             else if (currentTab === 'status') renderStatusPage();
+            else if (currentTab === 'occupation') renderOccupationPage();
             else if (currentTab === 'focus') renderFocusPage();
             else if (currentTab === 'reminders') renderRemindersPage();
             else if (currentTab === 'projects') renderProjectsPage();
@@ -4642,7 +4664,7 @@
                 const grid = document.createElement('div');
                 grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:18px;';
 
-                const ATTR_LABELS = { intelligence:'智力', vitality:'活力', charisma:'魅力', dexterity:'靈巧', willpower:'意志' };
+                const ATTR_LABELS = { strength:'力量', intelligence:'智力', agility:'敏捷', vitality:'活力', charisma:'魅力', dexterity:'靈巧', luck:'幸運', willpower:'意志' };
 
                 visibleHabits.forEach(habit => {
                     const isNeg     = habit.type === 'negative';
@@ -4998,8 +5020,8 @@
 
         function renderHabitAttrRewardRows(attrs) {
             const container = document.getElementById('habitAttrRewardList');
-            const attrKeys   = ['intelligence','vitality','charisma','dexterity','willpower'];
-            const attrLabels = { intelligence:'智力',vitality:'活力',charisma:'魅力',dexterity:'靈巧',willpower:'意志' };
+            const attrKeys   = ['strength','intelligence','agility','vitality','charisma','dexterity','luck','willpower'];
+            const attrLabels = { strength:'力量',intelligence:'智力',agility:'敏捷',vitality:'活力',charisma:'魅力',dexterity:'靈巧',luck:'幸運',willpower:'意志' };
             const rows = attrs && attrs.length > 0 ? attrs : [];
             container.innerHTML = rows.map((a, i) => `
                 <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;" data-row="${i}">
@@ -6101,6 +6123,7 @@
                         if (state.player.exp >= _pomExpNeeded) {
                             state.player.level++;
                             state.player.exp -= _pomExpNeeded;
+                            distributeOccupationAttrExp(state.player.level);
                             if (typeof showLevelUpOverlay === 'function') {
                                 showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
                             }
@@ -6409,6 +6432,96 @@
                 match: t => /英文.?查詢|單字庫|vocab.?app|詞海術士/i.test(t)
             },
         ];
+
+        // ── Occupation Registry ───────────────────────────────────────────
+        // attrDist: percentage (integer, sum = 100) distributed to each attribute on level-up
+        const OCCUPATIONS = {
+            basic: [
+                { id: 'warrior', name: '戰士', icon: '⚔️', desc: '力量與防禦的化身', maxLevel: 20,
+                  attrDist: { strength:35, vitality:25, agility:15, willpower:10, dexterity:7, intelligence:4, charisma:2, luck:2 } },
+                { id: 'martial', name: '武術家', icon: '🥊', desc: '快速連擊的格鬥家', maxLevel: 20,
+                  attrDist: { agility:30, strength:25, dexterity:15, vitality:12, willpower:8, luck:5, charisma:3, intelligence:2 } },
+                { id: 'mage', name: '魔法師', icon: '🔮', desc: '精通魔法的施術者', maxLevel: 20,
+                  attrDist: { intelligence:35, willpower:20, luck:15, charisma:10, agility:8, dexterity:5, vitality:4, strength:3 } },
+                { id: 'hunter', name: '獵人', icon: '🏹', desc: '精準的遠程攻擊者', maxLevel: 20,
+                  attrDist: { agility:30, dexterity:25, luck:20, strength:10, intelligence:7, vitality:5, willpower:2, charisma:1 } },
+            ],
+            advanced: [
+                { id: 'dragonknight', name: '龍騎士', icon: '🐉', desc: '駕馭龍力的騎士', minLevel: 20,
+                  attrDist: { strength:30, vitality:25, charisma:15, willpower:12, agility:8, dexterity:5, intelligence:3, luck:2 } },
+                { id: 'shadow_ninja', name: '影忍', icon: '🗡️', desc: '潛行於暗處的刺客', minLevel: 20,
+                  attrDist: { agility:35, dexterity:25, luck:15, strength:10, willpower:8, intelligence:4, vitality:2, charisma:1 } },
+                { id: 'sage', name: '賢者（法師）', icon: '📜', desc: '掌握古代智慧的法師', minLevel: 20,
+                  attrDist: { intelligence:30, willpower:25, charisma:15, luck:15, agility:6, dexterity:5, vitality:3, strength:1 } },
+                { id: 'beastmaster', name: '馴獸師', icon: '🦁', desc: '與野獸共鳴的訓練師', minLevel: 20,
+                  attrDist: { vitality:25, strength:20, agility:20, charisma:15, dexterity:8, willpower:7, luck:3, intelligence:2 } },
+            ],
+            special: [
+                { id: 'shadow_monarch', name: '暗影君王', icon: '👑', desc: '統御暗影的絕對王者', minLevel: 30,
+                  attrDist: { strength:25, agility:20, willpower:20, intelligence:15, dexterity:10, luck:5, vitality:3, charisma:2 } },
+                { id: 'sharingan_sasuke', name: '萬花筒寫輪眼', icon: '🔴', desc: '以天照焚盡一切的寫輪眼使者', minLevel: 30,
+                  attrDist: { intelligence:30, willpower:25, agility:20, dexterity:12, strength:5, vitality:4, luck:2, charisma:2 } },
+            ]
+        };
+
+        // Returns a flat list of all occupations (any tier)
+        function getAllOccupations() {
+            return [...OCCUPATIONS.basic, ...OCCUPATIONS.advanced, ...OCCUPATIONS.special];
+        }
+
+        // Called after a player levels up to newLevel (>= 6).
+        // Distributes newLevel × 10 EXP to each attribute according to the active character's occupation.
+        function distributeOccupationAttrExp(newLevel) {
+            if (newLevel < 6) return; // bonus starts from level 5 → 6
+            const p = state.player;
+            const activeChar = (p.characterGallery || []).find(c => c.id === p.activeCharacterId);
+            const occId = activeChar ? activeChar.occupation : null;
+            const occ = occId ? getAllOccupations().find(o => o.id === occId) : null;
+            if (!occ || !occ.attrDist) return;
+
+            const totalPerAttr = newLevel * 100; // EXP pool per-attribute (before distribution)
+            const gainedAttrs = [];
+            Object.entries(occ.attrDist).forEach(([attrKey, pct]) => {
+                const attr = p.attributes[attrKey];
+                if (!attr) return;
+                const gain = Math.round(totalPerAttr * pct / 100);
+                if (gain <= 0) return;
+                attr.exp = (attr.exp || 0) + gain;
+                gainedAttrs.push({ key: attrKey, gain });
+                // Check attribute level-up
+                let leveled = false;
+                while (true) {
+                    const needed = 50 + attr.level * 50;
+                    if (attr.exp >= needed) {
+                        attr.level++;
+                        attr.exp -= needed;
+                        leveled = true;
+                    } else break;
+                }
+                if (leveled && typeof showLevelUpOverlay === 'function') {
+                    showLevelUpOverlay(
+                        `${attributesConfig[attrKey].label.split(' ')[0]} Level Up!`,
+                        `Now Level ${attr.level}`
+                    );
+                }
+            });
+
+            if (gainedAttrs.length > 0) {
+                const preview = gainedAttrs.slice(0, 3).map(a =>
+                    `${attributesConfig[a.key].label.split(' ')[0]} +${a.gain}`
+                ).join(' · ');
+                showToast(`${occ.icon} 職業加成 (${occ.name})`, `屬性 EXP 獲得：${preview}${gainedAttrs.length > 3 ? ' …' : ''}`);
+            }
+        }
+
+        // Returns the tier label for a given occupation id
+        function getOccupationTier(id) {
+            if (OCCUPATIONS.basic.some(o => o.id === id))    return 'basic';
+            if (OCCUPATIONS.advanced.some(o => o.id === id)) return 'advanced';
+            if (OCCUPATIONS.special.some(o => o.id === id))  return 'special';
+            return null;
+        }
+        // ── End Occupation Registry ──────────────────────────────────────
 
         // Returns HTML for a badge icon – resolves by stored path, gallery title-match, or emoji fallback.
         // Immune to Firebase state overwrites because resolution happens at render time.
@@ -8294,6 +8407,7 @@
                     if (state.player.exp >= expNeeded) {
                         state.player.level++;
                         state.player.exp -= expNeeded;
+                        distributeOccupationAttrExp(state.player.level);
                         if (typeof showLevelUpOverlay === 'function') {
                             showLevelUpOverlay(`Player Level Up!`, `You are now Level ${state.player.level}!`);
                         } else {
@@ -9180,18 +9294,17 @@
                 existing.remove(); // Replace old
             }
 
-            const cfg = attributesConfig[attribute] || { color: '#999', label: 'Unknown (?)' };
             const div = document.createElement('div');
             div.className = 'badge';
             div.dataset.attr = attribute;
             div.dataset.exp = exp;
-            div.style.background = cfg.color;
+            div.style.background = attributesConfig[attribute].color;
             div.style.color = 'white';
             div.style.display = 'flex';
             div.style.alignItems = 'center';
             div.style.gap = '5px';
             div.innerHTML = `
-                ${cfg.label.split(' ')[0]} +${exp}
+                ${attributesConfig[attribute].label.split(' ')[0]} +${exp}
                 <span onclick="this.parentElement.remove()" style="cursor: pointer; opacity: 0.7; font-weight: bold; margin-left: 2px;">&times;</span>
             `;
             container.appendChild(div);
@@ -9415,7 +9528,7 @@
                 const isAchievement = document.getElementById('modalIsAchievement').checked;
 
                 // Determine primary attribute for backward compatibility / display
-                const primaryAttribute = attributeRewards.length > 0 ? attributeRewards[0].attribute : 'intelligence';
+                const primaryAttribute = attributeRewards.length > 0 ? attributeRewards[0].attribute : 'strength';
 
                 // Critical Fix: Define timeSpent variables
                 const timeSpentMin = parseInt(document.getElementById('modalTimeSpent').value) || 0;
@@ -9979,14 +10092,110 @@
             renderCharacterGalleryGrid();
             renderStatusPage();
         }
+        // ── Character Edit Modal ──────────────────────────────────────────
+        function openCharacterEditModal(charId) {
+            const p = state.player;
+            const char = (p.characterGallery || []).find(c => c.id === charId);
+            if (!char) return;
+
+            document.getElementById('charEditId').value = charId;
+
+            // Preview
+            const preview = document.getElementById('charEditPreview');
+            preview.innerHTML = `
+                <div style="width:54px;height:81px;border-radius:8px;overflow:hidden;flex-shrink:0;background:var(--bg-gradient);background-attachment:fixed;">
+                    <img src="${char.path}" alt="${char.name}" style="width:100%;height:100%;object-fit:contain;mix-blend-mode:multiply;" onerror="this.style.display='none'">
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:1rem;color:#fff;">${char.name}</div>
+                    <div style="font-size:0.82rem;color:rgba(255,255,255,0.6);margin-top:3px;">Lv.${char.level}</div>
+                </div>
+            `;
+
+            // Build occupation select
+            const sel = document.getElementById('charEditOccupation');
+            sel.innerHTML = '<option value="">── 未設定 ──</option>';
+            const groups = [
+                { label: '基本職業 (Lv 1–20)', items: OCCUPATIONS.basic },
+                { label: '進階職業 (Lv 20+)',  items: OCCUPATIONS.advanced },
+                { label: '特殊職業 (Lv 30+)',  items: OCCUPATIONS.special },
+            ];
+            groups.forEach(g => {
+                const optGroup = document.createElement('optgroup');
+                optGroup.label = g.label;
+                g.items.forEach(occ => {
+                    const opt = document.createElement('option');
+                    opt.value = occ.id;
+                    opt.textContent = `${occ.icon} ${occ.name}`;
+                    if (char.occupation === occ.id) opt.selected = true;
+                    optGroup.appendChild(opt);
+                });
+                sel.appendChild(optGroup);
+            });
+
+            // Update distribution table on change
+            function updateHint() {
+                const selOcc = getAllOccupations().find(o => o.id === sel.value);
+                const hint = document.getElementById('charEditOccupationHint');
+                if (!selOcc) { hint.innerHTML = ''; return; }
+                const dist = selOcc.attrDist || {};
+                // Sort attributes by percentage descending
+                const sorted = Object.entries(dist).sort((a, b) => b[1] - a[1]);
+                const rows = sorted.map(([k, pct]) => {
+                    const cfg = attributesConfig[k];
+                    if (!cfg) return '';
+                    const label = cfg.label; // e.g. "智力 (INT)"
+                    const shortName = label.split(' ')[0];
+                    const badge = label.split(' ')[1] || '';
+                    return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+                        <span style="font-size:0.72rem;font-weight:700;min-width:46px;color:#fff;">${shortName} <span style="color:rgba(255,255,255,0.55);">${badge}</span></span>
+                        <div style="flex:1;height:7px;background:rgba(255,255,255,0.15);border-radius:4px;overflow:hidden;">
+                            <div style="height:100%;width:${pct}%;background:${cfg.border};border-radius:4px;transition:width 0.4s;"></div>
+                        </div>
+                        <span style="font-size:0.72rem;font-weight:700;min-width:30px;text-align:right;color:#fff;">${pct}%</span>
+                    </div>`;
+                }).join('');
+                hint.innerHTML = `
+                    <div style="margin-top:2px;font-size:0.77rem;color:rgba(255,255,255,0.65);margin-bottom:7px;">${selOcc.desc}</div>
+                    <div style="margin-top:4px;padding:10px 12px;background:rgba(255,255,255,0.07);border-radius:10px;border:1px solid rgba(255,255,255,0.15);">
+                        <div style="font-size:0.72rem;font-weight:700;color:rgba(255,255,255,0.55);letter-spacing:0.05em;margin-bottom:9px;">升等屬性 EXP 分配比例</div>
+                        ${rows}
+                    </div>`;
+            }
+            sel.onchange = updateHint;
+            updateHint();
+
+            document.getElementById('characterEditModal').style.display = 'flex';
+        }
+
+        function closeCharacterEditModal() {
+            document.getElementById('characterEditModal').style.display = 'none';
+        }
+
+        function saveCharacterEdit() {
+            const charId = document.getElementById('charEditId').value;
+            const newOccupation = document.getElementById('charEditOccupation').value || null;
+            const char = (state.player.characterGallery || []).find(c => c.id === charId);
+            if (!char) return;
+            char.occupation = newOccupation;
+            saveState();
+            closeCharacterEditModal();
+            if (currentTab === 'occupation') renderOccupationPage();
+            showToast('已更新', `${char.name} 的職業已設定完成。`);
+        }
+        // ── End Character Edit Modal ──────────────────────────────────────
+
         // ── End Character Gallery ─────────────────────────────────────────
 
         const BUILTIN_TASK_PHOTOS = [
             // RPG Attribute Presets
+            { id: 'builtin_strength', name: '力量鍛鍊 (Strength)', data: '/task_photos/task_strength.webp' },
             { id: 'builtin_intelligence', name: '知識學習 (Intelligence)', data: '/task_photos/task_intelligence.webp' },
+            { id: 'builtin_agility', name: '速度敏捷 (Agility)', data: '/task_photos/task_agility.webp' },
             { id: 'builtin_vitality', name: '體力回復 (Vitality)', data: '/task_photos/task_vitality.webp' },
             { id: 'builtin_charisma', name: '魅力社交 (Charisma)', data: '/task_photos/task_charisma.webp' },
             { id: 'builtin_dexterity', name: '靈巧工藝 (Dexterity)', data: '/task_photos/task_dexterity.webp' },
+            { id: 'builtin_luck', name: '幸運冒險 (Luck)', data: '/task_photos/task_luck.webp' },
             { id: 'builtin_willpower', name: '意志修練 (Willpower)', data: '/task_photos/task_willpower.webp' },
             // User Presets Built-in
             { id: 'builtin_english', name: '英文口說 (English)', data: '/task_photos/task_english.webp' },
@@ -10331,6 +10540,7 @@
                     state.player.level++;
                     state.player.exp -= expNeeded;
                     levelUp = true;
+                    distributeOccupationAttrExp(state.player.level);
                 }
 
                 showToast("Quest Completed!", `+${task.rewardExp} EXP, +${task.rewardGold} Gold${levelUp ? ' (LEVEL UP!)' : ''}`);
@@ -10682,6 +10892,140 @@
             } else {
                 alert("Please enter valid Level (>0) and EXP (>=0).");
             }
+        }
+
+        // --- Occupation Page ---
+        function renderOccupationPage() {
+            contentDiv.innerHTML = '';
+            migrateCharacterGallery();
+            const p = state.player;
+            const gallery = p.characterGallery || [];
+
+            const title = document.createElement('h2');
+            title.className = 'page-title';
+            title.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+            title.innerHTML = `
+                職業 (Occupation)
+                <button onclick="openPageInfoModal('occupation','職業 (Occupation)')" title="Page Info" style="background:none;border:none;cursor:pointer;font-size:1.2rem;opacity:0.7;padding:5px;transition:transform 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">ℹ️</button>
+            `;
+            contentDiv.appendChild(title);
+
+            const sectionDefs = [
+                { tier: 'basic',    label: '四大基本職業',  subtitle: '20 級以前的職業選擇', reqLabel: null,        occupations: OCCUPATIONS.basic,    minSlots: 4 },
+                { tier: 'advanced', label: '進階職業',       subtitle: '20 級以上可選',        reqLabel: '需達 Lv.20', occupations: OCCUPATIONS.advanced, minSlots: 4 },
+                { tier: 'special',  label: '特殊職業',       subtitle: '30 級以上可暫時切換',  reqLabel: '需達 Lv.30', occupations: OCCUPATIONS.special,  minSlots: 0 },
+            ];
+
+            sectionDefs.forEach(section => {
+                const canAccess = section.tier === 'basic' ? true
+                    : section.tier === 'advanced' ? p.level >= 20
+                    : p.level >= 30;
+
+                const sec = document.createElement('div');
+                sec.className = 'glass glass-card';
+                sec.style.marginBottom = '28px';
+
+                // Section header
+                const headerEl = document.createElement('div');
+                headerEl.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+                        <h3 style="margin:0;font-size:1.15rem;font-weight:700;color:var(--accent-color);">${section.label}</h3>
+                        <span style="font-size:0.82rem;opacity:0.65;background:rgba(255,255,255,0.25);padding:3px 10px;border-radius:12px;">${section.subtitle}</span>
+                        ${section.reqLabel && !canAccess ? `<span style="font-size:0.8rem;background:rgba(0,0,0,0.18);color:rgba(255,255,255,0.75);padding:3px 10px;border-radius:12px;">🔒 ${section.reqLabel}</span>` : ''}
+                        ${section.reqLabel && canAccess ? `<span style="font-size:0.8rem;background:rgba(72,187,120,0.25);color:#276749;padding:3px 10px;border-radius:12px;">✓ 已解鎖</span>` : ''}
+                    </div>
+                    <hr style="border:none;border-top:1px solid rgba(255,255,255,0.2);margin-bottom:18px;">
+                `;
+                sec.appendChild(headerEl);
+
+                section.occupations.forEach((occ, occIdx) => {
+                    const chars = gallery.filter(c => c.occupation === occ.id).sort((a,b) => a.level - b.level);
+                    const placeholderCount = Math.max(0, section.minSlots - chars.length);
+
+                    // Occupation sub-header
+                    const occHeader = document.createElement('div');
+                    occHeader.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:12px;' + (occIdx > 0 ? 'margin-top:22px;' : '');
+                    occHeader.innerHTML = `
+                        <span style="font-size:1.5rem;line-height:1;">${occ.icon}</span>
+                        <div>
+                            <div style="font-weight:700;font-size:1rem;">${occ.name}</div>
+                            <div style="font-size:0.78rem;opacity:0.58;">${occ.desc}</div>
+                        </div>
+                        <div style="margin-left:auto;font-size:0.78rem;opacity:0.55;background:rgba(255,255,255,0.18);padding:2px 9px;border-radius:10px;">${chars.length} 個角色</div>
+                    `;
+                    sec.appendChild(occHeader);
+
+                    // Cards grid
+                    const grid = document.createElement('div');
+                    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px;';
+
+                    // Existing character cards
+                    chars.forEach(char => {
+                        const isActive = char.id === p.activeCharacterId;
+                        const isSpecialTier = section.tier === 'special';
+                        const canEquip = p.level >= char.level;
+                        const borderStyle = isActive
+                            ? 'border:2px solid var(--accent-color,#805AD5);box-shadow:0 0 14px rgba(128,90,213,0.4);'
+                            : 'border:1px solid rgba(255,255,255,0.2);';
+
+                        const card = document.createElement('div');
+                        card.style.cssText = `border-radius:14px;overflow:hidden;${borderStyle}background:rgba(255,255,255,0.08);transition:transform 0.2s;position:relative;`;
+                        card.onmouseenter = () => { if(!isActive) card.style.transform='scale(1.03)'; };
+                        card.onmouseleave = () => { card.style.transform='scale(1)'; };
+
+                        const lockOverlay = !canEquip ? `
+                            <div style="position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;z-index:2;">
+                                <span style="font-size:1.5rem;">🔒</span>
+                                <span style="color:#fff;font-size:0.72rem;font-weight:600;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:10px;">${isSpecialTier ? `需達 Lv.${char.level} 切換` : `Lv.${char.level} 解鎖`}</span>
+                            </div>` : '';
+
+                        const levelBadge = isSpecialTier
+                            ? `<div style="position:absolute;top:7px;right:7px;background:rgba(80,0,0,0.72);color:#FFD700;font-size:0.65rem;font-weight:bold;padding:2px 7px;border-radius:10px;backdrop-filter:blur(4px);z-index:3;">⚡ Lv.${char.level}</div>`
+                            : `<div style="position:absolute;top:7px;right:7px;background:rgba(0,0,0,0.55);color:#FFD700;font-size:0.68rem;font-weight:bold;padding:2px 7px;border-radius:10px;backdrop-filter:blur(4px);z-index:3;">Lv.${char.level}</div>`;
+
+                        card.innerHTML = `
+                            <div style="aspect-ratio:2/3;overflow:hidden;position:relative;background:var(--bg-gradient);background-attachment:fixed;">
+                                <img src="${char.path}" alt="${char.name}" style="width:100%;height:100%;object-fit:contain;object-position:center;mix-blend-mode:multiply;${!canEquip?'filter:grayscale(60%);':''}" onerror="this.style.display='none'">
+                                ${levelBadge}
+                                ${isActive ? `<div style="position:absolute;top:7px;left:7px;background:var(--accent-color,#805AD5);color:#fff;font-size:0.62rem;padding:2px 7px;border-radius:10px;z-index:3;">使用中</div>` : ''}
+                                ${lockOverlay}
+                            </div>
+                            <div style="padding:10px;">
+                                <div style="font-weight:600;font-size:0.85rem;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${char.name}">${char.name}</div>
+                                <button onclick="openCharacterEditModal('${char.id}')" style="width:100%;padding:5px;border-radius:8px;border:none;font-size:0.77rem;font-weight:600;background:rgba(255,255,255,0.18);color:var(--text-primary);cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.32)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'">✏️ 編輯</button>
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+
+                    // Placeholder cards
+                    for (let i = 0; i < placeholderCount; i++) {
+                        const ph = document.createElement('div');
+                        ph.style.cssText = 'border-radius:14px;overflow:hidden;border:1px dashed rgba(150,150,150,0.35);background:rgba(150,150,150,0.07);opacity:0.55;';
+                        ph.innerHTML = `
+                            <div style="aspect-ratio:2/3;background:repeating-linear-gradient(45deg,rgba(150,150,150,0.06),rgba(150,150,150,0.06) 10px,rgba(150,150,150,0.12) 10px,rgba(150,150,150,0.12) 20px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;">
+                                <div style="font-size:2.2rem;opacity:0.35;">🂠</div>
+                                <div style="font-size:0.7rem;opacity:0.4;letter-spacing:0.5px;">待新增</div>
+                            </div>
+                            <div style="padding:10px;">
+                                <div style="height:13px;background:rgba(150,150,150,0.22);border-radius:4px;margin-bottom:8px;"></div>
+                                <div style="height:24px;background:rgba(150,150,150,0.12);border-radius:8px;"></div>
+                            </div>
+                        `;
+                        grid.appendChild(ph);
+                    }
+
+                    sec.appendChild(grid);
+
+                    if (occIdx < section.occupations.length - 1) {
+                        const hr = document.createElement('hr');
+                        hr.style.cssText = 'border:none;border-top:1px solid rgba(255,255,255,0.1);margin:20px 0 0;';
+                        sec.appendChild(hr);
+                    }
+                });
+
+                contentDiv.appendChild(sec);
+            });
         }
 
         // --- Status Page ---
@@ -13883,5 +14227,30 @@
         </div>
     </div>
 
+    <!-- Character Edit Modal -->
+    <div id="characterEditModal" onclick="if(event.target===this)closeCharacterEditModal()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:10000;justify-content:center;align-items:center;padding:20px;box-sizing:border-box;backdrop-filter:blur(6px);">
+        <div style="background:var(--card-bg,rgba(30,20,60,0.97));backdrop-filter:blur(24px);border-radius:20px;padding:28px;max-width:420px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.12);position:relative;color:#fff;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h3 style="margin:0;font-size:1.25rem;color:#fff;">✏️ 編輯角色</h3>
+                <button onclick="closeCharacterEditModal()" style="background:none;border:none;font-size:1.6rem;cursor:pointer;opacity:0.55;line-height:1;padding:0;color:#fff;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.55'">✕</button>
+            </div>
+            <!-- Character preview row -->
+            <div id="charEditPreview" style="display:flex;align-items:center;gap:14px;margin-bottom:22px;background:rgba(255,255,255,0.08);border-radius:12px;padding:12px 16px;color:#fff;"></div>
+            <!-- Occupation field -->
+            <div style="margin-bottom:18px;">
+                <label style="font-size:0.85rem;font-weight:600;color:rgba(255,255,255,0.8);display:block;margin-bottom:6px;">職業 (Occupation)</label>
+                <select id="charEditOccupation" style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.12);color:#fff;font-size:0.92rem;cursor:pointer;">
+                    <option value="" style="background:#2d1b4e;color:#fff;">── 未設定 ──</option>
+                </select>
+                <div id="charEditOccupationHint" style="font-size:0.78rem;color:#fff;margin-top:5px;line-height:1.4;"></div>
+            </div>
+            <!-- Actions -->
+            <div style="display:flex;gap:10px;">
+                <button onclick="saveCharacterEdit()" class="btn btn-primary" style="flex:1;padding:10px;">💾 儲存</button>
+                <button onclick="closeCharacterEditModal()" class="btn" style="flex:1;padding:10px;background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.2);">取消</button>
+            </div>
+            <input type="hidden" id="charEditId">
+        </div>
+    </div>
 </body>
 </html>
