@@ -2614,7 +2614,9 @@
         // latency scaled with chunk count × round-trip time — painful on mobile networks
         // where RTT is high and variable. Promise.all collapses that to ~1 round trip.
         // `chunkCollectionPath` is the Firestore path prefix under which chunks {0,1,2,...}
-        // live (e.g. `users/{uid}/dataChunks` or `users/{uid}/sections/{key}Chunks`).
+        // live (e.g. `users/{uid}/dataChunks` or `users/{uid}/sections/{key}/chunks`).
+        // Must always resolve to a collection path with an even total segment count
+        // once `/{i}` is appended — Firestore doc refs alternate collection/doc/collection/doc.
         async function _readChunksParallel(getDoc, doc, db, chunkCollectionPath, totalChunks) {
             const snaps = await Promise.all(
                 Array.from({ length: totalChunks }, (_, i) => getDoc(doc(db, `${chunkCollectionPath}/${i}`)))
@@ -2687,7 +2689,7 @@
         async function _readSectionFromCloud(getDoc, doc, db, uid, key) {
             const metaSnap = await getDoc(doc(db, `users/${uid}/sections/${key}`));
             if (!metaSnap.exists() || !metaSnap.data().totalChunks) return null;
-            const str = await _readChunksParallel(getDoc, doc, db, `users/${uid}/sections/${key}Chunks`, metaSnap.data().totalChunks);
+            const str = await _readChunksParallel(getDoc, doc, db, `users/${uid}/sections/${key}/chunks`, metaSnap.data().totalChunks);
             return str ? JSON.parse(str) : null;
         }
 
@@ -2711,7 +2713,7 @@
 
         async function _writeSectionToCloud(setDoc, doc, db, uid, key, sectionData, savedAt, chunkSize) {
             const str = JSON.stringify(sectionData);
-            const totalChunks = await _writeChunksParallel(setDoc, doc, db, `users/${uid}/sections/${key}Chunks`, str, chunkSize);
+            const totalChunks = await _writeChunksParallel(setDoc, doc, db, `users/${uid}/sections/${key}/chunks`, str, chunkSize);
             await setDoc(doc(db, `users/${uid}/sections/${key}`), { totalChunks, updatedAt: savedAt });
             return str;
         }
