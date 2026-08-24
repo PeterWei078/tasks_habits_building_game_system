@@ -2613,20 +2613,107 @@
         // Chunk read/write were previously sequential `await`-in-a-loop, so total sync
         // latency scaled with chunk count × round-trip time — painful on mobile networks
         // where RTT is high and variable. Promise.all collapses that to ~1 round trip.
-        async function _readChunksParallel(getDoc, doc, db, uid, totalChunks) {
+        // `chunkCollectionPath` is the Firestore path prefix under which chunks {0,1,2,...}
+        // live (e.g. `users/{uid}/dataChunks` or `users/{uid}/sections/{key}Chunks`).
+        async function _readChunksParallel(getDoc, doc, db, chunkCollectionPath, totalChunks) {
             const snaps = await Promise.all(
-                Array.from({ length: totalChunks }, (_, i) => getDoc(doc(db, `users/${uid}/dataChunks/${i}`)))
+                Array.from({ length: totalChunks }, (_, i) => getDoc(doc(db, `${chunkCollectionPath}/${i}`)))
             );
             return snaps.map(snap => (snap.exists() ? snap.data().chunk : '')).join('');
         }
 
-        async function _writeChunksParallel(setDoc, doc, db, uid, stateString, chunkSize) {
+        async function _writeChunksParallel(setDoc, doc, db, chunkCollectionPath, stateString, chunkSize) {
             const totalChunks = Math.ceil(stateString.length / chunkSize);
             await Promise.all(
                 Array.from({ length: totalChunks }, (_, i) =>
-                    setDoc(doc(db, `users/${uid}/dataChunks/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) }))
+                    setDoc(doc(db, `${chunkCollectionPath}/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) }))
             );
             return totalChunks;
+        }
+
+        // --- Sectioned cloud sync ---
+        // A single checkbox toggle used to re-upload the ENTIRE state (2.4MB+ for an
+        // active user) because everything lived in one JSON blob. That made the upload
+        // duration proportional to total account size, not to the size of the edit —
+        // brutal on mobile upload bandwidth. Splitting the state into independently
+        // synced sections means a task toggle only re-uploads the sections that actually
+        // changed (tasks + player stats), not rarely-touched data like the character
+        // gallery, shop items, or journal entries.
+        //
+        // 'tasks' and 'playerStats' are explicit allowlists of the fields that change on
+        // nearly every action (task/habit edits, EXP/gold/attribute gains). Everything
+        // else automatically falls into the 'config' catch-all — including any field
+        // added to defaultState in the future that nobody remembers to add to a section
+        // list here. That keeps this safe by construction: a forgotten field just ends up
+        // in the less-optimally-placed catch-all instead of silently failing to sync.
+        const SYNC_SECTION_KEYS = ['tasks', 'playerStats', 'config'];
+        const _SYNC_HOT_STATE_KEYS = ['tasks', 'archivedTasks', 'archivedProjects', 'featuredTaskId', 'habits'];
+        const _SYNC_HOT_PLAYER_KEYS = ['name', 'level', 'exp', 'gold', 'attributes', 'activities', 'totalFocusTime', 'timerSettings', 'activeCharacterId', 'groups', 'tags', 'skills'];
+        let _lastSyncedSectionStrings = {}; // key -> last-uploaded JSON string; unchanged sections are skipped on the next push
+
+        function _buildSyncSections() {
+            const tasksSection = {};
+            _SYNC_HOT_STATE_KEYS.forEach(k => { tasksSection[k] = state[k]; });
+
+            const playerStatsSection = {};
+            _SYNC_HOT_PLAYER_KEYS.forEach(k => { playerStatsSection[k] = state.player[k]; });
+
+            const configSection = { player: {} };
+            Object.keys(state).forEach(k => {
+                if (k === 'player' || k === '_updatedAt' || _SYNC_HOT_STATE_KEYS.includes(k)) return;
+                configSection[k] = state[k];
+            });
+            Object.keys(state.player).forEach(k => {
+                if (_SYNC_HOT_PLAYER_KEYS.includes(k)) return;
+                configSection.player[k] = state.player[k];
+            });
+
+            return { tasks: tasksSection, playerStats: playerStatsSection, config: configSection };
+        }
+
+        function _applySyncSection(sectionKey, data) {
+            if (!data) return;
+            if (sectionKey === 'tasks') {
+                Object.assign(state, data);
+            } else if (sectionKey === 'playerStats') {
+                Object.assign(state.player, data);
+            } else if (sectionKey === 'config') {
+                const { player: playerData, ...topData } = data;
+                Object.assign(state, topData);
+                if (playerData) Object.assign(state.player, playerData);
+            }
+        }
+
+        async function _readSectionFromCloud(getDoc, doc, db, uid, key) {
+            const metaSnap = await getDoc(doc(db, `users/${uid}/sections/${key}`));
+            if (!metaSnap.exists() || !metaSnap.data().totalChunks) return null;
+            const str = await _readChunksParallel(getDoc, doc, db, `users/${uid}/sections/${key}Chunks`, metaSnap.data().totalChunks);
+            return str ? JSON.parse(str) : null;
+        }
+
+        async function _readAllSectionsFromCloud(getDoc, doc, db, uid) {
+            const results = await Promise.all(SYNC_SECTION_KEYS.map(k => _readSectionFromCloud(getDoc, doc, db, uid, k)));
+            const out = {};
+            SYNC_SECTION_KEYS.forEach((k, i) => { out[k] = results[i]; });
+            return out;
+        }
+
+        // Applies freshly-loaded cloud sections onto a clean default-shaped state and
+        // seeds the skip-cache so the very next saveState() doesn't immediately re-upload
+        // everything it just downloaded.
+        function _hydrateStateFromCloudSections(sections) {
+            state = JSON.parse(JSON.stringify(defaultState));
+            SYNC_SECTION_KEYS.forEach(key => {
+                if (sections[key]) _applySyncSection(key, sections[key]);
+                _lastSyncedSectionStrings[key] = JSON.stringify(sections[key] || {});
+            });
+        }
+
+        async function _writeSectionToCloud(setDoc, doc, db, uid, key, sectionData, savedAt, chunkSize) {
+            const str = JSON.stringify(sectionData);
+            const totalChunks = await _writeChunksParallel(setDoc, doc, db, `users/${uid}/sections/${key}Chunks`, str, chunkSize);
+            await setDoc(doc(db, `users/${uid}/sections/${key}`), { totalChunks, updatedAt: savedAt });
+            return str;
         }
 
         async function initFirebase() {
@@ -2722,18 +2809,19 @@
                         try {
                             const userDocRef = doc(window.firebaseDb, "users", user.uid);
                             const docSnap = await getDoc(userDocRef);
-                            
-                            let cloudStateStr = null;
-                            if (docSnap.exists() && docSnap.data().totalChunks) {
-                                // Load chunks
-                                const totalChunks = docSnap.data().totalChunks;
-                                cloudStateStr = await _readChunksParallel(getDoc, doc, window.firebaseDb, user.uid, totalChunks);
+
+                            let cloudSections = null; // new sectioned format
+                            let legacyCloudStateStr = null; // old single-blob format, for accounts that haven't synced since this change
+                            if (docSnap.exists() && docSnap.data().syncFormat === 'sections-v1') {
+                                cloudSections = await _readAllSectionsFromCloud(getDoc, doc, window.firebaseDb, user.uid);
+                            } else if (docSnap.exists() && docSnap.data().totalChunks) {
+                                legacyCloudStateStr = await _readChunksParallel(getDoc, doc, window.firebaseDb, `users/${user.uid}/dataChunks`, docSnap.data().totalChunks);
                             } else if (docSnap.exists() && docSnap.data().state) {
                                 // Legacy single document load
-                                cloudStateStr = docSnap.data().state;
+                                legacyCloudStateStr = docSnap.data().state;
                             }
 
-                            if (cloudStateStr) {
+                            if (cloudSections || legacyCloudStateStr) {
                                 const cloudUpdatedAt = docSnap.data().updatedAt || '';
                                 const lastCloudAt = localStorage.getItem('sl_last_cloud_at') || '';
                                 const isDirty = localStorage.getItem('sl_local_dirty') === '1';
@@ -2742,12 +2830,16 @@
                                     console.log("Local state has unsynced changes newer than or equal to cloud. Pushing to cloud instead of overwrite.");
                                     saveState();
                                 } else {
-                                    state = JSON.parse(cloudStateStr);
+                                    if (cloudSections) {
+                                        _hydrateStateFromCloudSections(cloudSections);
+                                    } else {
+                                        state = JSON.parse(legacyCloudStateStr);
+                                    }
                                     applyDataMigrations();
                                     // Record the cloud timestamp BEFORE saveState() so the dirty flag logic
                                     // knows this device just loaded fresh data (not a local-only change)
                                     localStorage.setItem('sl_last_cloud_at', cloudUpdatedAt || new Date().toISOString());
-                                    saveState(); // persist migrated fields (new characters etc.) back to Firebase
+                                    saveState(); // persist migrated fields (new characters etc.) back to Firebase, and upgrade legacy accounts to the sectioned format
                                     console.log("State loaded from Firebase");
                                     render();
                                 }
@@ -2760,17 +2852,14 @@
                                         console.log("Migrating local data to Firebase...");
                                         state = parsedLocal;
                                         migrateCharacterGallery();
-                                        // Save to firebase using chunking
-                                        const chunkSize = 800000;
-                                        const totalChunks = await _writeChunksParallel(setDoc, doc, window.firebaseDb, user.uid, localData, chunkSize);
-                                        await setDoc(userDocRef, { totalChunks: totalChunks, updatedAt: new Date().toISOString() });
+                                        saveState(); // writes using the sectioned format
                                         alert("已成功將您的本機資料同步至雲端！");
                                         render();
                                     } else {
-                                        await setDoc(userDocRef, { state: JSON.stringify(state) });
+                                        saveState();
                                     }
                                 } else {
-                                    await setDoc(userDocRef, { state: JSON.stringify(state) });
+                                    saveState();
                                 }
                             }
                         } catch (error) {
@@ -2855,16 +2944,22 @@
         }
 
         async function _doPull(getDoc, doc, uid, db, metaSnap, cloudAt) {
-            let cloudStateStr = null;
-            if (metaSnap.data().totalChunks) {
-                const totalChunks = metaSnap.data().totalChunks;
-                cloudStateStr = await _readChunksParallel(getDoc, doc, db, uid, totalChunks);
+            let cloudSections = null;
+            let legacyCloudStateStr = null;
+            if (metaSnap.data().syncFormat === 'sections-v1') {
+                cloudSections = await _readAllSectionsFromCloud(getDoc, doc, db, uid);
+            } else if (metaSnap.data().totalChunks) {
+                legacyCloudStateStr = await _readChunksParallel(getDoc, doc, db, `users/${uid}/dataChunks`, metaSnap.data().totalChunks);
             } else if (metaSnap.data().state) {
-                cloudStateStr = metaSnap.data().state;
+                legacyCloudStateStr = metaSnap.data().state;
             }
 
-            if (cloudStateStr) {
-                state = JSON.parse(cloudStateStr);
+            if (cloudSections || legacyCloudStateStr) {
+                if (cloudSections) {
+                    _hydrateStateFromCloudSections(cloudSections);
+                } else {
+                    state = JSON.parse(legacyCloudStateStr);
+                }
                 applyDataMigrations();
                 localStorage.setItem('sl_data', JSON.stringify(state));
                 localStorage.setItem('sl_last_cloud_at', cloudAt);
@@ -2877,11 +2972,16 @@
         }
 
         async function _doPush(setDoc, doc, uid, db, userDocRef) {
-            const stateString = JSON.stringify(state);
             const savedAt = new Date().toISOString();
+            state._updatedAt = savedAt;
             const chunkSize = 800000;
-            const totalChunks = await _writeChunksParallel(setDoc, doc, db, uid, stateString, chunkSize);
-            await setDoc(userDocRef, { totalChunks, updatedAt: savedAt });
+            const sections = _buildSyncSections();
+            // Manual "overwrite cloud" action — write every section unconditionally (no skip-cache check)
+            await Promise.all(SYNC_SECTION_KEYS.map(async key => {
+                const str = await _writeSectionToCloud(setDoc, doc, db, uid, key, sections[key], savedAt, chunkSize);
+                _lastSyncedSectionStrings[key] = str;
+            }));
+            await setDoc(userDocRef, { updatedAt: savedAt, syncFormat: 'sections-v1' });
             localStorage.setItem('sl_last_cloud_at', savedAt);
             localStorage.setItem('sl_local_dirty', '0');
             showToast('📤 已上傳至雲端', '本機資料已成功同步至雲端');
@@ -3293,9 +3393,7 @@
         saveState(); // Save the patched state immediately
 
         let _firebaseSyncDebounceTimer = null;
-        let _pendingSyncStateString = null;
-        let _pendingSyncSavedAt = null;
-        const FIREBASE_SYNC_DEBOUNCE_MS = 4000; // batches rapid successive edits (e.g. checking off several tasks on mobile) into one cloud sync instead of one full upload per edit
+        const FIREBASE_SYNC_DEBOUNCE_MS = 700; // only long enough to catch near-simultaneous events firing from one user action; a lone edit should feel instant
 
         function saveState() {
             state._updatedAt = new Date().toISOString();
@@ -3324,11 +3422,12 @@
                 }
             }
 
-            // 2. Debounce the Firebase push so a burst of edits (task toggles, drag reorders, etc.)
-            // results in one cloud sync of the latest state instead of one per edit.
+            // 2. Briefly debounce the Firebase push so a handful of near-simultaneous saveState()
+            // calls (e.g. multi-field updates from one action) collapse into one sync. Show the
+            // "syncing" indicator immediately though — the actual network call is what's delayed,
+            // not the feedback, so the icon never looks frozen while the user waits.
             if (window.firebaseSetDoc && window.firebaseUserUid) {
-                _pendingSyncStateString = stateString;
-                _pendingSyncSavedAt = state._updatedAt;
+                _updateSyncStatusUI('syncing');
                 if (_firebaseSyncDebounceTimer) clearTimeout(_firebaseSyncDebounceTimer);
                 _firebaseSyncDebounceTimer = setTimeout(_flushPendingFirebaseSync, FIREBASE_SYNC_DEBOUNCE_MS);
             }
@@ -3337,18 +3436,13 @@
 
         function _flushPendingFirebaseSync() {
             _firebaseSyncDebounceTimer = null;
-            if (!_pendingSyncStateString) return;
-            const stateString = _pendingSyncStateString;
-            const savedAt = _pendingSyncSavedAt;
-            _pendingSyncStateString = null;
-            _pendingSyncSavedAt = null;
             if (window.isFirebaseSyncing) {
                 // A sync is already in flight for an older snapshot — don't drop this change,
                 // queue it so the in-flight sync kicks off one more push with the latest state
                 // once it finishes (rather than silently skipping it).
                 window.firebaseSyncQueued = true;
             } else {
-                _pushStateToFirebase(stateString, savedAt);
+                _pushStateToFirebase();
             }
         }
 
@@ -3390,14 +3484,14 @@
             }
         }
 
-        function _pushStateToFirebase(stateString, savedAt) {
+        function _pushStateToFirebase() {
             window.isFirebaseSyncing = true;
             _updateSyncStatusUI('syncing');
             const uid = window.firebaseUserUid;
             const db = window.firebaseDb;
             const doc = window.firebaseDoc;
             const setDoc = window.firebaseSetDoc;
-
+            const savedAt = state._updatedAt;
             const chunkSize = 800000; // ~800KB chunks
 
             // Guard against a hung network request leaving isFirebaseSyncing stuck
@@ -3410,8 +3504,20 @@
             (async () => {
                 try {
                     await withTimeout((async () => {
-                        const totalChunks = await _writeChunksParallel(setDoc, doc, db, uid, stateString, chunkSize);
-                        await setDoc(doc(db, "users", uid), { totalChunks: totalChunks, updatedAt: savedAt });
+                        const sections = _buildSyncSections();
+                        // Only re-upload sections whose content actually changed since the last
+                        // successful push — this is what lets a single task toggle skip re-sending
+                        // rarely-touched data (character gallery, shop items, journal, ...).
+                        await Promise.all(SYNC_SECTION_KEYS.map(async key => {
+                            const str = JSON.stringify(sections[key]);
+                            if (_lastSyncedSectionStrings[key] === str) return;
+                            await _writeSectionToCloud(setDoc, doc, db, uid, key, sections[key], savedAt, chunkSize);
+                            _lastSyncedSectionStrings[key] = str;
+                        }));
+                        // Always touch the small top-level meta doc so cross-device conflict/dirty
+                        // checks (which compare this updatedAt) stay accurate even when every
+                        // section above was skipped as unchanged.
+                        await setDoc(doc(db, "users", uid), { updatedAt: savedAt, syncFormat: 'sections-v1' });
                     })(), 45000);
                     // Cloud confirmed in sync — clear dirty flag and record cloud timestamp
                     localStorage.setItem('sl_local_dirty', '0');
@@ -3425,8 +3531,8 @@
                     window.isFirebaseSyncing = false;
                     if (window.firebaseSyncQueued) {
                         window.firebaseSyncQueued = false;
-                        // Re-serialize in case state changed further while this push was running
-                        _pushStateToFirebase(JSON.stringify(state), state._updatedAt);
+                        // Re-reads the live state (with whatever changed while this push was running)
+                        _pushStateToFirebase();
                     }
                 }
             })();
