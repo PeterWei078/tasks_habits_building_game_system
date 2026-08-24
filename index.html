@@ -1995,27 +1995,32 @@
 
         <!-- Right Panel: Task Memo (Only for Edit Mode) -->
         <div class="modal-content" id="editTaskMemoSection" style="max-width: 600px; width: 100%; margin: 0; flex: 1; min-width: 300px; display: none; flex-direction: column;">
+            <!-- Sticky so the header/toolbar stay reachable while #taskModalFlexContainer scrolls
+                 past a tall memo (this panel has no scroll of its own — see #taskModalFlexContainer
+                 > .modal-content { overflow-y: visible } which hands scrolling to the outer container). -->
+            <div style="position:sticky;top:0;z-index:5;background:rgba(255,255,255,0.97);padding-top:2px;box-shadow:0 6px 8px -6px rgba(0,0,0,0.12);">
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
                 <button type="button" onclick="insertMemoBlock('text')" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ 文字</button>
                 <button type="button" onclick="insertMemoBlock('checklist')" style="background:rgba(99,230,190,0.15);border:1px solid rgba(99,230,190,0.35);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ ✅ 清單</button>
             </div>
             <!-- Shared Rich-Text Toolbar (works on whichever text block has focus) -->
-            <div id="inlineMemoToolbar" style="display:flex;flex-wrap:wrap;gap:6px;background:rgba(0,0,0,0.1);padding:7px;border-radius:8px;margin-bottom:12px;">
+            <div id="inlineMemoToolbar" style="display:flex;flex-wrap:wrap;gap:4px;background:rgba(0,0,0,0.1);padding:7px;border-radius:8px;margin-bottom:12px;">
                 <button type="button" class="btn" style="padding:4px 10px;font-weight:bold;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('bold',false,null)">B</button>
                 <button type="button" class="btn" style="padding:4px 10px;font-style:italic;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('italic',false,null)">I</button>
                 <button type="button" class="btn" style="padding:4px 10px;text-decoration:underline;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('underline',false,null)">U</button>
-                <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 3px;"></div>
-                <button type="button" class="btn" title="項目符號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertUnorderedList',false,null)">• 清單</button>
-                <button type="button" class="btn" title="編號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertOrderedList',false,null)">1. 編號</button>
-                <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 3px;"></div>
+                <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
+                <button type="button" class="btn" title="項目符號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertUnorderedList',false,null)">•</button>
+                <button type="button" class="btn" title="編號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertOrderedList',false,null)">1.</button>
+                <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
                 <button type="button" class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('removeFormat',false,null)">🧹清除</button>
                 <button type="button" class="btn" style="padding:4px 8px;background:#FFF5F5;color:#E53E3E;border:1px solid #FC8181;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('foreColor',false,'#E53E3E')">🟥紅</button>
-                <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 2px;"></div>
+                <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
                 <button type="button" class="btn" style="padding:4px 8px;background:#FEFCBF;color:#744210;font-weight:bold;border:1px solid #D69E2E;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'#FEFCBF')">Highlight</button>
                 <button type="button" class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'transparent')">✕</button>
-                <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 2px;"></div>
+                <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
                 <button type="button" class="btn" title="將選取的文字行轉為 Checkbox 清單（無選取時插入空白清單）" style="padding:4px 9px;background:rgba(99,230,190,0.18);color:inherit;border:1px solid rgba(99,230,190,0.45);border-radius:4px;cursor:pointer;font-size:0.82rem;" onmousedown="event.preventDefault()" onclick="convertSelectionToChecklist()">☑ 轉清單</button>
+            </div>
             </div>
             <!-- Block container -->
             <div id="inlineMemoBlocksContainer" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0;"></div>
@@ -13850,20 +13855,20 @@
             </div>
             <div class="modal-body" style="display:flex;flex-direction:column;gap:10px;flex:1;overflow:hidden;">
                 <!-- Rich Text Toolbar -->
-                <div style="display:flex;flex-wrap:wrap;gap:6px;background:rgba(0,0,0,0.1);padding:7px;border-radius:8px;">
+                <div style="display:flex;flex-wrap:wrap;gap:4px;background:rgba(0,0,0,0.1);padding:7px;border-radius:8px;">
                     <button class="btn" style="padding:4px 10px;font-weight:bold;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('bold',false,null)">B</button>
                     <button class="btn" style="padding:4px 10px;font-style:italic;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('italic',false,null)">I</button>
                     <button class="btn" style="padding:4px 10px;text-decoration:underline;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;color:inherit;" onmousedown="event.preventDefault()" onclick="document.execCommand('underline',false,null)">U</button>
-                    <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 3px;"></div>
-                    <button class="btn" title="項目符號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertUnorderedList',false,null)">• 清單</button>
-                    <button class="btn" title="編號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertOrderedList',false,null)">1. 編號</button>
-                    <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 3px;"></div>
+                    <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
+                    <button class="btn" title="項目符號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertUnorderedList',false,null)">•</button>
+                    <button class="btn" title="編號清單" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('insertOrderedList',false,null)">1.</button>
+                    <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
                     <button class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('removeFormat',false,null)">🧹清除</button>
                     <button class="btn" style="padding:4px 8px;background:#FFF5F5;color:#E53E3E;border:1px solid #FC8181;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('foreColor',false,'#E53E3E')">🟥紅</button>
-                    <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 2px;"></div>
+                    <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
                     <button class="btn" style="padding:4px 8px;background:#FEFCBF;color:#744210;font-weight:bold;border:1px solid #D69E2E;border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'#FEFCBF')">Highlight</button>
                     <button class="btn" style="padding:4px 8px;background:rgba(255,255,255,0.2);color:inherit;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="document.execCommand('hiliteColor',false,'transparent')">✕</button>
-                    <div style="width:1px;background:rgba(255,255,255,0.3);margin:0 2px;"></div>
+                    <div style="width:1px;background:rgba(255,255,255,0.3);"></div>
                     <button class="btn" title="將選取的文字行轉為 Checkbox 清單（無選取時插入空白清單）" style="padding:4px 9px;background:rgba(99,230,190,0.18);color:inherit;border:1px solid rgba(99,230,190,0.45);border-radius:4px;cursor:pointer;font-size:0.82rem;" onmousedown="event.preventDefault()" onclick="convertSelectionToChecklist()">☑ 轉清單</button>
                 </div>
                 <!-- Block container -->
