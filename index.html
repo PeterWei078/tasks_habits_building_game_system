@@ -796,6 +796,11 @@
             /* Highest for edits */
         }
 
+        #memoTemplateModal {
+            z-index: 2300;
+            /* Must sit above both #taskModal (2100) and the standalone taskMemoModal (2000) */
+        }
+
         .modal-content {
             background: rgba(255, 255, 255, 0.95);
             width: 90%;
@@ -1999,10 +2004,13 @@
                  past a tall memo (this panel has no scroll of its own — see #taskModalFlexContainer
                  > .modal-content { overflow-y: visible } which hands scrolling to the outer container). -->
             <div style="position:sticky;top:0;z-index:5;background:rgba(255,255,255,0.97);padding-top:2px;box-shadow:0 6px 8px -6px rgba(0,0,0,0.12);">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 6px; flex-wrap: wrap;">
                 <h2 style="margin: 0; font-size: 1.5rem;">📝 Task Memo</h2>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button type="button" onclick="openMemoTemplateModal()" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">📑 範本</button>
                 <button type="button" onclick="insertMemoBlock('text')" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ 文字</button>
                 <button type="button" onclick="insertMemoBlock('checklist')" style="background:rgba(99,230,190,0.15);border:1px solid rgba(99,230,190,0.35);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ ✅ 清單</button>
+                </div>
             </div>
             <!-- Shared Rich-Text Toolbar (works on whichever text block has focus) -->
             <div id="inlineMemoToolbar" style="display:flex;flex-wrap:wrap;gap:4px;background:rgba(0,0,0,0.1);padding:7px;border-radius:8px;margin-bottom:12px;">
@@ -2982,6 +2990,7 @@
                     type: 'youtube'
                 }
             ],
+            memoTemplates: [], // [{id, name, blocks}] — reusable Task Memo block snapshots
             reminderTags: [],
             reminders: [
                 { id: 'rem_default', title: '預設提醒', content: '點擊此處開始輸入重要提醒...可以使用上方工具列調整樣式。', tags: [], pinned: false, todos: [], photo: null }
@@ -3015,6 +3024,9 @@
             }
             if (!state.archivedProjects) {
                 state.archivedProjects = [];
+            }
+            if (!state.memoTemplates) {
+                state.memoTemplates = [];
             }
             if (!state.reminders) {
                 state.reminders = [
@@ -13557,17 +13569,19 @@
             _memoLastFocusedBlockId = blockId;
         };
 
+        // Resolve where a "no explicit position" insert should land: right after whichever
+        // block the user last clicked into, or at the end if nothing's been focused yet.
+        function _memoResolveInsertIdx() {
+            const lastIdx = _memoBlocks.findIndex(b => b.id === _memoLastFocusedBlockId);
+            return lastIdx >= 0 ? lastIdx + 1 : _memoBlocks.length;
+        }
+
         window.insertMemoBlock = function(type, insertIdx) {
             // Flush current text blocks first
             _memoBlocks.forEach(b => {
                 if (b.type === 'text') { const el = document.getElementById('mbtxt_' + b.id); if (el) b.html = el.innerHTML; }
             });
-            if (insertIdx === undefined) {
-                // Header "+文字"/"+✅清單" button, no explicit position: insert right after
-                // whichever block the user last clicked into, instead of always at the bottom.
-                const lastIdx = _memoBlocks.findIndex(b => b.id === _memoLastFocusedBlockId);
-                insertIdx = lastIdx >= 0 ? lastIdx + 1 : _memoBlocks.length;
-            }
+            if (insertIdx === undefined) insertIdx = _memoResolveInsertIdx();
             const newBlock = type === 'checklist'
                 ? { id: _memoUid(), type: 'checklist', title: 'To-Do 清單', items: [] }
                 : { id: _memoUid(), type: 'text', html: '' };
@@ -13776,6 +13790,97 @@
             window.closeTaskMemoModal();
         };
 
+        // ── Memo Templates (save/apply reusable snapshots of the block list) ────
+        window.openMemoTemplateModal = function() {
+            renderMemoTemplateList();
+            document.getElementById('memoTemplateModal').classList.add('show');
+        };
+
+        window.closeMemoTemplateModal = function() {
+            document.getElementById('memoTemplateModal').classList.remove('show');
+        };
+
+        function renderMemoTemplateList() {
+            const container = document.getElementById('memoTemplateList');
+            if (!container) return;
+            if (state.memoTemplates.length === 0) {
+                container.innerHTML = '<div style="text-align:center;opacity:0.4;padding:20px 0;font-size:0.85rem;">尚無已儲存的範本</div>';
+                return;
+            }
+            container.innerHTML = state.memoTemplates.map(t => `
+                <div style="display:flex;align-items:center;gap:6px;padding:9px 6px;border-bottom:1px solid rgba(0,0,0,0.08);">
+                    <div onclick="applyMemoTemplate('${t.id}')" style="flex:1;cursor:pointer;">
+                        <div style="font-weight:600;font-size:0.9rem;">${t.name}</div>
+                        <div style="font-size:0.72rem;opacity:0.5;">${t.blocks.length} 個區塊 · 點擊套用</div>
+                    </div>
+                    <button onclick="renameMemoTemplate('${t.id}')" title="重新命名" style="background:none;border:none;cursor:pointer;opacity:0.5;font-size:0.95rem;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">✏️</button>
+                    <button onclick="deleteMemoTemplate('${t.id}')" title="刪除" style="background:none;border:none;cursor:pointer;opacity:0.5;color:#FF6B6B;font-size:0.95rem;padding:4px;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        window.saveCurrentMemoAsTemplate = function() {
+            // Flush current text blocks first (same as insertMemoBlock)
+            _memoBlocks.forEach(b => {
+                if (b.type === 'text') { const el = document.getElementById('mbtxt_' + b.id); if (el) b.html = el.innerHTML; }
+            });
+            if (_memoBlocks.length === 0) {
+                showToast('無法儲存', '目前 Memo 是空的，沒有內容可儲存為範本。');
+                return;
+            }
+            const name = prompt('請輸入範本名稱：', '');
+            if (!name || !name.trim()) return;
+            state.memoTemplates.push({
+                id: 'tpl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                name: name.trim(),
+                blocks: JSON.parse(JSON.stringify(_memoBlocks))
+            });
+            saveState();
+            renderMemoTemplateList();
+            showToast('範本已儲存', `已另存為「${name.trim()}」`);
+        };
+
+        window.applyMemoTemplate = function(templateId) {
+            const tpl = state.memoTemplates.find(t => t.id === templateId);
+            if (!tpl) return;
+            // Flush current text blocks first (same as insertMemoBlock)
+            _memoBlocks.forEach(b => {
+                if (b.type === 'text') { const el = document.getElementById('mbtxt_' + b.id); if (el) b.html = el.innerHTML; }
+            });
+            const insertIdx = _memoResolveInsertIdx();
+            // Fresh ids so re-applying the same template (or applying it twice) never collides
+            // with blocks/items already in _memoBlocks.
+            const clonedBlocks = JSON.parse(JSON.stringify(tpl.blocks)).map(b => {
+                b.id = _memoUid();
+                if (b.type === 'checklist') b.items = b.items.map(item => ({ ...item, id: _memoItemUid() }));
+                return b;
+            });
+            _memoBlocks.splice(insertIdx, 0, ...clonedBlocks);
+            _memoLastFocusedBlockId = clonedBlocks[clonedBlocks.length - 1].id;
+            renderTaskMemoBlocks();
+            closeMemoTemplateModal();
+            showToast('範本已套用', `已插入「${tpl.name}」的內容`);
+        };
+
+        window.renameMemoTemplate = function(templateId) {
+            const tpl = state.memoTemplates.find(t => t.id === templateId);
+            if (!tpl) return;
+            const name = prompt('重新命名範本：', tpl.name);
+            if (!name || !name.trim()) return;
+            tpl.name = name.trim();
+            saveState();
+            renderMemoTemplateList();
+        };
+
+        window.deleteMemoTemplate = function(templateId) {
+            const tpl = state.memoTemplates.find(t => t.id === templateId);
+            if (!tpl) return;
+            if (!confirm(`確定要刪除範本「${tpl.name}」嗎？`)) return;
+            state.memoTemplates = state.memoTemplates.filter(t => t.id !== templateId);
+            saveState();
+            renderMemoTemplateList();
+        };
+
         // --- Init ---
         console.log("System Version: 1.5 - Shop & Inventory Live");
         checkHabitBreaks();
@@ -13864,6 +13969,7 @@
             <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap;">
                 <h2 style="margin:0;font-size:1.5rem;">📝 Task Memo</h2>
                 <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <button type="button" onclick="openMemoTemplateModal()" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">📑 範本</button>
                     <button type="button" onclick="insertMemoBlock('text')" style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ 文字</button>
                     <button type="button" onclick="insertMemoBlock('checklist')" style="background:rgba(99,230,190,0.15);border:1px solid rgba(99,230,190,0.35);border-radius:8px;color:inherit;padding:5px 10px;cursor:pointer;font-size:0.82rem;">+ ✅ 清單</button>
                     <button class="close-btn" style="background:none;border:none;font-size:1.5rem;cursor:pointer;opacity:0.7;" onclick="closeTaskMemoModal()" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">✕</button>
@@ -13893,6 +13999,18 @@
                     <button type="button" class="btn btn-primary" onclick="saveTaskMemo()">Save Memo</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Memo Template Picker Modal (shared by both the inline panel and the standalone Task Memo modal) -->
+    <div id="memoTemplateModal" class="modal-backdrop">
+        <div class="modal-content" style="max-width:420px;padding:22px;">
+            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h2 style="margin:0;font-size:1.3rem;">📑 Memo 範本</h2>
+                <button class="close-btn" style="background:none;border:none;font-size:1.5rem;cursor:pointer;opacity:0.7;" onclick="closeMemoTemplateModal()" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">✕</button>
+            </div>
+            <button type="button" onclick="saveCurrentMemoAsTemplate()" class="btn" style="width:100%;padding:9px;margin-bottom:14px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);border-radius:8px;color:inherit;cursor:pointer;font-size:0.85rem;">＋ 將目前 Memo 另存為新範本</button>
+            <div id="memoTemplateList"></div>
         </div>
     </div>
 
