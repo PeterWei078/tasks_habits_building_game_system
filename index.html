@@ -2610,6 +2610,25 @@
         window.firebaseUserUid = null;
         window.isFirebaseSyncing = false;
 
+        // Chunk read/write were previously sequential `await`-in-a-loop, so total sync
+        // latency scaled with chunk count × round-trip time — painful on mobile networks
+        // where RTT is high and variable. Promise.all collapses that to ~1 round trip.
+        async function _readChunksParallel(getDoc, doc, db, uid, totalChunks) {
+            const snaps = await Promise.all(
+                Array.from({ length: totalChunks }, (_, i) => getDoc(doc(db, `users/${uid}/dataChunks/${i}`)))
+            );
+            return snaps.map(snap => (snap.exists() ? snap.data().chunk : '')).join('');
+        }
+
+        async function _writeChunksParallel(setDoc, doc, db, uid, stateString, chunkSize) {
+            const totalChunks = Math.ceil(stateString.length / chunkSize);
+            await Promise.all(
+                Array.from({ length: totalChunks }, (_, i) =>
+                    setDoc(doc(db, `users/${uid}/dataChunks/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) }))
+            );
+            return totalChunks;
+        }
+
         async function initFirebase() {
             try {
                 const loginBtn = document.getElementById('login-btn');
@@ -2708,14 +2727,7 @@
                             if (docSnap.exists() && docSnap.data().totalChunks) {
                                 // Load chunks
                                 const totalChunks = docSnap.data().totalChunks;
-                                let fullStr = "";
-                                for (let i = 0; i < totalChunks; i++) {
-                                    const chunkSnap = await getDoc(doc(window.firebaseDb, `users/${user.uid}/dataChunks/${i}`));
-                                    if (chunkSnap.exists()) {
-                                        fullStr += chunkSnap.data().chunk;
-                                    }
-                                }
-                                cloudStateStr = fullStr;
+                                cloudStateStr = await _readChunksParallel(getDoc, doc, window.firebaseDb, user.uid, totalChunks);
                             } else if (docSnap.exists() && docSnap.data().state) {
                                 // Legacy single document load
                                 cloudStateStr = docSnap.data().state;
@@ -2750,11 +2762,8 @@
                                         migrateCharacterGallery();
                                         // Save to firebase using chunking
                                         const chunkSize = 800000;
-                                        const totalChunks = Math.ceil(localData.length / chunkSize);
+                                        const totalChunks = await _writeChunksParallel(setDoc, doc, window.firebaseDb, user.uid, localData, chunkSize);
                                         await setDoc(userDocRef, { totalChunks: totalChunks, updatedAt: new Date().toISOString() });
-                                        for (let i = 0; i < totalChunks; i++) {
-                                            await setDoc(doc(window.firebaseDb, `users/${user.uid}/dataChunks/${i}`), { chunk: localData.slice(i * chunkSize, (i + 1) * chunkSize) });
-                                        }
                                         alert("已成功將您的本機資料同步至雲端！");
                                         render();
                                     } else {
@@ -2849,12 +2858,7 @@
             let cloudStateStr = null;
             if (metaSnap.data().totalChunks) {
                 const totalChunks = metaSnap.data().totalChunks;
-                let fullStr = "";
-                for (let i = 0; i < totalChunks; i++) {
-                    const chunkSnap = await getDoc(doc(db, `users/${uid}/dataChunks/${i}`));
-                    if (chunkSnap.exists()) fullStr += chunkSnap.data().chunk;
-                }
-                cloudStateStr = fullStr;
+                cloudStateStr = await _readChunksParallel(getDoc, doc, db, uid, totalChunks);
             } else if (metaSnap.data().state) {
                 cloudStateStr = metaSnap.data().state;
             }
@@ -2876,12 +2880,8 @@
             const stateString = JSON.stringify(state);
             const savedAt = new Date().toISOString();
             const chunkSize = 800000;
-            const totalChunks = Math.ceil(stateString.length / chunkSize);
+            const totalChunks = await _writeChunksParallel(setDoc, doc, db, uid, stateString, chunkSize);
             await setDoc(userDocRef, { totalChunks, updatedAt: savedAt });
-            for (let i = 0; i < totalChunks; i++) {
-                await setDoc(doc(db, `users/${uid}/dataChunks/${i}`),
-                    { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
-            }
             localStorage.setItem('sl_last_cloud_at', savedAt);
             localStorage.setItem('sl_local_dirty', '0');
             showToast('📤 已上傳至雲端', '本機資料已成功同步至雲端');
@@ -3292,6 +3292,11 @@
 
         saveState(); // Save the patched state immediately
 
+        let _firebaseSyncDebounceTimer = null;
+        let _pendingSyncStateString = null;
+        let _pendingSyncSavedAt = null;
+        const FIREBASE_SYNC_DEBOUNCE_MS = 4000; // batches rapid successive edits (e.g. checking off several tasks on mobile) into one cloud sync instead of one full upload per edit
+
         function saveState() {
             state._updatedAt = new Date().toISOString();
             if (state.player.activities && state.player.activities.length > 300) {
@@ -3301,7 +3306,7 @@
             const stateString = JSON.stringify(state);
             let isLocalSaveSuccess = true;
 
-            // 1. Try saving to LocalStorage
+            // 1. Try saving to LocalStorage (always immediate — never debounced, so nothing is lost even offline)
             try {
                 localStorage.setItem('sl_data', stateString);
                 localStorage.setItem('sl_local_dirty', '1'); // local has changes not yet confirmed in cloud
@@ -3319,19 +3324,49 @@
                 }
             }
 
-            // 2. Always try syncing to Firebase
+            // 2. Debounce the Firebase push so a burst of edits (task toggles, drag reorders, etc.)
+            // results in one cloud sync of the latest state instead of one per edit.
             if (window.firebaseSetDoc && window.firebaseUserUid) {
-                if (window.isFirebaseSyncing) {
-                    // A sync is already in flight for an older snapshot — don't drop this change,
-                    // queue it so the in-flight sync kicks off one more push with the latest state
-                    // once it finishes (rather than silently skipping it).
-                    window.firebaseSyncQueued = true;
-                } else {
-                    _pushStateToFirebase(stateString, state._updatedAt);
-                }
+                _pendingSyncStateString = stateString;
+                _pendingSyncSavedAt = state._updatedAt;
+                if (_firebaseSyncDebounceTimer) clearTimeout(_firebaseSyncDebounceTimer);
+                _firebaseSyncDebounceTimer = setTimeout(_flushPendingFirebaseSync, FIREBASE_SYNC_DEBOUNCE_MS);
             }
             return isLocalSaveSuccess;
         }
+
+        function _flushPendingFirebaseSync() {
+            _firebaseSyncDebounceTimer = null;
+            if (!_pendingSyncStateString) return;
+            const stateString = _pendingSyncStateString;
+            const savedAt = _pendingSyncSavedAt;
+            _pendingSyncStateString = null;
+            _pendingSyncSavedAt = null;
+            if (window.isFirebaseSyncing) {
+                // A sync is already in flight for an older snapshot — don't drop this change,
+                // queue it so the in-flight sync kicks off one more push with the latest state
+                // once it finishes (rather than silently skipping it).
+                window.firebaseSyncQueued = true;
+            } else {
+                _pushStateToFirebase(stateString, savedAt);
+            }
+        }
+
+        // Mobile browsers freeze timers in backgrounded tabs, so a pending debounced sync
+        // could sit unsent for a long time (or get dropped) if the user switches away right
+        // after editing. Flush immediately when the page is hidden/closed instead of waiting.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden' && _firebaseSyncDebounceTimer) {
+                clearTimeout(_firebaseSyncDebounceTimer);
+                _flushPendingFirebaseSync();
+            }
+        });
+        window.addEventListener('pagehide', () => {
+            if (_firebaseSyncDebounceTimer) {
+                clearTimeout(_firebaseSyncDebounceTimer);
+                _flushPendingFirebaseSync();
+            }
+        });
 
         function _updateSyncStatusUI(status) {
             const icon = document.getElementById('sync-cloud-icon');
@@ -3364,7 +3399,6 @@
             const setDoc = window.firebaseSetDoc;
 
             const chunkSize = 800000; // ~800KB chunks
-            const totalChunks = Math.ceil(stateString.length / chunkSize);
 
             // Guard against a hung network request leaving isFirebaseSyncing stuck
             // forever, which would silently block all future auto-syncs.
@@ -3376,10 +3410,8 @@
             (async () => {
                 try {
                     await withTimeout((async () => {
+                        const totalChunks = await _writeChunksParallel(setDoc, doc, db, uid, stateString, chunkSize);
                         await setDoc(doc(db, "users", uid), { totalChunks: totalChunks, updatedAt: savedAt });
-                        for (let i = 0; i < totalChunks; i++) {
-                            await setDoc(doc(db, `users/${uid}/dataChunks/${i}`), { chunk: stateString.slice(i * chunkSize, (i + 1) * chunkSize) });
-                        }
                     })(), 45000);
                     // Cloud confirmed in sync — clear dirty flag and record cloud timestamp
                     localStorage.setItem('sl_local_dirty', '0');
