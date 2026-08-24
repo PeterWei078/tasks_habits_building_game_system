@@ -3419,6 +3419,7 @@
         let activeReminderTags = []; // empty = show all; multi-select AND filter
         let _memoBlocks = [];        // live working copy for the block-based memo editor
         let _memoContainerId = '';   // which DOM container is currently hosting the editor
+        let _memoLastFocusedBlockId = null; // last block the user clicked into; new blocks insert right after it
 
         function switchTab(tab) {
             currentTab = tab;
@@ -9018,6 +9019,7 @@
                     memoSection.style.display = 'flex';
                     _memoContainerId = 'inlineMemoBlocksContainer';
                     _memoBlocks = JSON.parse(JSON.stringify(task.memoBlocks || (task.memo ? [{ id: 'mb_' + task.id, type: 'text', html: task.memo }] : [])));
+                    _memoLastFocusedBlockId = null;
                     renderTaskMemoBlocks();
                 }
 
@@ -13480,6 +13482,7 @@
                         <div id="mbtxt_${block.id}" contenteditable="true"
                             style="outline:none;padding:12px 14px;border:1px dashed rgba(255,255,255,0.2);border-top:none;border-radius:0 0 10px 10px;min-height:80px;line-height:1.6;font-size:0.95rem;background:rgba(255,255,255,0.04);"
                             oninput="saveMemoTextBlock('${block.id}',this.innerHTML)"
+                            onfocus="_memoSetLastFocusedBlock('${block.id}')"
                             onblur="saveMemoTextBlock('${block.id}',this.innerHTML)">${block.html}</div>
                     `;
                 } else if (block.type === 'checklist') {
@@ -13489,6 +13492,7 @@
                             <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleMemoChecklistItem('${block.id}','${item.id}')"
                                 style="width:15px;height:15px;cursor:pointer;accent-color:var(--accent-color,#7c3aed);flex-shrink:0;">
                             <input type="text" value="${item.text.replace(/"/g,'&quot;')}"
+                                onfocus="_memoSetLastFocusedBlock('${block.id}')"
                                 onblur="_handleMemoChecklistItemBlur('${block.id}','${item.id}',this.value)"
                                 onkeydown="_handleMemoChecklistItemKeydown(event,'${block.id}','${item.id}')"
                                 style="flex:1;background:transparent;border:none;color:inherit;outline:none;font-size:0.88rem;padding:2px 0;${item.done?'text-decoration:line-through;opacity:0.45;':''}">
@@ -13549,19 +13553,30 @@
         }
 
         // ── Block CRUD ──────────────────────────────────────────────────────────
+        window._memoSetLastFocusedBlock = function(blockId) {
+            _memoLastFocusedBlockId = blockId;
+        };
+
         window.insertMemoBlock = function(type, insertIdx) {
             // Flush current text blocks first
             _memoBlocks.forEach(b => {
                 if (b.type === 'text') { const el = document.getElementById('mbtxt_' + b.id); if (el) b.html = el.innerHTML; }
             });
+            if (insertIdx === undefined) {
+                // Header "+文字"/"+✅清單" button, no explicit position: insert right after
+                // whichever block the user last clicked into, instead of always at the bottom.
+                const lastIdx = _memoBlocks.findIndex(b => b.id === _memoLastFocusedBlockId);
+                insertIdx = lastIdx >= 0 ? lastIdx + 1 : _memoBlocks.length;
+            }
             const newBlock = type === 'checklist'
                 ? { id: _memoUid(), type: 'checklist', title: 'To-Do 清單', items: [] }
                 : { id: _memoUid(), type: 'text', html: '' };
-            if (insertIdx === undefined || insertIdx >= _memoBlocks.length) {
+            if (insertIdx >= _memoBlocks.length) {
                 _memoBlocks.push(newBlock);
             } else {
                 _memoBlocks.splice(insertIdx, 0, newBlock);
             }
+            _memoLastFocusedBlockId = newBlock.id;
             renderTaskMemoBlocks();
             // Focus new text block
             if (type === 'text') {
@@ -13737,6 +13752,7 @@
                 : task.memo ? [{ id: 'mb_' + task.id, type: 'text', html: task.memo }]
                 : []
             ));
+            _memoLastFocusedBlockId = null;
             renderTaskMemoBlocks();
             document.getElementById('taskMemoModal').classList.add('show');
         };
