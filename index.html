@@ -8758,7 +8758,7 @@
             // Left side: Daily Task
             const dailyTaskContainer = document.createElement('div');
             dailyTaskContainer.className = 'glass glass-card';
-            dailyTaskContainer.style.flex = '1 1 280px';
+            dailyTaskContainer.style.width = '100%';
             dailyTaskContainer.style.border = '4px solid rgba(255, 80, 80, 0.95)';
             dailyTaskContainer.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
             dailyTaskContainer.style.boxShadow = '0 0 0 2px rgba(255,80,80,0.25), 0 0 24px rgba(255, 80, 80, 0.45), inset 0 0 20px rgba(255,80,80,0.06)';
@@ -8784,19 +8784,19 @@
             dailyTaskLabel.textContent = '🔥 Daily Focus';
             dailyTaskContainer.appendChild(dailyTaskLabel);
 
-            // Right side: Featured Quest (first pinned non-completed task)
-            const featuredCard = document.createElement('div');
-            featuredCard.className = 'glass glass-card';
-            featuredCard.style.flex = '1 1 280px';
-            featuredCard.style.border = '4px solid rgba(48, 209, 104, 0.95)';
-            featuredCard.style.background = 'linear-gradient(135deg, rgba(72, 199, 116, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
-            featuredCard.style.boxShadow = '0 0 0 2px rgba(48,209,104,0.25), 0 0 24px rgba(48, 209, 104, 0.45), inset 0 0 20px rgba(72,199,116,0.06)';
-            featuredCard.style.position = 'relative';
-            featuredCard.style.display = 'flex';
-            featuredCard.style.flexDirection = 'column';
-            featuredCard.style.justifyContent = 'center';
-            featuredCard.style.padding = '15px';
-            featuredCard.style.minHeight = '120px';
+            topLayout.appendChild(dailyTaskContainer);
+
+            // Below: Featured Quests — independent full-width section, grid of up to 3 mini cards.
+            // Kept out of topLayout on purpose so Daily Focus's height never stretches to match it
+            // (flex align-items:stretch was coupling the two heights together before).
+            const featuredSection = document.createElement('div');
+            featuredSection.className = 'glass glass-card';
+            featuredSection.style.border = '4px solid rgba(48, 209, 104, 0.95)';
+            featuredSection.style.background = 'linear-gradient(135deg, rgba(72, 199, 116, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
+            featuredSection.style.boxShadow = '0 0 0 2px rgba(48,209,104,0.25), 0 0 24px rgba(48, 209, 104, 0.45), inset 0 0 20px rgba(72,199,116,0.06)';
+            featuredSection.style.position = 'relative';
+            featuredSection.style.padding = '20px 15px 15px';
+            featuredSection.style.marginBottom = '20px';
 
             const featuredLabel = document.createElement('div');
             featuredLabel.style.position = 'absolute';
@@ -8811,7 +8811,13 @@
             featuredLabel.style.letterSpacing = '0.05em';
             featuredLabel.style.boxShadow = '0 2px 8px rgba(29,185,84,0.6)';
             featuredLabel.textContent = '⭐ Featured Quests';
-            featuredCard.appendChild(featuredLabel);
+            featuredSection.appendChild(featuredLabel);
+
+            const featuredGrid = document.createElement('div');
+            featuredGrid.style.display = 'grid';
+            featuredGrid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(260px, 1fr))';
+            featuredGrid.style.gap = '16px';
+            featuredSection.appendChild(featuredGrid);
 
             const featuredIds = Array.isArray(state.featuredTaskIds) ? state.featuredTaskIds : [];
             const featuredTasks = featuredIds
@@ -8820,28 +8826,25 @@
                 .slice(0, 3);
 
             if (featuredTasks.length > 0) {
-                featuredTasks.forEach((ftTask, idx) => {
-                    const row = document.createElement('div');
-                    row.style.cssText = 'position:relative;' + (idx > 0 ? 'margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15);' : '');
+                featuredTasks.forEach(ftTask => {
+                    const slot = document.createElement('div');
+                    slot.style.cssText = 'position:relative; background:rgba(255,255,255,0.06); border-radius:12px; padding:12px;';
                     const ft = createTaskElement(ftTask);
                     ft.style.marginBottom = '0';
-                    row.appendChild(ft);
+                    slot.appendChild(ft);
                     const removeBtn = document.createElement('button');
-                    removeBtn.style.cssText = 'position:absolute;top:0;right:0;background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.45;color:inherit;';
+                    removeBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.45;color:inherit;';
                     removeBtn.title = '取消指定';
                     removeBtn.textContent = '✕';
                     removeBtn.onmouseover = () => removeBtn.style.opacity = '1';
                     removeBtn.onmouseout = () => removeBtn.style.opacity = '0.45';
                     removeBtn.onclick = () => { setFeaturedTask(ftTask.id); };
-                    row.appendChild(removeBtn);
-                    featuredCard.appendChild(row);
+                    slot.appendChild(removeBtn);
+                    featuredGrid.appendChild(slot);
                 });
             } else {
-                featuredCard.innerHTML += `<div style="text-align:center; opacity:0.5; padding:20px; font-size:0.85rem;">尚未指定任務。<br>點擊任務的 ⭐ 圖示可將其固定於此（最多同時顯示 3 則）。</div>`;
+                featuredGrid.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px; font-size:0.85rem;">尚未指定任務。<br>點擊任務的 ⭐ 圖示可將其固定於此（最多同時顯示 3 則）。</div>`;
             }
-
-            topLayout.appendChild(dailyTaskContainer);
-            topLayout.appendChild(featuredCard);
 
             const listCardHeader = document.createElement('div');
             listCardHeader.style.display = 'flex';
@@ -8889,6 +8892,7 @@
             contentDiv.appendChild(groupFilterContainer);
             contentDiv.appendChild(tagFilterWrapper);
             contentDiv.appendChild(topLayout);
+            contentDiv.appendChild(featuredSection);
             contentDiv.appendChild(listCard);
 
             // Auto-scroll timeline to center the "Today" line
