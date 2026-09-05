@@ -2649,7 +2649,7 @@
         // list here. That keeps this safe by construction: a forgotten field just ends up
         // in the less-optimally-placed catch-all instead of silently failing to sync.
         const SYNC_SECTION_KEYS = ['tasks', 'playerStats', 'config'];
-        const _SYNC_HOT_STATE_KEYS = ['tasks', 'archivedTasks', 'archivedProjects', 'featuredTaskId', 'habits'];
+        const _SYNC_HOT_STATE_KEYS = ['tasks', 'archivedTasks', 'archivedProjects', 'featuredTaskIds', 'habits'];
         const _SYNC_HOT_PLAYER_KEYS = ['name', 'level', 'exp', 'gold', 'attributes', 'activities', 'totalFocusTime', 'timerSettings', 'activeCharacterId', 'groups', 'tags', 'skills'];
         let _lastSyncedSectionStrings = {}; // key -> last-uploaded JSON string; unchanged sections are skipped on the next push
 
@@ -3081,7 +3081,7 @@
             ],
             archivedTasks: [],
             archivedProjects: [],
-            featuredTaskId: null,
+            featuredTaskIds: [],
             focusMusic: [
                 {
                     id: 'music_1',
@@ -3329,7 +3329,10 @@
                 });
             }
             if (typeof state.player.gold === 'undefined') state.player.gold = 0;
-            if (typeof state.featuredTaskId === 'undefined') state.featuredTaskId = null;
+            if (!Array.isArray(state.featuredTaskIds)) {
+                state.featuredTaskIds = state.featuredTaskId ? [state.featuredTaskId] : [];
+            }
+            delete state.featuredTaskId;
             if (!state.player.theme) {
                 state.player.theme = defaultState.player.theme;
             }
@@ -8807,24 +8810,34 @@
             featuredLabel.style.fontWeight = 'bold';
             featuredLabel.style.letterSpacing = '0.05em';
             featuredLabel.style.boxShadow = '0 2px 8px rgba(29,185,84,0.6)';
-            featuredLabel.textContent = '⭐ Featured Quest';
+            featuredLabel.textContent = '⭐ Featured Quests';
             featuredCard.appendChild(featuredLabel);
 
-            const featuredTask = state.featuredTaskId ? state.tasks.find(t => String(t.id) === String(state.featuredTaskId)) : null;
-            if (featuredTask) {
-                const ft = createTaskElement(featuredTask);
-                ft.style.marginBottom = '0';
-                featuredCard.appendChild(ft);
-                const removeBtn = document.createElement('button');
-                removeBtn.style.cssText = 'position:absolute;top:6px;right:8px;background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.45;color:inherit;';
-                removeBtn.title = '取消指定';
-                removeBtn.textContent = '✕';
-                removeBtn.onmouseover = () => removeBtn.style.opacity = '1';
-                removeBtn.onmouseout = () => removeBtn.style.opacity = '0.45';
-                removeBtn.onclick = () => { state.featuredTaskId = null; saveState(); renderTasksPage(); };
-                featuredCard.appendChild(removeBtn);
+            const featuredIds = Array.isArray(state.featuredTaskIds) ? state.featuredTaskIds : [];
+            const featuredTasks = featuredIds
+                .map(id => state.tasks.find(t => String(t.id) === String(id)))
+                .filter(t => t && !t.completed)
+                .slice(0, 3);
+
+            if (featuredTasks.length > 0) {
+                featuredTasks.forEach((ftTask, idx) => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'position:relative;' + (idx > 0 ? 'margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15);' : '');
+                    const ft = createTaskElement(ftTask);
+                    ft.style.marginBottom = '0';
+                    row.appendChild(ft);
+                    const removeBtn = document.createElement('button');
+                    removeBtn.style.cssText = 'position:absolute;top:0;right:0;background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.45;color:inherit;';
+                    removeBtn.title = '取消指定';
+                    removeBtn.textContent = '✕';
+                    removeBtn.onmouseover = () => removeBtn.style.opacity = '1';
+                    removeBtn.onmouseout = () => removeBtn.style.opacity = '0.45';
+                    removeBtn.onclick = () => { setFeaturedTask(ftTask.id); };
+                    row.appendChild(removeBtn);
+                    featuredCard.appendChild(row);
+                });
             } else {
-                featuredCard.innerHTML += `<div style="text-align:center; opacity:0.5; padding:20px; font-size:0.85rem;">尚未指定任務。<br>點擊任務的 ⭐ 圖示可將其固定於此。</div>`;
+                featuredCard.innerHTML += `<div style="text-align:center; opacity:0.5; padding:20px; font-size:0.85rem;">尚未指定任務。<br>點擊任務的 ⭐ 圖示可將其固定於此（最多同時顯示 3 則）。</div>`;
             }
 
             topLayout.appendChild(dailyTaskContainer);
@@ -8971,7 +8984,7 @@
                 </div>
                 <!-- Controls Wrapper -->
                 <div class="task-actions" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; margin-left: 10px;">
-                    <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${String(state.featuredTaskId) === String(task.id) ? '1' : '0.3'}; filter: ${String(state.featuredTaskId) === String(task.id) ? 'drop-shadow(0 0 4px rgba(72,199,116,0.8))' : 'none'};" onclick="event.stopPropagation(); setFeaturedTask('${task.id}')" title="${String(state.featuredTaskId) === String(task.id) ? '取消 Featured Quest' : '設為 Featured Quest'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⭐</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? '1' : '0.3'}; filter: ${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? 'drop-shadow(0 0 4px rgba(72,199,116,0.8))' : 'none'};" onclick="event.stopPropagation(); setFeaturedTask('${task.id}')" title="${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? '取消 Featured Quest' : '設為 Featured Quest（最多同時 3 則）'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⭐</button>
                     ${!task.completed ? `<button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); startFocusForTask('${task.id}')" title="開始番茄鐘專注此任務" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">🍅</button>` : ''}
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.pinned ? '1' : '0.35'}; filter: ${task.pinned ? 'drop-shadow(0 0 4px rgba(107,70,193,0.7))' : 'none'};" onclick="event.stopPropagation(); togglePinTask('${task.id}')" title="${task.pinned ? '取消置頂' : '優先置頂'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📌</button>
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); openInGoogleCalendar('${task.id}')" title="加入 Google Calendar" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">📆</button>
@@ -9010,7 +9023,7 @@
             const filteredTasks = state.tasks.filter(t => {
                 // Filter out the daily task from the general list so it's not duplicated
                 if (t.title.includes(dailyTaskName)) return false;
-                if (state.featuredTaskId && String(t.id) === String(state.featuredTaskId)) return false;
+                if (featuredTasks.some(ft => String(ft.id) === String(t.id))) return false;
                 if (state.hideCompletedTasks && t.completed) return false;
                 const groupMatch = currentGroupId === 'all' || (t.groupId ? t.groupId === currentGroupId : currentGroupId === 'default'); // Backward compat
 
@@ -10679,6 +10692,9 @@
             }
             // Use loose equality for filtering to match mixed types
             state.tasks = state.tasks.filter(t => t.id != id);
+            if (Array.isArray(state.featuredTaskIds)) {
+                state.featuredTaskIds = state.featuredTaskIds.filter(fid => fid != id);
+            }
             saveState();
             render();
             showToast("Quest Abandoned", "The quest has been removed from your log.");
@@ -10691,12 +10707,17 @@
         }
 
         function setFeaturedTask(id) {
-            const isSame = String(state.featuredTaskId) === String(id);
-            state.featuredTaskId = isSame ? null : id;
+            if (!Array.isArray(state.featuredTaskIds)) state.featuredTaskIds = [];
+            const isFeatured = state.featuredTaskIds.some(fid => String(fid) === String(id));
+            if (isFeatured) {
+                state.featuredTaskIds = state.featuredTaskIds.filter(fid => String(fid) !== String(id));
+            } else {
+                state.featuredTaskIds.push(id);
+            }
             saveState();
             renderTasksPage();
             const task = state.tasks.find(t => t.id == id);
-            showToast(isSame ? '⭐ 已取消指定' : '⭐ 已設為 Featured Quest', task ? task.title : '');
+            showToast(isFeatured ? '⭐ 已取消指定' : '⭐ 已設為 Featured Quest', task ? task.title : '');
         }
 
         function togglePinTask(id) {
