@@ -5022,7 +5022,7 @@
                     delete habit.penaltiesApplied[today];
                     delete habit.completions[today];
                     saveState();
-                    renderHabitsPage();
+                    render();
                     return;
                 }
 
@@ -5036,7 +5036,7 @@
                 const justEscalated = streak === threshold + 1;
 
                 saveState();
-                renderHabitsPage();
+                render();
 
                 if (justEscalated) {
                     setTimeout(() => showHabitEscalationNotification(habit), 300);
@@ -5049,7 +5049,7 @@
             if (wasCompleted) {
                 delete habit.completions[today];
                 saveState();
-                renderHabitsPage();
+                render();
                 return;
             }
 
@@ -5059,7 +5059,7 @@
             if (streak === 7 && !habit.milestoneReached) {
                 habit.milestoneReached = true;
                 saveState();
-                renderHabitsPage();
+                render();
                 setTimeout(() => showHabitMilestoneNotification(habit), 300);
                 return;
             }
@@ -5092,7 +5092,7 @@
             }
 
             saveState();
-            renderHabitsPage();
+            render();
         };
 
         window.toggleHabitRetro = function(habitId, dateStr) {
@@ -8963,6 +8963,31 @@
                     photoHtml = `<div class="task-photo-container" style="margin-left: 15px; flex-shrink: 0;"><img class="task-photo" data-photo-ref="${task.photo}" src="${photoSrc(task.photo)}" style="max-width: 240px; max-height: 180px; border-radius: 8px; border: 2px solid var(--accent-color, rgba(255,255,255,0.5)); object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.2);" onclick="event.stopPropagation()"></div>`;
                 }
 
+                // Fills the empty middle space in the Daily Focus card with today's positive-habit
+                // checklist. Reuses toggleHabitCompletion() (the same function the Habits page uses)
+                // so completion state stays a single source of truth across both views.
+                let habitChecklistHtml = '';
+                if (isDailyFocus) {
+                    const todayStr = getTodayDateStr();
+                    const positiveHabits = (state.habits || []).filter(h => (h.type || 'positive') === 'positive' && !h.hidden);
+                    if (positiveHabits.length > 0) {
+                        habitChecklistHtml = `
+                        <div style="flex: 1 1 200px; max-width: 240px; margin: 0 15px; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
+                            <div style="font-size: 0.75rem; font-weight: 700; opacity: 0.65; letter-spacing: 0.03em; margin-bottom: 6px; flex-shrink: 0;">🔄 今日習慣</div>
+                            <div style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; padding-right: 4px;">
+                                ${positiveHabits.map(h => {
+                                    const done = !!h.completions[todayStr];
+                                    return `
+                                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; cursor: pointer;">
+                                        <input type="checkbox" ${done ? 'checked' : ''} onclick="event.stopPropagation(); toggleHabitCompletion('${h.id}')" style="width: auto; cursor: pointer; flex-shrink: 0;">
+                                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${done ? 'text-decoration: line-through; opacity: 0.55;' : ''}">${h.icon || '🔸'} ${h.title}</span>
+                                    </label>`;
+                                }).join('')}
+                            </div>
+                        </div>`;
+                    }
+                }
+
                 item.innerHTML = `
                 <div class="task-content" onclick="openTaskModal('${task.id}')" style="cursor: pointer; justify-content: space-between;">
                     <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTask('${task.id}')"></div>
@@ -8984,6 +9009,7 @@
                             </div>
                         </div>
                     </div>
+                    ${habitChecklistHtml}
                     ${task.photo ? photoHtml : ''}
                 </div>
                 <!-- Controls Wrapper -->
