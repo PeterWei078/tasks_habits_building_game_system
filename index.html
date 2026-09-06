@@ -247,6 +247,20 @@
                 gap: 16px !important;
                 border-top: 1px solid rgba(255, 255, 255, 0.15);
             }
+            /* Daily Focus card: checkbox+title keep sharing the first line (like any
+               other task), the habit checklist wraps to its own full-width line below,
+               and the decorative photo is dropped entirely to leave room for it. */
+            .daily-focus-content {
+                flex-wrap: wrap !important;
+            }
+            .daily-focus-habit-checklist {
+                flex: 1 1 100% !important;
+                max-width: 100% !important;
+                margin: 12px 0 0 !important;
+            }
+            .daily-focus-content .task-photo-container {
+                display: none !important;
+            }
         }
 
         .checkbox {
@@ -8972,7 +8986,7 @@
                     const positiveHabits = (state.habits || []).filter(h => (h.type || 'positive') === 'positive' && !h.hidden);
                     if (positiveHabits.length > 0) {
                         habitChecklistHtml = `
-                        <div style="flex: 1 1 200px; max-width: 240px; margin: 0 15px; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
+                        <div class="daily-focus-habit-checklist" style="flex: 1 1 200px; max-width: 240px; margin: 0 15px; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
                             <div style="font-size: 0.75rem; font-weight: 700; opacity: 0.65; letter-spacing: 0.03em; margin-bottom: 6px; flex-shrink: 0;">🔄 今日習慣</div>
                             <div style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; padding-right: 4px;">
                                 ${positiveHabits.map(h => {
@@ -8989,7 +9003,7 @@
                 }
 
                 item.innerHTML = `
-                <div class="task-content" onclick="openTaskModal('${task.id}')" style="cursor: pointer; justify-content: space-between;">
+                <div class="task-content ${isDailyFocus ? 'daily-focus-content' : ''}" onclick="openTaskModal('${task.id}')" style="cursor: pointer; justify-content: space-between;">
                     <div class="checkbox ${task.completed ? 'checked' : ''}" onclick="event.stopPropagation(); toggleTask('${task.id}')"></div>
                     <div style="flex: 1; min-width: 0;">
                         <div class="task-text ${task.completed ? 'completed' : ''}">${task.pinned ? '<span style="font-size:0.7rem; background: var(--accent-color); color: white; padding: 1px 6px; border-radius: 4px; margin-right: 5px; vertical-align: middle; font-weight: 600;">📌 置頂</span>' : ''}${task.title} ${task.image ? `<a href="${task.image}" target="_blank" onclick="event.stopPropagation()" style="margin-left: 5px; opacity: 0.7; text-decoration: none;" title="Open Link">🔗</a>` : ''}</div>
