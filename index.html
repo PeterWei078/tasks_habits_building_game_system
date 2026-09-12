@@ -8837,7 +8837,7 @@
             const featuredTasks = featuredIds
                 .map(id => state.tasks.find(t => String(t.id) === String(id)))
                 .filter(t => t && !t.completed)
-                .slice(0, 3);
+                .slice(0, 2);
 
             if (featuredTasks.length > 0) {
                 featuredTasks.forEach(ftTask => {
@@ -8857,7 +8857,7 @@
                     featuredGrid.appendChild(slot);
                 });
             } else {
-                featuredGrid.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px; font-size:0.85rem;">尚未指定任務。<br>點擊任務的 ⭐ 圖示可將其固定於此（最多同時顯示 3 則）。</div>`;
+                featuredGrid.innerHTML = `<div style="text-align:center; opacity:0.5; padding:20px; font-size:0.85rem;">尚未指定任務。<br>點擊任務的 ⭐ 圖示可將其固定於此（最多同時顯示 2 則）。</div>`;
             }
 
             const listCardHeader = document.createElement('div');
@@ -9028,7 +9028,7 @@
                 </div>
                 <!-- Controls Wrapper -->
                 <div class="task-actions" style="display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; margin-left: 10px;">
-                    <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? '1' : '0.3'}; filter: ${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? 'drop-shadow(0 0 4px rgba(72,199,116,0.8))' : 'none'};" onclick="event.stopPropagation(); setFeaturedTask('${task.id}')" title="${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? '取消 Featured Quest' : '設為 Featured Quest（最多同時 3 則）'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⭐</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? '1' : '0.3'}; filter: ${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? 'drop-shadow(0 0 4px rgba(72,199,116,0.8))' : 'none'};" onclick="event.stopPropagation(); setFeaturedTask('${task.id}')" title="${(state.featuredTaskIds || []).some(id => String(id) === String(task.id)) ? '取消 Featured Quest' : '設為 Featured Quest（最多同時 2 則）'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">⭐</button>
                     ${!task.completed ? `<button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); startFocusForTask('${task.id}')" title="開始番茄鐘專注此任務" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">🍅</button>` : ''}
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.pinned ? '1' : '0.35'}; filter: ${task.pinned ? 'drop-shadow(0 0 4px rgba(107,70,193,0.7))' : 'none'};" onclick="event.stopPropagation(); togglePinTask('${task.id}')" title="${task.pinned ? '取消置頂' : '優先置頂'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📌</button>
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); openInGoogleCalendar('${task.id}')" title="加入 Google Calendar" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">📆</button>
