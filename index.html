@@ -13718,14 +13718,13 @@
                     `).join('');
                     wrap.innerHTML = `
                         <div style="background:rgba(99,230,190,0.08);border:1px solid rgba(99,230,190,0.25);border-radius:10px;overflow:hidden;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;background:rgba(99,230,190,0.1);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 8px;background:rgba(99,230,190,0.1);">
                                 <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0;">
-                                    <span style="font-size:0.82rem;flex-shrink:0;">✅</span>
                                     <input type="text" value="${block.title.replace(/"/g,'&quot;')}" title="點擊修改清單標題"
                                         onfocus="_memoSetLastFocusedBlock('${block.id}')"
                                         onblur="updateMemoChecklistTitle('${block.id}',this.value)"
                                         onkeydown="if(event.key==='Enter'){this.blur();}"
-                                        style="flex:1;min-width:30px;width:0;font-size:0.8rem;font-weight:600;opacity:0.75;background:transparent;border:none;outline:none;color:inherit;padding:1px 2px;border-radius:3px;text-overflow:ellipsis;">
+                                        style="flex:1;min-width:30px;width:0;font-size:1.05rem;font-weight:800;color:#059669;background:transparent;border:none;outline:none;padding:2px;border-radius:3px;text-overflow:ellipsis;">
                                     <span style="font-size:0.72rem;opacity:0.45;flex-shrink:0;">${done}/${block.items.length}</span>
                                 </div>
                                 <div style="display:flex;gap:2px;flex-shrink:0;">
