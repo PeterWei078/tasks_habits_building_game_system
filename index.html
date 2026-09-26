@@ -13867,9 +13867,21 @@
         // Enter = save + add next item. Backspace on an empty, non-first item = delete it and refocus the previous item.
         window._handleMemoChecklistItemKeydown = function(e, blockId, itemId) {
             if (e.key === 'Enter') {
+                if (e.isComposing || e.keyCode === 229) return; // IME 選字中的 Enter 不觸發新增
                 e.preventDefault();
-                e.target.blur();
-                addMemoChecklistItem(blockId);
+                const b = _memoBlocks.find(b => b.id === blockId);
+                if (!b) return;
+                const idx = b.items.findIndex(i => i.id === itemId);
+                if (idx < 0) return;
+                const text = e.target.value;
+                if (!text.trim()) return; // 空白項目按 Enter 不新增
+                b.items[idx].text = text;
+                const newItem = { id: _memoItemUid(), text: '', done: false };
+                b.items.splice(idx + 1, 0, newItem); // 插在目前項目下方
+                renderTaskMemoBlocks();
+                setTimeout(() => {
+                    document.getElementById('mbi_' + newItem.id)?.querySelector('input[type="text"]')?.focus();
+                }, 30);
                 return;
             }
             if (e.key === 'Backspace' && e.target.value === '' && e.target.selectionStart === 0) {
