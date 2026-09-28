@@ -2007,6 +2007,13 @@
                     </div>
                 </div>
 
+                <div class="form-row" id="taskReminderLinkRow" style="margin-top: 10px; display: none;">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px;">🔔 關聯提醒板 (Linked Reminder)</label>
+                        <div id="taskReminderLinkContent" style="margin-top: 6px;"></div>
+                    </div>
+                </div>
+
                 <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; margin-top: 10px;"
                     onclick="saveTaskFromModal()">Create Task</button>
             </div>
@@ -3361,6 +3368,7 @@
                             ? [{ id: 'mb_' + task.id, type: 'text', html: task.memo }]
                             : [];
                     }
+                    if (typeof task.linkedReminderId === 'undefined') task.linkedReminderId = null;
                 });
             }
             migrateCharacterGallery();
@@ -4114,7 +4122,15 @@
                 const isExpanded = window.expandedReminderIds.has(rem.id);
                 const card = document.createElement('div');
                 card.className = 'glass glass-card';
+                card.id = 'remcard_' + rem.id;
                 const pinnedBorder = rem.pinned ? 'border:1px solid rgba(255,200,50,0.5);box-shadow:0 0 12px rgba(255,200,50,0.15);' : '';
+
+                // Tasks linked to this reminder (reverse of task.linkedReminderId)
+                const linkedTasksForRem = (state.tasks || []).filter(t => t.linkedReminderId === rem.id);
+                const linkedTasksBadgeHtml = linkedTasksForRem.length > 0 ? `
+                    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;">
+                        ${linkedTasksForRem.map(t => `<span onclick="event.stopPropagation();openTaskModal('${t.id}')" title="前往任務" style="cursor:pointer;background:rgba(124,58,237,0.18);border:1px solid rgba(124,58,237,0.45);border-radius:10px;padding:2px 8px;font-size:0.72rem;color:#c4b5fd;">🔗 來自任務：${t.title}</span>`).join('')}
+                    </div>` : '';
 
                 if (!isExpanded) {
                     // ── COLLAPSED ────────────────────────────────────────────
@@ -4152,6 +4168,7 @@
                                 ${totalTodos > 0 ? `<span style="background:rgba(255,255,255,0.1);border-radius:10px;padding:2px 8px;font-size:0.75rem;color:rgba(255,255,255,0.65);">✅ ${doneTodos}/${totalTodos}</span>` : ''}
                                 ${rem.photo ? `<span style="background:rgba(255,255,255,0.1);border-radius:10px;padding:2px 8px;font-size:0.75rem;color:rgba(255,255,255,0.65);">📷</span>` : ''}
                             </div>` : ''}
+                            ${linkedTasksBadgeHtml}
                         </div>
                     `;
                 } else {
@@ -4211,6 +4228,7 @@
                                 ${addTagOptions}
                             </select>` : ''}
                         </div>
+                        ${linkedTasksBadgeHtml}
 
                         <!-- Toolbar -->
                         <div style="display:flex;gap:8px;margin-bottom:10px;background:rgba(255,255,255,0.1);padding:5px;border-radius:6px;flex-wrap:wrap;">
@@ -4540,6 +4558,136 @@
                 window.expandedReminderIds.add(id);
             }
             renderRemindersPage();
+        };
+
+        // ── Task ↔ Reminder linking (one reminder board per task) ──────────────
+        // Refreshes the "🔔 關聯提醒板" row inside the (currently open) Edit Task modal, if any.
+        function renderTaskReminderLinkUI(task) {
+            const box = document.getElementById('taskReminderLinkContent');
+            if (!box) return;
+            const rem = task.linkedReminderId ? state.reminders.find(r => r.id === task.linkedReminderId) : null;
+            if (rem) {
+                box.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.4);border-radius:10px;padding:4px 10px;font-size:0.85rem;">🔔 ${rem.title}</span>
+                        <button type="button" onclick="goToLinkedReminder('${task.id}')" class="btn" style="padding:4px 10px;font-size:0.8rem;">前往查看</button>
+                        <button type="button" onclick="openReminderLinkMenu('${task.id}')" class="btn" style="padding:4px 10px;font-size:0.8rem;background:rgba(255,255,255,0.1);">更改連結</button>
+                    </div>`;
+            } else {
+                box.innerHTML = `<button type="button" onclick="openReminderLinkMenu('${task.id}')" style="background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.3);border-radius:10px;color:inherit;padding:6px 14px;cursor:pointer;font-size:0.85rem;">+ 連結提醒板</button>`;
+            }
+        }
+
+        // Refreshes the modal's link row only if it's currently open and showing this task.
+        function _refreshOpenTaskReminderLinkUI(taskId, task) {
+            const modal = document.getElementById('taskModal');
+            if (modal && modal.classList.contains('show') && String(editingTaskId) === String(taskId)) {
+                renderTaskReminderLinkUI(task);
+            }
+        }
+
+        // Card 🔔 button dispatch: linked → jump to it, unlinked → open the picker.
+        window.handleReminderLinkClick = function(taskId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+            if (task.linkedReminderId) {
+                goToLinkedReminder(taskId);
+            } else {
+                openReminderLinkMenu(taskId);
+            }
+        };
+
+        window.linkTaskReminder = function(taskId, reminderId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+            task.linkedReminderId = reminderId;
+            saveState();
+            _refreshOpenTaskReminderLinkUI(taskId, task);
+            render();
+        };
+
+        window.unlinkTaskReminder = function(taskId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+            task.linkedReminderId = null;
+            saveState();
+            _refreshOpenTaskReminderLinkUI(taskId, task);
+            render();
+        };
+
+        window.createAndLinkReminder = function(taskId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+            const newId = 'rem_' + Date.now();
+            state.reminders.push({
+                id: newId,
+                title: task.title || '新提醒板',
+                content: '', tags: [], pinned: false, todos: [], photo: null
+            });
+            task.linkedReminderId = newId;
+            saveState();
+            _refreshOpenTaskReminderLinkUI(taskId, task);
+            render();
+        };
+
+        // Small picker: choose an existing reminder board to link, unlink, or create+link a new one.
+        window.openReminderLinkMenu = function(taskId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task) return;
+            document.querySelectorAll('[data-reminder-link-overlay]').forEach(el => el.remove());
+
+            const overlay = document.createElement('div');
+            overlay.setAttribute('data-reminder-link-overlay', '1');
+            overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+            const reminderListHtml = (state.reminders || []).map(r => {
+                const isLinked = task.linkedReminderId === r.id;
+                return `<button type="button" onclick="linkTaskReminder('${task.id}','${r.id}');document.querySelectorAll('[data-reminder-link-overlay]').forEach(el=>el.remove());"
+                    style="display:block;width:100%;text-align:left;background:${isLinked ? 'rgba(124,58,237,0.35)' : 'rgba(255,255,255,0.08)'};border:1px solid ${isLinked ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.15)'};border-radius:10px;padding:8px 12px;margin-bottom:6px;color:#fff;cursor:pointer;font-size:0.9rem;">${isLinked ? '✅ ' : ''}${r.title}</button>`;
+            }).join('') || `<div style="opacity:0.5;font-size:0.85rem;padding:8px 0;">目前沒有提醒板</div>`;
+
+            overlay.innerHTML = `
+                <div style="background:linear-gradient(135deg,rgba(60,50,90,0.97),rgba(40,40,60,0.97));border-radius:18px;padding:24px 22px;max-width:380px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.15);color:#fff;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                        <h3 style="margin:0;font-size:1.1rem;">🔔 連結提醒板</h3>
+                        <button onclick="document.querySelectorAll('[data-reminder-link-overlay]').forEach(el=>el.remove());" style="background:none;border:none;color:#fff;opacity:0.6;font-size:1.2rem;cursor:pointer;">✕</button>
+                    </div>
+                    <div style="font-size:0.82rem;opacity:0.6;margin-bottom:10px;">選擇要連結的提醒板：</div>
+                    <div style="margin-bottom:14px;">${reminderListHtml}</div>
+                    ${task.linkedReminderId ? `<button type="button" onclick="unlinkTaskReminder('${task.id}');document.querySelectorAll('[data-reminder-link-overlay]').forEach(el=>el.remove());" style="width:100%;background:rgba(255,80,80,0.15);border:1px dashed rgba(255,100,100,0.4);border-radius:10px;padding:7px;color:#FF6B6B;cursor:pointer;font-size:0.85rem;margin-bottom:10px;">取消連結目前的提醒板</button>` : ''}
+                    <button type="button" onclick="createAndLinkReminder('${task.id}');document.querySelectorAll('[data-reminder-link-overlay]').forEach(el=>el.remove());" style="width:100%;background:rgba(99,230,190,0.15);border:1px dashed rgba(99,230,190,0.45);border-radius:10px;padding:8px;color:#63e6be;cursor:pointer;font-size:0.9rem;">+ 新建同名提醒板並連結</button>
+                </div>`;
+            document.body.appendChild(overlay);
+        };
+
+        // Jump from a task to its linked reminder board: switch tab, expand card, scroll + flash highlight.
+        window.goToLinkedReminder = function(taskId) {
+            const task = state.tasks.find(t => t.id == taskId);
+            if (!task || !task.linkedReminderId) return;
+            const rem = state.reminders.find(r => r.id === task.linkedReminderId);
+            if (!rem) {
+                task.linkedReminderId = null;
+                saveState();
+                alert('連結的提醒板已被刪除，已自動取消連結。');
+                render();
+                return;
+            }
+            document.querySelectorAll('[data-reminder-link-overlay]').forEach(el => el.remove());
+            activeReminderTags = [];
+            window.expandedReminderIds = window.expandedReminderIds || new Set();
+            window.expandedReminderIds.add(rem.id);
+            switchTab('reminders');
+            setTimeout(() => {
+                const el = document.getElementById('remcard_' + rem.id);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.style.transition = 'box-shadow 0.3s';
+                    const prevBoxShadow = el.style.boxShadow;
+                    el.style.boxShadow = '0 0 0 3px rgba(124,58,237,0.9), 0 0 24px rgba(124,58,237,0.6)';
+                    setTimeout(() => { el.style.boxShadow = prevBoxShadow; }, 1600);
+                }
+            }, 80);
         };
 
         window.updateReminderTitle = function(id, title) {
@@ -9032,6 +9180,7 @@
                     ${!task.completed ? `<button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); startFocusForTask('${task.id}')" title="開始番茄鐘專注此任務" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">🍅</button>` : ''}
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.pinned ? '1' : '0.35'}; filter: ${task.pinned ? 'drop-shadow(0 0 4px rgba(107,70,193,0.7))' : 'none'};" onclick="event.stopPropagation(); togglePinTask('${task.id}')" title="${task.pinned ? '取消置頂' : '優先置頂'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📌</button>
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: 0.55;" onclick="event.stopPropagation(); openInGoogleCalendar('${task.id}')" title="加入 Google Calendar" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.15)'" onmouseout="this.style.opacity='0.55'; this.style.transform='scale(1)'">📆</button>
+                    <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${task.linkedReminderId ? '1' : '0.35'}; filter: ${task.linkedReminderId ? 'drop-shadow(0 0 4px rgba(255,200,50,0.7))' : 'none'};" onclick="event.stopPropagation(); handleReminderLinkClick('${task.id}')" title="${task.linkedReminderId ? '前往連結的提醒板' : '連結提醒板'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🔔</button>
                     <button style="background:none; border:none; cursor:pointer; font-size: 1.2rem; transition: transform 0.2s; opacity: ${(task.memoBlocks&&task.memoBlocks.length>0)||task.memo ? '1' : '0.4'}; text-shadow: ${(task.memoBlocks&&task.memoBlocks.length>0)||task.memo ? '0 0 8px rgba(255,255,255,0.6)' : 'none'};" onclick="event.stopPropagation(); window.openTaskMemoModal('${task.id}')" title="${(task.memoBlocks&&task.memoBlocks.length>0)||task.memo ? 'Edit Memo' : 'Add Memo'}" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">📝</button>
                     ${task.completed ? '' : `<button style="background:none; border:none; cursor:pointer; opacity:0.5; font-size: 1.1rem; transition: transform 0.2s;" onclick="event.stopPropagation(); deleteTask('${task.id}')" title="Delete Task" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">🗑️</button>`}
                 </div>
@@ -9223,6 +9372,9 @@
                 document.getElementById('modalPinned').checked = !!task.pinned;
                 document.getElementById('modalIsAchievement').checked = !!task.isAchievement;
 
+                const linkRow = document.getElementById('taskReminderLinkRow');
+                if (linkRow) { linkRow.style.display = 'block'; renderTaskReminderLinkUI(task); }
+
                 const memoSection = document.getElementById('editTaskMemoSection');
                 if (memoSection) {
                     memoSection.style.display = 'flex';
@@ -9264,6 +9416,9 @@
                 updateModalPomoDisplay();
                 document.getElementById('modalPinned').checked = false;
                 document.getElementById('modalIsAchievement').checked = false;
+
+                const linkRowNew = document.getElementById('taskReminderLinkRow');
+                if (linkRowNew) linkRowNew.style.display = 'none';
 
                 document.getElementById('modalPhotoFile').value = '';
                 document.getElementById('modalPhotoPreview').style.display = 'none';
